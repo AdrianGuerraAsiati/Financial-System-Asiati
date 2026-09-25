@@ -13,6 +13,8 @@ class Resultado:
     codigo: str
     estado: str
     datos: dict[str, Any]
+    descripcion: str
+    critico: bool
 
 
 class Motor(Protocol):
