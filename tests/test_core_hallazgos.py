@@ -28,9 +28,10 @@ def test_hallazgo_belongs_to_period_and_persists_state() -> None:
         )
         session.add(periodo)
         session.flush()
+        periodo_id = periodo.id
 
         hallazgo = Hallazgo(
-            periodo_id=periodo.id,
+            periodo_id=periodo_id,
             critico=True,
             resuelto=False,
         )
@@ -44,6 +45,6 @@ def test_hallazgo_belongs_to_period_and_persists_state() -> None:
         )
 
         assert persisted is not None
-        assert persisted.periodo_id == periodo.id
+        assert persisted.periodo_id == periodo_id
         assert persisted.critico is True
         assert persisted.resuelto is False
