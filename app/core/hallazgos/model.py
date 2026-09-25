@@ -1,4 +1,7 @@
-from sqlalchemy import Boolean, ForeignKey, Integer
+from typing import Any
+
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -25,3 +28,7 @@ class Hallazgo(Base):
         default=False,
         server_default="false",
     )
+    motor_slug: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    codigo_regla: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
+    evidencia: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
