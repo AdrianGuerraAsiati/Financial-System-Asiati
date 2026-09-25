@@ -9,7 +9,25 @@ on:
       - main
 
 jobs:
-  pytest:
+  unit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Unit tests
+        run: pytest -q tests --ignore-glob="tests/test_core_*.py"
+
+  integration:
     runs-on: ubuntu-latest
 
     services:
@@ -45,5 +63,5 @@ jobs:
       - name: Migrate database
         run: alembic upgrade head
 
-      - name: Test
-        run: pytest -q
+      - name: Integration tests
+        run: pytest -q tests/test_core_*.py
