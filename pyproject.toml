@@ -1,0 +1,23 @@
+[project]
+name = "financial-system-asiati"
+version = "0.1.0"
+description = "Plataforma Financiera ASIATI"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "uvicorn[standard]>=0.30,<1.0",
+  "pydantic>=2.9,<3.0",
+  "sqlalchemy>=2.0,<3.0",
+  "psycopg[binary]>=3.2,<4.0",
+  "pandas>=2.2,<3.0",
+  "openpyxl>=3.1,<4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
