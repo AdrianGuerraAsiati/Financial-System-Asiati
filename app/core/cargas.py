@@ -26,4 +26,12 @@ class Carga(Base):
         ForeignKey("empresas.id"),
         nullable=False,
     )
+    fuente_id: Mapped[int] = mapped_column(
+        ForeignKey("fuentes.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    periodo_id: Mapped[int] = mapped_column(
+        ForeignKey("periodos.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     contenido_hash: Mapped[str] = mapped_column(String(64), nullable=False)
