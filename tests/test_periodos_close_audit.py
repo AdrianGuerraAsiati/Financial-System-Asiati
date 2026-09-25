@@ -39,6 +39,7 @@ def test_close_records_traceable_event() -> None:
         periodo,
         actor="sistemas@asiati.com.co",
         motivo="Cierre mensual validado",
+        verificar_criticos=lambda _session, _periodo_id: False,
     )
 
     assert periodo.cerrado is True
