@@ -38,6 +38,43 @@ Durante la validación con datos reales se obtuvieron:
 
 Esto significa que el comportamiento real debe gobernar el diseño del motor.
 
+## Descubrimiento de reglas de Wallets
+
+La evidencia operativa más reciente confirma que la conciliación de Wallets contiene varias reglas y que todavía no todas están construidas/documentadas.
+
+### Regla identificada parcialmente: guías entregadas
+
+La transcripción disponible indica que existe una regla asociada a las **guías entregadas** y al **día/hora en que fueron entregadas**.
+
+La evidencia disponible no permite determinar todavía de forma inequívoca:
+
+- cuál es el dato fuente exacto que identifica una guía entregada;
+- qué timestamp debe tomarse como referencia;
+- cómo se normaliza la hora;
+- qué significa exactamente el corte mencionado como “00:00 del día que se entregaron”;
+- qué movimiento o valor se reconoce a partir de ese corte;
+- qué excepciones existen;
+- qué resultado debe producir el motor cuando la condición se cumple o falla.
+
+Por tanto, esta regla **no debe implementarse todavía**.
+
+### Plantilla mínima para cerrar una regla
+
+Antes de convertir una regla de Wallets en código TDD se debe poder responder:
+
+1. **Nombre funcional de la regla.**
+2. **Fuentes de entrada.**
+3. **Campos usados.**
+4. **Condición exacta.**
+5. **Transformación o cálculo.**
+6. **Resultado esperado.**
+7. **Excepciones.**
+8. **Ejemplo positivo real.**
+9. **Ejemplo negativo real.**
+10. **Cómo impacta no pagadas, duplicadas, huérfanas u otra categoría.**
+
+Cuando esos diez puntos estén suficientemente definidos, la regla puede pasar a un PR RED → GREEN.
+
 ## Pendientes de negocio antes de cerrar las reglas
 
 Todavía deben levantarse:
@@ -58,6 +95,14 @@ La capa de categorización no pertenece exclusivamente a Wallets.
 Fue identificada como una capacidad del core porque las dimensiones de categorización serán consumidas por varios motores y posteriormente por flujo de caja y resultados.
 
 El Motor 01 puede consumir esa interfaz, pero no debe crear una implementación paralela propia.
+
+### Aclaración sobre el documento largo
+
+La evidencia operativa más reciente aclara que el archivo largo mencionado en conversación corresponde a la **categorización de movimientos bancarios**, no al detalle completo de las reglas de Wallets.
+
+Se describe como una referencia de aproximadamente 24 páginas sobre la forma actual de categorizar movimientos bancarios, con alrededor de 20 columnas/dimensiones.
+
+Ese material pertenece al levantamiento de categorización y debe tratarse por separado del descubrimiento de reglas de Wallets.
 
 ## Validación de archivos
 
