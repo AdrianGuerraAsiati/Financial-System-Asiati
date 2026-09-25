@@ -12,6 +12,24 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: financial_system
+          POSTGRES_USER: asiati
+          POSTGRES_PASSWORD: asiati
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U asiati -d financial_system"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://asiati:asiati@localhost:5432/financial_system
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,6 +41,9 @@ jobs:
 
       - name: Install
         run: pip install -e ".[dev]"
+
+      - name: Migrate database
+        run: alembic upgrade head
 
       - name: Test
         run: pytest -q
