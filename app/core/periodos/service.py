@@ -1,8 +1,11 @@
+from collections.abc import Callable
 from datetime import date
 
 from sqlalchemy.orm import Session
 
+from app.core.hallazgos import existen_criticos_abiertos
 from app.core.periodos.errors import (
+    HallazgosCriticosAbiertosError,
     MotivoReaperturaRequeridoError,
     PeriodoAbiertoError,
     PeriodoCerradoError,
@@ -13,6 +16,9 @@ from app.core.periodos.history import (
     PeriodoCierreEvento,
 )
 from app.core.periodos.model import Periodo
+
+
+VerificarCriticos = Callable[[Session, int], bool]
 
 
 def actualizar_rango(
@@ -35,10 +41,16 @@ def cerrar_periodo(
     *,
     actor: str,
     motivo: str | None = None,
+    verificar_criticos: VerificarCriticos = existen_criticos_abiertos,
 ) -> PeriodoCierreEvento:
-    """Cierra el período y registra la transición en la misma transacción."""
+    """Cierra el período si no existen hallazgos críticos abiertos."""
     if periodo.cerrado:
         raise PeriodoCerradoError("El período ya está cerrado.")
+
+    if verificar_criticos(session, periodo.id):
+        raise HallazgosCriticosAbiertosError(
+            "El período tiene hallazgos críticos abiertos."
+        )
 
     evento = PeriodoCierreEvento(
         periodo_id=periodo.id,
