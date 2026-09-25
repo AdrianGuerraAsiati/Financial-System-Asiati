@@ -1,14 +1,7 @@
-import hashlib
-
 from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
-
-
-def calcular_hash_contenido(contenido: bytes) -> str:
-    """Devuelve un SHA-256 determinístico para el contenido de una carga."""
-    return hashlib.sha256(contenido).hexdigest()
 
 
 class Carga(Base):
