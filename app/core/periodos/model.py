@@ -30,6 +30,3 @@ class Periodo(Base):
         default=False,
         server_default="false",
     )
-
-    def cerrar(self) -> None:
-        self.cerrado = True
