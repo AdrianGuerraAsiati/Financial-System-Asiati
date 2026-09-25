@@ -16,9 +16,9 @@ class ConciliacionWallets:
         }
 
     def validar(self, carga: Any) -> ResultadoValidacion:
-        # Placeholder: la validación real debe detectar integridad,
-        # formato y archivos incompletos antes de ejecutar el motor.
-        if carga is None:
+        # C0 mínimo: una carga ausente o vacía no puede avanzar al motor.
+        # El contrato real de archivos se definirá con las fuentes operativas.
+        if carga is None or carga == {}:
             return ResultadoValidacion(
                 valido=False,
                 errores=("La carga es obligatoria.",),
