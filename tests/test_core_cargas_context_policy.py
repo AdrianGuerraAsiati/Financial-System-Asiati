@@ -47,7 +47,9 @@ def test_load_registration_rejects_cross_empresa_context() -> None:
                 contenido_hash="d" * 64,
             )
 
-        assert session.scalar(select(Carga).where(Carga.contenido_hash == "d" * 64)) is None
+        assert session.scalar(
+            select(Carga).where(Carga.contenido_hash == "d" * 64)
+        ) is None
         session.rollback()
 
 
@@ -71,11 +73,15 @@ def test_load_registration_persists_consistent_context() -> None:
         session.add_all([fuente, periodo])
         session.flush()
 
+        empresa_id = empresa.id
+        fuente_id = fuente.id
+        periodo_id = periodo.id
+
         carga = registrar_carga(
             session,
-            empresa_id=empresa.id,
-            fuente_id=fuente.id,
-            periodo_id=periodo.id,
+            empresa_id=empresa_id,
+            fuente_id=fuente_id,
+            periodo_id=periodo_id,
             contenido_hash="e" * 64,
         )
         session.commit()
@@ -85,6 +91,6 @@ def test_load_registration_persists_consistent_context() -> None:
         persisted = session.get(Carga, carga_id)
 
         assert persisted is not None
-        assert persisted.empresa_id == empresa.id
-        assert persisted.fuente_id == fuente.id
-        assert persisted.periodo_id == periodo.id
+        assert persisted.empresa_id == empresa_id
+        assert persisted.fuente_id == fuente_id
+        assert persisted.periodo_id == periodo_id
