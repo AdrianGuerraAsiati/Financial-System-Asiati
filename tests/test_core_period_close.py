@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.empresas import Empresa
 from app.core.periodos import Periodo
+from app.core.periodos.service import cerrar_periodo
 
 
 def _engine():
@@ -48,7 +49,12 @@ def test_period_can_be_closed_and_persisted() -> None:
         session.add(periodo)
         session.flush()
 
-        periodo.cerrar()
+        cerrar_periodo(
+            session,
+            periodo,
+            actor="sistemas@asiati.com.co",
+            motivo="Cierre mensual",
+        )
         periodo_id = periodo.id
         session.commit()
 
