@@ -6,10 +6,11 @@ compartido con motores enchufados encima. Cuatro dominios: conciliación, carter
 tesorería, y cierres con estado de resultados. El primer motor es
 `conciliacion_wallets`.
 
-Fuentes de verdad. Léelas antes de cualquier cambio grande:
+Fuentes de contexto y verdad. Léelas antes de cualquier cambio grande:
+- `Ai_Handoff.md` — estado operativo vivo: qué está en curso, quién toca qué y próximos frentes. No reemplaza las decisiones formales.
 - `docs/SPEC_NUCLEO.md` — el núcleo.
 - `docs/motores/conciliacion_wallets/PROMPT_MAESTRO.md` — el motor de wallets (C0–C6).
-- `docs/decisiones/` — decisiones tomadas después de la spec. Mandan sobre la spec.
+- `docs/decisiones/` — decisiones tomadas después de la spec. Mandan sobre la spec y sobre el handoff.
 
 Si el código y la spec no coinciden y no hay decisión escrita, dilo y pregunta.
 No elijas en silencio.
