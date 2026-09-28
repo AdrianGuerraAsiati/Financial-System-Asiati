@@ -47,10 +47,11 @@ def test_comprobante_pendiente_persists_with_business_context() -> None:
         empresa = Empresa(nombre="ASIATI Comercial comprobantes")
         session.add(empresa)
         session.flush()
+        empresa_id = empresa.id
 
         registro = guardar_comprobante(
             session,
-            empresa_id=empresa.id,
+            empresa_id=empresa_id,
             comprobante=_comprobante(),
         )
         session.commit()
@@ -60,7 +61,7 @@ def test_comprobante_pendiente_persists_with_business_context() -> None:
         persisted = session.get(ComprobantePagoPersistido, registro_id)
 
         assert persisted is not None
-        assert persisted.empresa_id == empresa.id
+        assert persisted.empresa_id == empresa_id
         assert persisted.oc == "OC-123"
         assert persisted.cliente == "Cliente A"
         assert persisted.pais == "COLOMBIA"
