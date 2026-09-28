@@ -14,6 +14,8 @@ class AlmacenComprobantes(Protocol):
         contenido: bytes,
     ) -> str: ...
 
+    def eliminar(self, ubicacion: str) -> None: ...
+
 
 def _segmento_seguro(valor: str, *, fallback: str) -> str:
     limpio = re.sub(r"[^A-Za-z0-9._-]+", "_", valor.strip())
@@ -53,3 +55,10 @@ class AlmacenLocalComprobantes:
         destino.write_bytes(contenido)
 
         return ubicacion.as_posix()
+
+    def eliminar(self, ubicacion: str) -> None:
+        destino = self.directorio_base / ubicacion
+        try:
+            destino.unlink()
+        except FileNotFoundError:
+            return
