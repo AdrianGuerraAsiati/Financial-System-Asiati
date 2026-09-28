@@ -11,6 +11,10 @@ from app.motores.cartera_ocs.importacion import (
     RegistroCarteraEnCamino,
     normalizar_fila_cartera,
 )
+from app.motores.cartera_ocs.mora import (
+    RegistroCarteraMora,
+    normalizar_fila_mora,
+)
 
 
 SHEETS_READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
@@ -182,3 +186,66 @@ def construir_fuente_google_sheets_desde_entorno(
         },
     )
     return FuenteOperacionesGoogleSheets(lector)
+
+
+
+class FuenteMoraGoogleSheets:
+    """Adapta filas de la hoja MORA al contrato de Cartera."""
+
+    def __init__(self, lector: LectorFilasGoogleSheets) -> None:
+        self.lector = lector
+
+    def listar(
+        self,
+        *,
+        empresa_id: int,
+    ) -> tuple[RegistroCarteraMora, ...]:
+        registros: list[RegistroCarteraMora] = []
+
+        for fila in self.lector.leer_filas(empresa_id=empresa_id):
+            registro = normalizar_fila_mora(fila)
+            if registro is not None:
+                registros.append(registro)
+
+        return tuple(registros)
+
+
+def construir_fuente_mora_google_sheets_desde_entorno(
+    *,
+    cliente: ClienteValoresGoogleSheets | None = None,
+) -> FuenteMoraGoogleSheets:
+    empresa_id = os.getenv("CARTERA_SHEETS_EMPRESA_ID", "").strip()
+    spreadsheet_id = os.getenv("CARTERA_SHEETS_SPREADSHEET_ID", "").strip()
+    rango = os.getenv("CARTERA_SHEETS_MORA_RANGE", "").strip()
+
+    faltantes = [
+        nombre
+        for nombre, valor in (
+            ("CARTERA_SHEETS_EMPRESA_ID", empresa_id),
+            ("CARTERA_SHEETS_SPREADSHEET_ID", spreadsheet_id),
+            ("CARTERA_SHEETS_MORA_RANGE", rango),
+        )
+        if not valor
+    ]
+    if faltantes:
+        raise ConfiguracionGoogleSheetsIncompletaError(
+            "Falta configurar: " + ", ".join(faltantes)
+        )
+
+    try:
+        empresa = int(empresa_id)
+    except ValueError as exc:
+        raise ConfiguracionGoogleSheetsIncompletaError(
+            "CARTERA_SHEETS_EMPRESA_ID debe ser entero."
+        ) from exc
+
+    lector = LectorGoogleSheetsApi(
+        cliente=cliente or ClienteGoogleSheetsApi(),
+        configuraciones={
+            empresa: ConfiguracionGoogleSheets(
+                spreadsheet_id=spreadsheet_id,
+                rango=rango,
+            )
+        },
+    )
+    return FuenteMoraGoogleSheets(lector)
