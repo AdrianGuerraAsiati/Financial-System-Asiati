@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.motores.cartera_ocs.api import router as cartera_router
+from app.motores.conciliacion_wallets.wiilog.api import router as wiilog_wallet_router
 
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -15,6 +16,7 @@ app = FastAPI(
 )
 
 app.include_router(cartera_router)
+app.include_router(wiilog_wallet_router)
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 
