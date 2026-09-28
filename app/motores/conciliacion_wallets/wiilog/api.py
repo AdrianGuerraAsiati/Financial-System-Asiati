@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.auth.dependencias import Acceso, requiere
 from app.core.cargas.errors import ContextoCargaInvalidoError
 from app.core.periodos.errors import PeriodoCerradoError
 from app.core.session import obtener_session
@@ -14,9 +15,24 @@ from .integracion import ejecutar_y_persistir_wiilog, listar_hallazgos_wiilog
 router = APIRouter(prefix="/wallets/wiilog", tags=["wallets"])
 
 
+def _empresa_de_query(empresa_id: int) -> int:
+    return empresa_id
+
+
+def _empresa_de_form(empresa_id: int = Form(...)) -> int:
+    return empresa_id
+
+
+ejecutar_conciliacion = requiere(
+    "conciliacion.ejecutar", empresa_de=_empresa_de_form
+)
+ver_conciliacion = requiere("conciliacion.ver", empresa_de=_empresa_de_query)
+
+
 @router.post("/conciliar", status_code=201)
 def conciliar_wiilog(
     empresa_id: int = Form(...),
+    _acceso: Acceso = Depends(ejecutar_conciliacion),
     periodo_id: int = Form(...),
     fuente_ordenes_id: int = Form(...),
     fuente_wallet_id: int = Form(...),
@@ -74,6 +90,7 @@ def conciliar_wiilog(
 @router.get("/hallazgos")
 def consultar_hallazgos_wiilog(
     empresa_id: int,
+    _acceso: Acceso = Depends(ver_conciliacion),
     periodo_id: int,
     session: Session = Depends(obtener_session),
 ) -> list[dict[str, object]]:
