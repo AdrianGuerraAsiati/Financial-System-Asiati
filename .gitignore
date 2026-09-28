@@ -15,3 +15,6 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Datos reales de la operacion: nunca en git
+fixtures/

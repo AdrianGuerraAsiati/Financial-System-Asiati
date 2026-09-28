@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "fuente_tipo": "WALLET_WIILOG",
+  "empresa": "WIILOG",
+  "descripcion": "Wallet recaudadora de Wiilog en Dropi (usuario marcablanca@wiilog.com.co). Recibe fulfillment por orden, comisión de flete de marca blanca y transferencias de usuarios.",
+
+  "columnas_wallet": {
+    "id": "ID",
+    "fecha": "FECHA",
+    "fecha_formato": "%d-%m-%Y %H:%M",
+    "tipo": "TIPO",
+    "monto": "MONTO",
+    "monto_previo": "MONTO PREVIO",
+    "orden_id": "ORDEN ID",
+    "guia": "NUMERO DE GUIA",
+    "descripcion": "DESCRIPCIÓN",
+    "actor": "USUARIO QUE REALIZA EL MOVIMIENTO",
+    "cuenta_retiro": "CUENTA",
+    "concepto_retiro": "CONCEPTO DE RETIRO"
+  },
+  "orden_saldo": "ID",
+  "nota_orden_saldo": "El saldo se valida ordenando por ID, no por FECHA: la fecha viene al minuto y varios movimientos comparten minuto.",
+
+  "columnas_ordenes": {
+    "orden_id": "ID",
+    "guia": "NÚMERO GUIA",
+    "estatus": "ESTATUS",
+    "tipo_envio": "TIPO DE ENVIO",
+    "transportadora": "TRANSPORTADORA",
+    "bodega": "BODEGA",
+    "id_bodega": "ID DE BODEGA",
+    "fecha_orden": "FECHA",
+    "fecha_orden_formato": "%d-%m-%Y",
+    "fecha_guia": "FECHA GENERACION DE GUIA",
+    "fecha_entregado": "FECHA ENTREGADO",
+    "fecha_devolucion": "FECHA DEVOLUCION",
+    "fechas_estado_formato": "%d/%m/%Y",
+    "marca_blanca": "MARCA BLANCA"
+  },
+  "nota_ordenes": "El reporte trae una fila por línea de producto. Se agrupa por ID antes de cruzar. La columna MARCA BLANCA solo viene en el reporte que comparte el KAM de Dropi; si no está, la regla de flete queda sin verificar.",
+
+  "fulfillment": {
+    "bodegas_que_cobran_prefijo": "WIILOG",
+    "tarifa_general": 2500,
+    "tarifas_por_bodega": {
+      "WIILOG BOGOTA": 2500,
+      "WIILOG BOGOTA 2.0": null,
+      "WIILOG BOGOTA 3.0": null,
+      "WIILOG BUCARAMANGA": null,
+      "WIILOG MEDELLIN 2.0": null
+    },
+    "nota_tarifas": "null = tarifa por confirmar. En septiembre se observaron cobros de 2.500, 3.250 (Bogotá 3.0, sin recaudo) y 5.000. Juan Felipe mencionó 2.000, 3.500 y 5.000 según bodega.",
+    "tolerancia_centavos": 100,
+    "momento_cobro": {
+      "CON RECAUDO": "GUIA_GENERADA",
+      "SIN RECAUDO": "CIERRE"
+    },
+    "estados_cierre": ["ENTREGADO", "DEVOLUCION"],
+    "estados_reversa": ["RECHAZADO"],
+    "ventana_gracia_dias": 1,
+    "nota_ventana": "En septiembre el 100 % de los cobros entró el mismo día de la guía. Una orden con guía de hoy o de ayer sin cobro todavía no es hallazgo."
+  },
+
+  "flete_marca_blanca": {
+    "comision_por_guia": 1000,
+    "estados_cobro": ["ENTREGADO", "DEVOLUCION"],
+    "transportadoras_excluidas": ["WIILOG"],
+    "requiere_columna_marca_blanca": true
+  },
+
+  "conceptos_wallet": [
+    {"codigo": "FF_GUIA_GENERADA",      "tipo": "ENTRADA", "empieza_con": "PAGO POR GANANCIA COMISION FULFILLMENT DE MARCA BLANCA", "contiene": "CONCEPTO: GUIA_GENERADA"},
+    {"codigo": "FF_CIERRE",             "tipo": "ENTRADA", "empieza_con": "PAGO POR GANANCIA COMISION FULFILLMENT DE MARCA BLANCA", "contiene": "CONCEPTO: ENTREGADO"},
+    {"codigo": "FF_CIERRE",             "tipo": "ENTRADA", "empieza_con": "PAGO POR GANANCIA COMISION FULFILLMENT DE MARCA BLANCA", "contiene": "CONCEPTO: DEVOLUCION"},
+    {"codigo": "FF_OTRO_USUARIO",       "tipo": "ENTRADA", "empieza_con": "PAGO POR FULFILLMENT, ORDEN ID"},
+    {"codigo": "FF_CORRECCION",         "tipo": "SALIDA",  "empieza_con": "CORRECCION DE ENTRADA DE FULFILLMENT"},
+    {"codigo": "FLETE_MB",              "tipo": "ENTRADA", "empieza_con": "PAGO POR GANANCIA FLETE DE MARCA BLANCA"},
+    {"codigo": "CRUCE_RECARGA_IN",      "tipo": "ENTRADA", "empieza_con": "ENTRADA POR RECARGA CRUZADA DE MARCA BLANCA"},
+    {"codigo": "CRUCE_DESCUENTO_IN",    "tipo": "ENTRADA", "empieza_con": "ENTRADA POR RETIRO ADMIN EN USER", "contiene": "SALDO NEGATIVO"},
+    {"codigo": "CRUCE_RETIRO_OUT",      "tipo": "SALIDA",  "empieza_con": "SALIDA POR RETIRO CRUZADO DE MARCA BLANCA"},
+    {"codigo": "TRANSFERENCIA_RECIBIDA","tipo": "ENTRADA", "empieza_con": "ENTRADA POR RETIRO ADMIN EN USER"},
+    {"codigo": "RECARGA_RECIBIDA",      "tipo": "ENTRADA", "empieza_con": "RECARGA DE SALDO EN CARTERA"},
+    {"codigo": "TRASLADO_WALLET_WIILOG","tipo": "SALIDA",  "empieza_con": "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO WIILOGWALLET@WIILOG.COM.CO"},
+    {"codigo": "TRANSFERENCIA_ENVIADA", "tipo": "SALIDA",  "empieza_con": "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO"},
+    {"codigo": "RETIRO_BANCARIO",       "tipo": "SALIDA",  "requiere_columna": "CUENTA"}
+  ],
+  "nota_conceptos": "Se evalúan en orden: el primero que empareja gana. Texto normalizado: mayúsculas, sin tildes, espacios colapsados. Match por 'empieza con' y 'contiene', nunca por igualdad: la descripción trae ID de orden, guía y correos al final.",
+
+  "cruces_neto_cero": {
+    "descripcion": "Dropi usa la wallet de Wiilog como puente para cubrir saldos negativos de usuarios: entra y sale el mismo valor en minutos. Se emparejan y no son ingreso ni egreso de Wiilog.",
+    "emparejar": [
+      ["CRUCE_RECARGA_IN", "TRANSFERENCIA_ENVIADA"],
+      ["CRUCE_DESCUENTO_IN", "CRUCE_RETIRO_OUT"],
+      ["RECARGA_RECIBIDA", "TRANSFERENCIA_ENVIADA"]
+    ],
+    "misma_cantidad": true,
+    "ventana_minutos": 30
+  },
+
+  "fecha_corte": "max(FECHA) del archivo de la wallet"
+}
