@@ -39,3 +39,8 @@ Para restaurar:
 ```sh
 DATABASE_URL=... sh ops/restore_postgres.sh /ruta/backup.sql.gz
 ```
+
+
+## Sesión en producción
+
+En producción, `SESSION_COOKIE_SECURE=true` es obligatorio y el acceso debe hacerse exclusivamente por HTTPS. En desarrollo local puede usarse `false` para `http://127.0.0.1`, pero ese valor no debe desplegarse en producción.
