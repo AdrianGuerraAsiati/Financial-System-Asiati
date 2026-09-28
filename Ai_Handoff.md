@@ -382,9 +382,43 @@ Cada KPI debe declarar:
 
 ---
 
-## 11. Próximo trabajo recomendado: SPEC funcional de Compras
+## 11. Compras / Supply Chain — trabajo funcional iniciado
 
-Mientras el PR #44 esté abierto, este es el frente recomendado.
+Mientras el PR #44 siga abierto, el frente activo fuera de `app/core` es Compras / Supply Chain.
+
+Ya existen en la rama/PR de documentación:
+
+- `docs/compras/SPEC_COMPRAS_SUPPLY_CHAIN.md`
+- `docs/compras/ESTADOS_LOGISTICOS.md`
+- `docs/compras/PREGUNTAS_NEGOCIO.md`
+
+Baseline levantado del snapshot `INFORME COMPRAS 2024-2026.xlsx`:
+
+- 2.259 líneas sustantivas entre CO, EC y CL;
+- 705 OCs válidas por país;
+- 214 OCs con más de un proveedor;
+- 32 OCs con más de un estado;
+- 46 OCs con más de un modo de transporte;
+- estados y modos de transporte reales inventariados.
+
+Principio funcional confirmado por el levantamiento:
+
+`OC -> múltiples líneas/SKU -> proveedor/estado/transporte por línea`
+
+No modelar la OC como una sola fila.
+
+### Próximo paso
+
+Resolver con Juanfe las preguntas priorizadas en `docs/compras/PREGUNTAS_NEGOCIO.md`, empezando por:
+
+1. `EN OTM`;
+2. `PENDIENTE DEPÓSITO`;
+3. `PENDIENTE INVIMA`;
+4. definición corporativa de valor en tránsito;
+5. columna monetaria oficial del KPI.
+
+Después de esas respuestas se puede cerrar el mapa de estados y definir el primer KPI implementable.
+
 
 ### Paso 1 — contrato funcional de fuente
 
