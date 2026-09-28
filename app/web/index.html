@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plataforma Financiera ASIATI</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Bloque 1</p>
+      <h1>Plataforma Financiera ASIATI</h1>
+    </div>
+    <label class="empresa-control">
+      Empresa ID
+      <input id="empresa-id" type="number" min="1" value="1">
+    </label>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" aria-label="Módulos">
+      <button class="nav-item active" data-view="cartera">Cartera</button>
+      <button class="nav-item" disabled>Wallets <span>Pendiente</span></button>
+      <button class="nav-item" disabled>Chin Chin <span>Pendiente</span></button>
+    </nav>
+
+    <main class="content">
+      <section class="intro">
+        <div>
+          <p class="eyebrow">ASIATI Comercial</p>
+          <h2>Cartera</h2>
+          <p>Consulta operaciones, revisa una OC y radica comprobantes para auditoría.</p>
+        </div>
+        <div id="estado-global" class="status" role="status">Listo</div>
+      </section>
+
+      <section class="panel" id="operaciones">
+        <div class="panel-heading">
+          <div>
+            <h3>Operaciones</h3>
+            <p>Fuente temporal prevista: Google Sheets.</p>
+          </div>
+          <button id="cargar-operaciones" type="button">Actualizar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>OC</th>
+                <th>Cliente</th>
+                <th>SKU</th>
+                <th>Estado</th>
+                <th>Cartera</th>
+                <th>Valor</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="operaciones-body">
+              <tr><td colspan="7" class="empty">Carga las operaciones para comenzar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="detalle-operacion">
+        <div class="panel-heading">
+          <div>
+            <h3>Detalle individual</h3>
+            <p id="detalle-titulo">Selecciona una OC.</p>
+          </div>
+        </div>
+        <div id="detalle-contenido" class="empty-block">
+          No hay una operación seleccionada.
+        </div>
+      </section>
+
+      <section class="grid-two">
+        <section class="panel" id="comprobantes-pendientes">
+          <div class="panel-heading">
+            <div>
+              <h3>Comprobantes pendientes</h3>
+              <p>Soportes radicados pendientes de auditoría.</p>
+            </div>
+            <button id="cargar-pendientes" type="button">Actualizar</button>
+          </div>
+          <div id="pendientes-lista" class="stack">
+            <p class="empty">Carga la bandeja para comenzar.</p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Radicar comprobante</h3>
+              <p>PDF, JPEG o PNG. Máximo configurado por la plataforma.</p>
+            </div>
+          </div>
+
+          <form id="form-comprobante" class="form-grid">
+            <label>OC
+              <input name="oc" required>
+            </label>
+            <label>Cliente
+              <input name="cliente" required>
+            </label>
+            <label>País
+              <input name="pais" required>
+            </label>
+            <label>Valor DDP
+              <input name="valor_ddp" type="number" min="0" step="0.01" required>
+            </label>
+            <label class="span-two">Tipo de negociación
+              <input name="tipo_negociacion" required>
+            </label>
+            <label>Fecha de entrega
+              <input name="fecha_entrega" type="date" required>
+            </label>
+            <label>Comercial
+              <input name="comercial" required>
+            </label>
+            <label class="span-two">Comprobante
+              <input name="archivo" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required>
+            </label>
+            <p class="notice span-two">
+              País, comercial y fecha de entrega permanecen manuales hasta conectar la hoja real y confirmar esas columnas.
+            </p>
+            <button class="span-two" type="submit">Radicar comprobante</button>
+          </form>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
