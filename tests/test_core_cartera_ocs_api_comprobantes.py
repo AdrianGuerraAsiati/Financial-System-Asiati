@@ -51,9 +51,11 @@ def test_web_upload_radicates_and_stores_payment_proof(tmp_path: Path, monkeypat
     assert body["oc"] == "OC-WEB-1"
     assert body["estado_auditoria"] == "PENDIENTE"
     assert body["monto_esperado"] == 5000.0
-    assert body["ubicacion_archivo"]
+    assert "ubicacion_archivo" not in body
 
-    assert (tmp_path / body["ubicacion_archivo"]).read_bytes() == b"contenido comprobante web"
+    stored_files = list(tmp_path.rglob("*.pdf"))
+    assert len(stored_files) == 1
+    assert stored_files[0].read_bytes() == b"contenido comprobante web"
 
     with Session(engine) as session:
         persisted = session.get(ComprobantePagoPersistido, body["id"])
@@ -62,4 +64,4 @@ def test_web_upload_radicates_and_stores_payment_proof(tmp_path: Path, monkeypat
         assert persisted.empresa_id == empresa_id
         assert persisted.oc == "OC-WEB-1"
         assert persisted.estado_auditoria == "PENDIENTE"
-        assert persisted.ubicacion_archivo == body["ubicacion_archivo"]
+        assert persisted.ubicacion_archivo is not None

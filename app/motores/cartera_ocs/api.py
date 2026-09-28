@@ -3,6 +3,7 @@ from dataclasses import asdict
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.session import obtener_session
@@ -22,10 +23,40 @@ from app.motores.cartera_ocs.financiacion import (
     OperacionFinanciada,
     generar_condicion_pago,
 )
-from app.motores.cartera_ocs.persistencia import guardar_comprobante
+from app.motores.cartera_ocs.persistencia import (
+    existe_comprobante_por_hash,
+    guardar_comprobante,
+)
 
 
 router = APIRouter(prefix="/cartera", tags=["cartera"])
+
+TIPOS_COMPROBANTE_DEFAULT = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+}
+MAX_COMPROBANTE_BYTES_DEFAULT = 10 * 1024 * 1024
+
+
+def _tipos_comprobante_permitidos() -> set[str]:
+    configurados = os.getenv("CARTERA_COMPROBANTES_MIME_TYPES")
+    if not configurados:
+        return TIPOS_COMPROBANTE_DEFAULT
+    return {
+        tipo.strip()
+        for tipo in configurados.split(",")
+        if tipo.strip()
+    }
+
+
+def _max_comprobante_bytes() -> int:
+    return int(
+        os.getenv(
+            "CARTERA_COMPROBANTES_MAX_BYTES",
+            str(MAX_COMPROBANTE_BYTES_DEFAULT),
+        )
+    )
 
 
 def obtener_fuente_operaciones() -> FuenteOperacionesCartera:
@@ -118,11 +149,22 @@ def subir_comprobante(
     session: Session = Depends(obtener_session),
     almacen: AlmacenComprobantes = Depends(obtener_almacen_comprobantes),
 ) -> dict[str, object]:
+    if archivo.content_type not in _tipos_comprobante_permitidos():
+        raise HTTPException(
+            status_code=415,
+            detail="Tipo de archivo de comprobante no permitido.",
+        )
+
     contenido = archivo.file.read()
     if not contenido:
         raise HTTPException(
             status_code=400,
             detail="El comprobante no puede estar vacío.",
+        )
+    if len(contenido) > _max_comprobante_bytes():
+        raise HTTPException(
+            status_code=413,
+            detail="El comprobante supera el tamaño máximo permitido.",
         )
 
     operacion = OperacionFinanciada(
@@ -143,6 +185,16 @@ def subir_comprobante(
         contenido=contenido,
     )
 
+    if existe_comprobante_por_hash(
+        session,
+        empresa_id=empresa_id,
+        contenido_hash=comprobante.contenido_hash,
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Este comprobante ya fue radicado para la empresa.",
+        )
+
     ubicacion = almacen.guardar(
         empresa_id=empresa_id,
         oc=comprobante.oc,
@@ -151,14 +203,26 @@ def subir_comprobante(
         contenido=contenido,
     )
 
-    registro = guardar_comprobante(
-        session,
-        empresa_id=empresa_id,
-        comprobante=comprobante,
-        ubicacion_archivo=ubicacion,
-    )
-    session.commit()
-    session.refresh(registro)
+    try:
+        registro = guardar_comprobante(
+            session,
+            empresa_id=empresa_id,
+            comprobante=comprobante,
+            ubicacion_archivo=ubicacion,
+        )
+        session.commit()
+        session.refresh(registro)
+    except IntegrityError as exc:
+        session.rollback()
+        almacen.eliminar(ubicacion)
+        raise HTTPException(
+            status_code=409,
+            detail="Este comprobante ya fue radicado para la empresa.",
+        ) from exc
+    except Exception:
+        session.rollback()
+        almacen.eliminar(ubicacion)
+        raise
 
     return {
         "id": registro.id,
@@ -166,5 +230,4 @@ def subir_comprobante(
         "estado_auditoria": registro.estado_auditoria,
         "monto_esperado": float(registro.monto_esperado),
         "contenido_hash": registro.contenido_hash,
-        "ubicacion_archivo": registro.ubicacion_archivo,
     }
