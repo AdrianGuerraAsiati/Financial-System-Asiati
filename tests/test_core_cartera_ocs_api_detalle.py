@@ -1,6 +1,6 @@
-from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.api import obtener_fuente_operaciones
 from app.motores.cartera_ocs.importacion import RegistroCarteraEnCamino
 
@@ -34,8 +34,8 @@ class FuenteFake:
 def test_web_returns_individual_operation_with_all_lines() -> None:
     app.dependency_overrides[obtener_fuente_operaciones] = lambda: FuenteFake()
     try:
-        response = TestClient(app).get(
-            "/cartera/operaciones/OC-DET?empresa_id=4"
+        response = cliente_superadmin().get(
+            "/api/v1/cartera/operaciones/OC-DET?empresa_id=4"
         )
     finally:
         app.dependency_overrides.clear()
@@ -50,8 +50,8 @@ def test_web_returns_individual_operation_with_all_lines() -> None:
 def test_web_returns_404_for_unknown_operation() -> None:
     app.dependency_overrides[obtener_fuente_operaciones] = lambda: FuenteFake()
     try:
-        response = TestClient(app).get(
-            "/cartera/operaciones/OC-X?empresa_id=4"
+        response = cliente_superadmin().get(
+            "/api/v1/cartera/operaciones/OC-X?empresa_id=4"
         )
     finally:
         app.dependency_overrides.clear()
