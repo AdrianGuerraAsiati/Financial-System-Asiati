@@ -52,6 +52,8 @@ Los códigos de rol siguen la convención de la migración `0009_create_usuarios
 | `cargas.eliminar` | Borrar una carga de un período abierto | Sí | — | Asig. | — | — |
 | `conciliacion.ejecutar` | Correr la conciliación de un período y fuente | Sí | — | Asig. | — | — |
 | `conciliacion.ver` | Ver resultados, hallazgos y resumen | Sí | Asig. | Asig. | Leer | — |
+| `cartera.ver` | Ver operaciones, mora, proyección y comprobantes | Sí | Asig. | Asig. | Leer | — |
+| `cartera.comprobantes.subir` | Radicar comprobantes de pago | Sí | — | Asig. | — | — |
 | `movimientos.categorizar` | Cambiar categoría y escribir observación | Sí | Asig. | Asig. | — | — |
 | `reglas.crear` | Guardar una regla de categorización nueva | Sí | Asig. | Asig. | — | — |
 | `hallazgos.gestionar` | Asignar, justificar, marcar resuelto | Sí | Asig. | Asig. | — | — |
@@ -69,6 +71,7 @@ Notas:
 - **Cerrar período** lo hace el coordinador (supervisa) y el superadmin; el conciliador no cierra su propio trabajo.
 - **TI no modifica datos financieros.** Puede ver resultados para diagnosticar un error y reprocesar lo que falló, siempre dejando rastro en auditoría. Si un arreglo exige cambiar un dato, lo hace un superadmin.
 - **Analista de tesorería** queda sin permisos hasta el bloque de tesorería.
+- **Cartera:** el mapeo inicial replica el alcance de consulta de conciliación y el patrón operativo de carga. Puede ajustarse cuando negocio defina un rol específico de cartera.
 
 ---
 
