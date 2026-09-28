@@ -12,7 +12,8 @@ Estados por orden
   EN_VENTANA          debía cobrarse hace menos de la ventana de gracia
   PENDIENTE_CIERRE    sin recaudo que todavía no cierra
   REVERSADO           cobrado y reversado por Dropi (orden rechazada)
-  NO_APLICA           bodega externa, sin guía o rechazada sin cobro
+  COBRADO_NO_CORRESPONDE  cobro en una bodega que no cobra FF (p. ej. Bucaramanga)  [hallazgo · medio]
+  NO_APLICA           bodega externa o sin FF, sin guía, o rechazada sin cobro
 """
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ import pandas as pd
 from . import normalizar as n
 
 CONCEPTOS_FF = ["FF_GUIA_GENERADA", "FF_CIERRE", "FF_OTRO_USUARIO", "FF_CORRECCION"]
-SEVERIDAD = {"NO_COBRADO": "critico", "DUPLICADO": "medio", "DIFERENCIA_TARIFA": "medio"}
+SEVERIDAD = {"NO_COBRADO": "critico", "DUPLICADO": "medio", "DIFERENCIA_TARIFA": "medio", "COBRADO_NO_CORRESPONDE": "medio"}
 
 
 def _pagos_por_orden(wallet: pd.DataFrame) -> pd.DataFrame:
@@ -47,6 +48,8 @@ def conciliar(ordenes: pd.DataFrame, wallet: pd.DataFrame, params: dict, fecha_c
     """Devuelve (resultado por orden del reporte, cobros de FF sin orden en el reporte)."""
     cfg = params["fulfillment"]
     prefijo = n.texto(cfg["bodegas_que_cobran_prefijo"])
+    sin_ff = {n.texto(b) for b in cfg.get("bodegas_sin_fulfillment", [])}
+    cobra_en_devolucion = bool(cfg.get("sin_recaudo_cobra_en_devolucion", True))
     tarifas = {n.texto(k): v for k, v in cfg["tarifas_por_bodega"].items()}
     general_c = n.centavos(cfg["tarifa_general"])
     tol = int(cfg["tolerancia_centavos"])
@@ -59,6 +62,8 @@ def conciliar(ordenes: pd.DataFrame, wallet: pd.DataFrame, params: dict, fecha_c
     r[["ff_neto_c", "ff_entradas", "ff_correcciones"]] = r[["ff_neto_c", "ff_entradas", "ff_correcciones"]].fillna(0).astype("int64")
 
     r["bodega_wiilog"] = r["bodega"].str.startswith(prefijo)
+    # Bodega que cobra FF: es de Wiilog y no está en la lista de bodegas sin fulfillment.
+    r["bodega_cobra_ff"] = r["bodega_wiilog"] & ~r["bodega"].isin(sin_ff)
     tarifa = r["bodega"].map(tarifas)
     r["tarifa_confirmada"] = tarifa.notna()
     r["tarifa_c"] = tarifa.map(lambda v: n.centavos(v) if pd.notna(v) else general_c)
@@ -67,11 +72,13 @@ def conciliar(ordenes: pd.DataFrame, wallet: pd.DataFrame, params: dict, fecha_c
     r["momento_cobro"] = np.where(sin_recaudo, "CIERRE", "GUIA_GENERADA")
     r["fecha_hecho"] = np.where(sin_recaudo, r["fecha_cierre"], r["fecha_guia"])
     r["fecha_hecho"] = pd.to_datetime(r["fecha_hecho"])
-    cerrada = r["estatus"].isin(cierre)
+    cierre_sr = cierre if cobra_en_devolucion else (cierre - {"DEVOLUCION"})
+    cerrada = r["estatus"].isin(cierre_sr)
     debia = np.where(sin_recaudo, cerrada, r["fecha_guia"].notna())
 
     estado = np.full(len(r), "NO_APLICA", dtype=object)
-    wi = r["bodega_wiilog"].to_numpy()
+    wi = r["bodega_cobra_ff"].to_numpy()
+    wiilog_sin_ff = (r["bodega_wiilog"] & ~r["bodega_cobra_ff"]).to_numpy()
     rev = r["estatus"].isin(reversa).to_numpy()
     cobrado = (r["ff_neto_c"] > 0).to_numpy()
     tuvo_entrada = (r["ff_entradas"] > 0).to_numpy()
@@ -80,7 +87,9 @@ def conciliar(ordenes: pd.DataFrame, wallet: pd.DataFrame, params: dict, fecha_c
     en_ventana = (r["fecha_hecho"] >= limite).to_numpy()
 
     for i in range(len(r)):
-        if not wi[i]:
+        if wiilog_sin_ff[i]:
+            estado[i] = "COBRADO_NO_CORRESPONDE" if cobrado[i] else "NO_APLICA"
+        elif not wi[i]:
             estado[i] = "NO_APLICA"
         elif rev[i]:
             estado[i] = "REVERSADO" if tuvo_entrada[i] and not cobrado[i] else ("COBRADO" if cobrado[i] else "NO_APLICA")
@@ -99,8 +108,8 @@ def conciliar(ordenes: pd.DataFrame, wallet: pd.DataFrame, params: dict, fecha_c
     r["dias_desde_hecho"] = (fecha_corte.normalize() - r["fecha_hecho"]).dt.days
     # Monto en juego: lo que falta cobrar, o lo cobrado de más.
     en_juego = np.select(
-        [r.estado_ff == "NO_COBRADO", r.estado_ff == "DUPLICADO", r.estado_ff == "DIFERENCIA_TARIFA"],
-        [r.tarifa_c, r.ff_neto_c - r.tarifa_c, (r.ff_neto_c - r.tarifa_c).abs()],
+        [r.estado_ff == "NO_COBRADO", r.estado_ff == "DUPLICADO", r.estado_ff == "DIFERENCIA_TARIFA", r.estado_ff == "COBRADO_NO_CORRESPONDE"],
+        [r.tarifa_c, r.ff_neto_c - r.tarifa_c, (r.ff_neto_c - r.tarifa_c).abs(), r.ff_neto_c],
         0,
     )
     r["monto_en_juego_c"] = en_juego.astype("int64")

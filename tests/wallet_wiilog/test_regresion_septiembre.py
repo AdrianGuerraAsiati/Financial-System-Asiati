@@ -2,6 +2,7 @@
 
 Los archivos viven en fixtures/ y NO se suben a git. Si no están, el test se salta.
 Las cifras esperadas están documentadas en docs/motores/conciliacion_wallets/WALLET_WIILOG.md §7.
+Parámetros versión 2 (28-sep-2026): Bucaramanga no cobra FF; Bogotá 3.0 a 3.250.
 """
 import json
 from pathlib import Path
@@ -47,23 +48,25 @@ def test_ff_por_estado(resultado):
     ff = resultado.ff[resultado.ff.bodega_wiilog]
     assert ff.estado_ff.value_counts().to_dict() == {
         "COBRADO": 17634,
-        "NO_APLICA": 4276,
-        "NO_COBRADO": 685,
+        "NO_APLICA": 5016,
         "DUPLICADO": 98,
-        "EN_VENTANA": 80,
-        "PENDIENTE_CIERRE": 74,
+        "PENDIENTE_CIERRE": 71,
         "REVERSADO": 25,
+        "EN_VENTANA": 20,
         "DIFERENCIA_TARIFA": 12,
+        "NO_COBRADO": 8,
     }
     en_juego = ff.groupby("estado_ff").monto_en_juego_c.sum()
-    assert en_juego["NO_COBRADO"] == 171_250_000
+    assert en_juego["NO_COBRADO"] == 2_075_000
     assert en_juego["DUPLICADO"] == 24_500_000
     assert en_juego["DIFERENCIA_TARIFA"] == 3_000_000
 
 
 def test_ff_no_cobrado_por_bodega(resultado):
     nc = resultado.ff[resultado.ff.estado_ff == "NO_COBRADO"].bodega.value_counts().to_dict()
-    assert nc == {"WIILOG BUCARAMANGA": 677, "WIILOG BOGOTA": 7, "WIILOG BOGOTA 3.0": 1}
+    assert nc == {"WIILOG BOGOTA": 7, "WIILOG BOGOTA 3.0": 1}
+    # Las 8 son órdenes sin recaudo devueltas: Dropi solo paga FF al entregar. Se reclaman.
+    assert set(resultado.ff[resultado.ff.estado_ff == "NO_COBRADO"].estatus) == {"DEVOLUCION"}
 
 
 def test_ff_fuera_del_reporte(resultado):
