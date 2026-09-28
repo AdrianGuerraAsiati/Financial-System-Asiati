@@ -211,3 +211,32 @@ def test_cruce_de_cartera_se_empareja_y_queda_neto_cero():
     cruce = res.movimientos[res.movimientos.cruce_id.notna()]
     assert len(cruce) == 2
     assert set(cruce.flujo) == {"NETO_CERO"}
+
+
+# ------------------------------------------------------------------ parámetros v2 (28-sep-2026)
+
+def test_v2_bucaramanga_no_cobra_ff():
+    res = correr([orden(1, bodega="WIILOG BUCARAMANGA")], Wallet())
+    assert estado_ff(res, 1) == "NO_APLICA"
+
+
+def test_v2_cobro_en_bucaramanga_no_corresponde():
+    res = correr([orden(1, bodega="WIILOG BUCARAMANGA")], Wallet().mov("ENTRADA", 2500, ff_gg(1), 1))
+    assert estado_ff(res, 1) == "COBRADO_NO_CORRESPONDE"
+    assert res.ff.loc["1", "monto_en_juego_c"] == n.centavos(2500)
+
+
+def test_v2_bogota_3_0_tarifa_3250():
+    res = correr([orden(1, bodega="WIILOG BOGOTÁ 3.0")], Wallet().mov("ENTRADA", 3250, ff_gg(1), 1))
+    assert estado_ff(res, 1) == "COBRADO"
+
+
+def test_v2_bogota_3_0_cobrado_a_2500_es_diferencia():
+    res = correr([orden(1, bodega="WIILOG BOGOTÁ 3.0")], Wallet().mov("ENTRADA", 2500, ff_gg(1), 1))
+    assert estado_ff(res, 1) == "DIFERENCIA_TARIFA"
+
+
+def test_v2_bodega_con_tarifa_por_confirmar_acepta_el_cobro():
+    res = correr([orden(1, bodega="WIILOG BOGOTÁ 2.0")], Wallet().mov("ENTRADA", 4000, ff_gg(1), 1))
+    assert estado_ff(res, 1) == "COBRADO"
+    assert bool(res.ff.loc["1", "tarifa_confirmada"]) is False

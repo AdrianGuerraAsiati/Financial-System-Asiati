@@ -26,7 +26,7 @@
 | 3 | **Cómo Wiilog cobra el fulfillment por guía** — la regla de su conciliación | ✅ Resuelto: ver [`WALLET_WIILOG.md`](WALLET_WIILOG.md) |
 | 4 | Archivos en `fixtures/`: órdenes de julio, las exportaciones de las tres wallets, y el resultado esperado de la corrida manual | ⬜ |
 
-Sin el punto 2 el motor puede construirse igual, pero la regla C3 sale con ruido y nadie le va a creer al resto del tablero. Sin el punto 3, el motor de Wiilog queda en borrador.
+Sin el punto 2 el motor puede construirse igual, pero la regla C3 sale con ruido y nadie le va a creer al resto del tablero.
 
 ---
 

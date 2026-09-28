@@ -10,6 +10,7 @@ Numeración: [SemVer](https://semver.org/lang/es/) — 0.x mientras no haya un c
 - Kit de trabajo con Claude Code: CLAUDE.md, comandos en `.claude/`, CODEOWNERS y plantilla de PR.
 - Motor de referencia de la wallet Wiilog (Python puro) con pruebas sintéticas y regresión de septiembre 2026.
 - Marcador `fixtures_reales` registrado en `pyproject.toml`.
+- Parámetros v2 de la wallet Wiilog: Bucaramanga sin fulfillment, tarifas por bodega, devoluciones sin recaudo se reclaman.
 
 ### Corregido
 - Avisos de obsolescencia de `pd.Timedelta` en el motor Wiilog, sin cambiar resultados.

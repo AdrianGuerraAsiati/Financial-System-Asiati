@@ -1,6 +1,8 @@
 # Wallet Wiilog · reglas de conciliación
 
-Versión 1 · 28 de septiembre de 2026 · Reglas: Juan Felipe Parra · Mapeo y validación: corrida sobre septiembre 2026
+Versión 2 · 28 de septiembre de 2026 · Reglas: Juan Felipe Parra · Mapeo y validación: corrida sobre septiembre 2026
+
+**Cambios de la versión 2:** Bucaramanga no cobra fulfillment; la tarifa depende solo de la bodega (Bogotá 2.500, Bogotá 3.0 3.250, Bogotá 2.0 y Medellín 2.0 por confirmar); la devolución sin recaudo sin cobro se reclama; el reverso en rechazadas es correcto.
 
 Parámetros: `parametros_wallet_wiilog.json` (mismo directorio).
 Motor de referencia: `app/motores/conciliacion_wallets/wiilog/` — Python puro, probado con septiembre.
@@ -83,14 +85,14 @@ Lo mismo para las **transferencias recibidas** de usuarios. Septiembre trae: 5 e
 
 | Elemento | Regla |
 |---|---|
-| Quién cobra | Órdenes despachadas desde bodegas Wiilog: `BODEGA` empieza con `WIILOG` (Bogotá, Bogotá 2.0, Bogotá 3.0, Bucaramanga, Medellín 2.0). Las demás bodegas no generan FF. |
+| Quién cobra | Órdenes despachadas desde bodegas Wiilog: `BODEGA` empieza con `WIILOG`, **excepto Bucaramanga**, que no cobra fulfillment. Las bodegas externas no generan FF. Un cobro en Bucaramanga es `COBRADO_NO_CORRESPONDE`. |
 | Cuándo, con recaudo | Al generarse la guía (`FECHA GENERACION DE GUIA`). Concepto `…CONCEPTO: GUIA_GENERADA`. |
-| Cuándo, sin recaudo | Al cerrar la orden: `ENTREGADO` o `DEVOLUCION` (`FECHA ENTREGADO` / `FECHA DEVOLUCION`). Concepto `…CONCEPTO: ENTREGADO`. |
-| Cuánto | Tarifa por bodega (parámetro). General 2.500. |
+| Cuándo, sin recaudo | Al cerrar la orden: `ENTREGADO` o `DEVOLUCION` (`FECHA ENTREGADO` / `FECHA DEVOLUCION`). Concepto `…CONCEPTO: ENTREGADO`. Dropi solo paga al entregar: **la devolución sin cobro se reclama** (`NO_COBRADO`). |
+| Cuánto | **Solo depende de la bodega**, no del tipo de envío ni del cliente: Bogotá 2.500 · Bogotá 3.0 3.250 · Bogotá 2.0 y Medellín 2.0 por confirmar (se acepta el cobro que llegue y se marca la tarifa como pendiente). Cualquier otro valor es `DIFERENCIA_TARIFA`. |
 | Ventana | 1 día: en septiembre el 100 % de los cobros entró el mismo día de la guía. |
-| Rechazadas | Dropi cobra y reversa (`CORRECCIÓN DE ENTRADA DE FULFILLMENT`). |
+| Rechazadas | Dropi cobra y reversa (`CORRECCIÓN DE ENTRADA DE FULFILLMENT`). **Es correcto**: `REVERSADO`, informativo. |
 
-Estados: `COBRADO` · `NO_COBRADO` (crítico) · `DUPLICADO` (medio) · `DIFERENCIA_TARIFA` (medio) · `EN_VENTANA` · `PENDIENTE_CIERRE` · `REVERSADO` · `NO_APLICA`.
+Estados: `COBRADO` · `NO_COBRADO` (crítico) · `DUPLICADO` (medio) · `DIFERENCIA_TARIFA` (medio) · `COBRADO_NO_CORRESPONDE` (medio) · `EN_VENTANA` · `PENDIENTE_CIERRE` · `REVERSADO` · `NO_APLICA`.
 Del lado de la wallet: `FUERA_DEL_REPORTE` (orden no está en el reporte de órdenes) y `FUERA_MARCA_BLANCA` (pago "PAGO POR FULFILLMENT").
 
 ## 6. Regla FLETE · Comisión de flete marca blanca
@@ -112,15 +114,15 @@ Archivos: `ordenes_sept_20260928_144134.xlsx` y `historyWallet_20260928_142641.x
 C0_SALDO            EN_ORDEN · saldo inicial 3.000,72 · entradas 86.853.298,80 · salidas 51.107.944,97 · final 35.748.354,55
 Órdenes agrupadas   23.093 (26.331 filas)
 
-FF · órdenes de bodegas Wiilog            22.884
+FF · órdenes de bodegas Wiilog (parámetros v2)   22.884
   COBRADO                                 17.634
-  NO_COBRADO                                 685   $1.712.500   (Bucaramanga 677 · Bogotá 7 · Bogotá 3.0 1)
+  NO_COBRADO                                   8      $20.750   (devoluciones sin recaudo: Bogotá 7 · Bogotá 3.0 1)
   DUPLICADO                                   98     $245.000
-  DIFERENCIA_TARIFA                           12      $30.000
-  EN_VENTANA                                  80
-  PENDIENTE_CIERRE                            74
+  DIFERENCIA_TARIFA                           12      $30.000   (Bogotá cobradas a 5.000)
+  EN_VENTANA                                  20
+  PENDIENTE_CIERRE                            71
   REVERSADO                                   25
-  NO_APLICA                                4.276
+  NO_APLICA                                5.016   (incluye las 870 de Bucaramanga)
 FF cobrado sin orden en el reporte
   FUERA_DEL_REPORTE                        1.333   $3.461.249,87
   FUERA_MARCA_BLANCA                       1.461   $3.652.499,94
@@ -135,17 +137,25 @@ Cruces neto cero emparejados                         18 parejas
 
 Si el motor no da estas cifras con estos archivos, el motor está mal, no los datos. Si una regla cambia a propósito, la línea base se actualiza en el mismo PR con la explicación.
 
-## 8. Lo que septiembre encontró y hay que decidir
+## 8. Decisiones
+
+### Cerradas el 28 de septiembre de 2026 (Juan Felipe)
+
+| # | Tema | Decisión | Efecto en septiembre |
+|---|---|---|---|
+| 1 | Bucaramanga | No cobra fulfillment. | Sus 870 órdenes pasan a `NO_APLICA`; ya no hay 677 no cobradas. |
+| 2 | Tarifas | Solo dependen de la bodega. Bogotá 2.500, Bogotá 3.0 3.250, Bogotá 2.0 y Medellín 2.0 por confirmar. | Los 24 cobros de 3.250 en Bogotá 3.0 son correctos. Los 12 cobros de 5.000 en Bogotá son `DIFERENCIA_TARIFA` ($30.000 de más). |
+| 3 | Devolución sin recaudo | Se cobra y, si no llega, se reclama. | 8 órdenes `NO_COBRADO`, $20.750. |
+| 4 | Rechazadas | El reverso de Dropi es correcto. | 25 órdenes `REVERSADO`, informativo. |
+
+### Abiertas
 
 | # | Hallazgo | Cifra | Pregunta | Decide |
 |---|---|---|---|---|
-| 1 | **Bucaramanga no cobra FF.** Ninguna orden de WIILOG BUCARAMANGA tiene cobro de FF y el reporte trae `TOTAL FULFILLMENT` en 0 para todas. | 677 órdenes · $1.692.500 a 2.500 | ¿Bucaramanga debe cobrar FF? ¿A qué tarifa? Si sí, es configuración en Dropi y se reclama. | Juan Felipe |
-| 2 | **FF cobrado dos veces** en la misma orden, misma guía, mismo minuto. | 98 órdenes del reporte · $245.000 (más 63 fuera del reporte) | Se le cobró de más al cliente: ¿se devuelve o se reporta a Dropi? | Juan Felipe |
-| 3 | **Devoluciones sin recaudo sin FF.** Dropi solo paga FF de sin recaudo cuando se entrega. | 8 órdenes · $20.000 | La regla dice que también se cobra en devolución. ¿Se reclama? | Juan Felipe |
-| 4 | **FF de 5.000 en Bogotá** con una sola entrada. | 12 órdenes · $30.000 de diferencia | ¿Cuándo aplica 5.000 en Bogotá? | Juan Felipe |
-| 5 | **Tarifas por bodega.** Bogotá 3.0 cobra 3.250 en sin recaudo. Se mencionaron 2.000, 3.500 y 5.000. | — | Tabla de tarifas por bodega y tipo de envío. | Juan Felipe |
-| 6 | **Rechazadas: Dropi reversa el FF.** | 25 órdenes | ¿Es correcto no cobrar el FF de una orden rechazada que ya se preparó? | Juan Felipe |
-| 7 | **"PAGO POR FULFILLMENT"** de órdenes que no están en el reporte de marca blanca. | 1.461 · $3.652.500 | ¿Son órdenes de usuarios Dropi despachadas desde bodegas Wiilog? Hace falta su reporte para conciliarlas. | Juan Felipe |
-| 8 | **Órdenes de agosto cobradas en septiembre.** | 1.333 · $3.461.250 | Descargar órdenes con un mes de margen hacia atrás. | Operación |
-| 9 | **Flete sin verificar.** | 4.268 guías cerradas sin comisión | Pedir a Jorge (KAM Dropi) el reporte con la columna MARCA BLANCA. | Operación |
-| 10 | **Transferencias por SUPER ADMIN.** | 5 enviadas $5.194.015 · 5 recibidas $10.165.060 | Soporte de cada una. | Conciliador |
+| 5 | **FF cobrado dos veces** en la misma orden, misma guía, mismo minuto. | 98 órdenes · $245.000 (más 63 fuera del reporte) | Se le cobró de más al cliente: ¿se devuelve o se reporta a Dropi? | Juan Felipe |
+| 6 | **Cobros de 5.000 en Bogotá.** | 12 órdenes · $30.000 | ¿Se reclama la diferencia a Dropi o se devuelve al cliente? | Juan Felipe |
+| 7 | **Tarifas de Bogotá 2.0 y Medellín 2.0.** | Sin cobros en septiembre | Confirmar el valor. | Juan Felipe |
+| 8 | **"PAGO POR FULFILLMENT"** de órdenes que no están en el reporte de marca blanca. | 1.461 · $3.652.500 | ¿Son órdenes de usuarios Dropi despachadas desde bodegas Wiilog? Hace falta su reporte. | Juan Felipe |
+| 9 | **Órdenes de agosto cobradas en septiembre.** | 1.333 · $3.461.250 | Descargar órdenes con un mes de margen hacia atrás. | Operación |
+| 10 | **Flete sin verificar.** | 4.268 guías cerradas sin comisión | Pedir a Jorge (KAM Dropi) el reporte con la columna MARCA BLANCA. | Operación |
+| 11 | **Transferencias por SUPER ADMIN.** | 5 enviadas $5.194.015 · 5 recibidas $10.165.060 | Soporte de cada una. | Conciliador |
