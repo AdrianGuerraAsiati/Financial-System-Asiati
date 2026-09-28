@@ -20,7 +20,7 @@ El módulo debe permitir responder, como mínimo:
 - qué operaciones requieren atención;
 - qué mercancía se espera recibir y cuándo.
 
-Por decisión corporativa vigente, **no se reemplaza ni rediseña la fuente actual**. La plataforma lee el Google Sheet tal como existe y aplica una capa de normalización y lógica encima.
+Por decisión corporativa vigente, **no se reemplaza ni rediseña la fuente actual**. La plataforma lee el Google Sheet tal como existe y aplica una capa de normalización y lógica encima. Además, la fuente es **estrictamente de solo lectura** para la plataforma; ver `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`.
 
 ---
 
@@ -338,7 +338,7 @@ detalle fuente -> regla propia -> resultado -> comparación contra vista existen
 ## 11. Fuera de alcance por ahora
 
 - reemplazar Google Sheets;
-- escribir de vuelta al Sheet;
+- escribir de vuelta al Sheet (prohibido por la decisión 0005 mientras siga vigente);
 - construir base de datos propia de compras;
 - modificar `app/core` mientras el PR #44 siga en curso;
 - OCR de comprobantes;
