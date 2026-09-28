@@ -90,8 +90,8 @@ def conciliar_wiilog(
 @router.get("/hallazgos")
 def consultar_hallazgos_wiilog(
     empresa_id: int,
-    _acceso: Acceso = Depends(ver_conciliacion),
     periodo_id: int,
+    _acceso: Acceso = Depends(ver_conciliacion),
     session: Session = Depends(obtener_session),
 ) -> list[dict[str, object]]:
     try:
