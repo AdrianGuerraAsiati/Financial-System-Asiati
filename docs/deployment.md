@@ -16,10 +16,17 @@ Esta configuración prepara una instalación de un solo servidor para la primera
 ## Arranque
 
 1. Copiar `.env.production.example` a `.env.production`.
-2. Configurar dominio, contraseña de PostgreSQL y variables de Google Sheets.
+2. Configurar dominio, contraseña de PostgreSQL, variables de Google Sheets y
+   `JWT_SECRET` (aleatorio, 48+ caracteres; por ejemplo
+   `python -c "import secrets; print(secrets.token_urlsafe(48))"`).
 3. Colocar el service account de Google en la ruta indicada por `GOOGLE_SERVICE_ACCOUNT_FILE`.
 4. Apuntar el DNS del dominio al servidor.
 5. Ejecutar `docker compose -f compose.production.yml up -d --build`.
+6. Crear el primer superadministrador desde la terminal (no hay endpoint público):
+   `docker compose -f compose.production.yml exec api python -m app.core.usuarios.crear_superadmin --email <correo> --nombre "<nombre>"`.
+
+Mientras siga vigente `docs/decisiones/0004-endpoints-wiilog-sin-auth-temporal.md`,
+la plataforma no se publica en internet.
 
 ## Backup
 
