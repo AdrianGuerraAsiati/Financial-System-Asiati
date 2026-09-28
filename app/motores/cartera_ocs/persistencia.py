@@ -27,6 +27,10 @@ class ComprobantePagoPersistido(Base):
     )
     nombre_archivo: Mapped[str] = mapped_column(String(255), nullable=False)
     contenido_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    ubicacion_archivo: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
     estado_auditoria: Mapped[str] = mapped_column(
         String(40),
         nullable=False,
@@ -44,6 +48,7 @@ def guardar_comprobante(
     *,
     empresa_id: int,
     comprobante: ComprobantePago,
+    ubicacion_archivo: str | None = None,
 ) -> ComprobantePagoPersistido:
     """Persiste un comprobante radicado dentro del módulo de Cartera."""
     registro = ComprobantePagoPersistido(
@@ -55,6 +60,7 @@ def guardar_comprobante(
         monto_esperado=Decimal(str(comprobante.monto_esperado)),
         nombre_archivo=comprobante.nombre_archivo,
         contenido_hash=comprobante.contenido_hash,
+        ubicacion_archivo=ubicacion_archivo,
         estado_auditoria=comprobante.estado_auditoria,
     )
     session.add(registro)
