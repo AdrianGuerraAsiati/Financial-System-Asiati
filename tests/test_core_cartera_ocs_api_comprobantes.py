@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.empresas import Empresa
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.persistencia import ComprobantePagoPersistido
 
 
@@ -24,9 +24,9 @@ def test_web_upload_radicates_and_stores_payment_proof(tmp_path: Path, monkeypat
         session.commit()
         empresa_id = empresa.id
 
-    client = TestClient(app)
+    client = cliente_superadmin()
     response = client.post(
-        "/cartera/comprobantes",
+        "/api/v1/cartera/comprobantes",
         data={
             "empresa_id": str(empresa_id),
             "oc": "OC-WEB-1",
