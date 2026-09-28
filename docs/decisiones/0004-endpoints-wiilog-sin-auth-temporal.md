@@ -2,7 +2,7 @@
 
 - Fecha: 2026-09-28
 - Decidió: Juan Felipe Parra
-- Estado: Aceptada
+- Estado: Implementada / cerrada
 
 ## Contexto
 `docs/nucleo/ROLES_Y_PERMISOS.md §7` exige que cada endpoint revise permisos en el
@@ -23,3 +23,15 @@ La plataforma NO se publica en internet hasta que estén protegidos.
   `requiere("conciliacion.ejecutar", empresa_de=...)` y `hallazgos` con
   `requiere("conciliacion.ver", empresa_de=...)`, y mover las rutas bajo `/api/v1`.
 - Ningún despliegue público se hace mientras esta decisión siga vigente.
+
+
+## Cierre
+
+La excepción temporal termina con la integración de autenticación de la plataforma:
+
+- `POST /api/v1/wallets/wiilog/conciliar` exige `conciliacion.ejecutar` y valida la empresa.
+- `GET /api/v1/wallets/wiilog/hallazgos` exige `conciliacion.ver` y valida la empresa.
+- Las rutas anteriores sin `/api/v1` dejan de registrarse.
+- Cartera también queda detrás de sesión y permisos en el mismo rollout de autenticación.
+
+La plataforma puede avanzar hacia despliegue público solo cuando la configuración de producción mantenga la cookie de sesión con `Secure=true`, HTTPS y el resto de controles de despliegue documentados.
