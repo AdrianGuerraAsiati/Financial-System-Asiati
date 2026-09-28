@@ -2,12 +2,12 @@ import os
 from datetime import date
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.empresas import Empresa
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.api import obtener_almacen_comprobantes
 from app.motores.cartera_ocs.almacenamiento import AlmacenLocalComprobantes
 from app.motores.cartera_ocs.comprobantes import radicar_comprobante
@@ -70,8 +70,8 @@ def test_web_serves_payment_proof_without_exposing_storage_path(tmp_path: Path) 
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
     try:
-        response = TestClient(app).get(
-            f"/cartera/comprobantes/{comprobante_id}/archivo?empresa_id={empresa_id}"
+        response = cliente_superadmin().get(
+            f"/api/v1/cartera/comprobantes/{comprobante_id}/archivo?empresa_id={empresa_id}"
         )
     finally:
         app.dependency_overrides.clear()
@@ -89,8 +89,8 @@ def test_web_does_not_serve_proof_from_another_company(tmp_path: Path) -> None:
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
     try:
-        response = TestClient(app).get(
-            f"/cartera/comprobantes/{comprobante_id}/archivo"
+        response = cliente_superadmin().get(
+            f"/api/v1/cartera/comprobantes/{comprobante_id}/archivo"
             f"?empresa_id={otra_empresa_id}"
         )
     finally:
