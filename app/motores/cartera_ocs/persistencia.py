@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.core.db import Base
@@ -10,6 +10,13 @@ from app.motores.cartera_ocs.comprobantes import ComprobantePago
 
 class ComprobantePagoPersistido(Base):
     __tablename__ = "cartera_comprobantes_pago"
+    __table_args__ = (
+        UniqueConstraint(
+            "empresa_id",
+            "contenido_hash",
+            name="uq_cartera_comprobante_empresa_hash",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     empresa_id: Mapped[int] = mapped_column(
@@ -65,3 +72,16 @@ def guardar_comprobante(
     )
     session.add(registro)
     return registro
+
+
+def existe_comprobante_por_hash(
+    session: Session,
+    *,
+    empresa_id: int,
+    contenido_hash: str,
+) -> bool:
+    statement = select(ComprobantePagoPersistido.id).where(
+        ComprobantePagoPersistido.empresa_id == empresa_id,
+        ComprobantePagoPersistido.contenido_hash == contenido_hash,
+    )
+    return session.scalar(statement) is not None
