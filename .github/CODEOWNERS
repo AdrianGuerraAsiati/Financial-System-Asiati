@@ -1,0 +1,15 @@
+# Cada PR pide revisión automática a los dueños de lo que toca.
+# Requiere que ambos usuarios tengan permiso de escritura en el repo.
+
+# Núcleo, infraestructura y CI
+/app/core/             @AdrianGuerraAsiati
+/alembic/              @AdrianGuerraAsiati
+/.github/              @AdrianGuerraAsiati
+/Dockerfile            @AdrianGuerraAsiati
+/docker-compose*.yml   @AdrianGuerraAsiati
+/pyproject.toml        @AdrianGuerraAsiati
+
+# Reglas de negocio de los motores y documentación funcional
+/app/motores/          @juanparra-code @AdrianGuerraAsiati
+/docs/                 @juanparra-code
+/CLAUDE.md             @juanparra-code @AdrianGuerraAsiati
