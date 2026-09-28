@@ -1,3 +1,8 @@
+from app.motores.cartera_ocs.comprobantes import (
+    ComprobantePago,
+    ESTADO_AUDITORIA_PENDIENTE,
+    radicar_comprobante,
+)
 from app.motores.cartera_ocs.financiacion import (
     CondicionPago,
     OperacionFinanciada,
@@ -17,7 +22,9 @@ from app.motores.cartera_ocs.validacion import (
 
 __all__ = [
     "CasoValidacionCartera",
+    "ComprobantePago",
     "CondicionPago",
+    "ESTADO_AUDITORIA_PENDIENTE",
     "OperacionFinanciada",
     "RegistroCarteraEnCamino",
     "TerminosNegociacion",
@@ -25,5 +32,6 @@ __all__ = [
     "normalizar_fila_cartera",
     "parsear_numero_cartera",
     "parsear_tipo_negociacion",
+    "radicar_comprobante",
     "validar_cartera_en_camino",
 ]
