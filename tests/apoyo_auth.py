@@ -13,6 +13,7 @@ from app.core.empresas import Empresa
 from app.core.hallazgos import Hallazgo
 from app.core.periodos import Periodo
 from app.core.usuarios import UsuarioEmpresa, crear_usuario
+from app.core.usuarios.roles import ROL_SUPER_ADMINISTRADOR
 from app.main import app
 
 
@@ -95,7 +96,8 @@ def crear_usuario_prueba(
 
 
 def cliente() -> TestClient:
-    # https: la cookie de sesión es Secure y el cliente no la envía por http.
+    os.environ.setdefault("JWT_SECRET", SECRETO_PRUEBA)
+    # https funciona tanto con cookie Secure como con la configuración local no-Secure.
     return TestClient(app, base_url="https://testserver")
 
 
@@ -111,3 +113,7 @@ def iniciar_sesion(email: str, password: str = PASSWORD_PRUEBA) -> TestClient:
 def cliente_con_rol(rol: str, *, empresas: tuple[int, ...] = ()) -> tuple[TestClient, int]:
     usuario_id, email = crear_usuario_prueba(rol, empresas=empresas)
     return iniciar_sesion(email), usuario_id
+
+
+def cliente_superadmin() -> TestClient:
+    return cliente_con_rol(ROL_SUPER_ADMINISTRADOR)[0]
