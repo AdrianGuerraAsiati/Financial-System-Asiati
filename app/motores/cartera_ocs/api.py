@@ -1,4 +1,5 @@
 import os
+from dataclasses import asdict
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -10,6 +11,10 @@ from app.motores.cartera_ocs.almacenamiento import (
     AlmacenLocalComprobantes,
 )
 from app.motores.cartera_ocs.comprobantes import radicar_comprobante
+from app.motores.cartera_ocs.consultas import (
+    FuenteOperacionesCartera,
+    listar_operaciones,
+)
 from app.motores.cartera_ocs.financiacion import (
     OperacionFinanciada,
     generar_condicion_pago,
@@ -20,12 +25,33 @@ from app.motores.cartera_ocs.persistencia import guardar_comprobante
 router = APIRouter(prefix="/cartera", tags=["cartera"])
 
 
+def obtener_fuente_operaciones() -> FuenteOperacionesCartera:
+    raise HTTPException(
+        status_code=503,
+        detail="La fuente de operaciones de Cartera todavía no está configurada.",
+    )
+
+
 def obtener_almacen_comprobantes() -> AlmacenComprobantes:
     directorio = os.getenv(
         "CARTERA_COMPROBANTES_DIR",
         "./data/comprobantes",
     )
     return AlmacenLocalComprobantes(directorio)
+
+
+@router.get("/operaciones")
+def consultar_operaciones(
+    empresa_id: int,
+    fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
+) -> list[dict[str, object]]:
+    return [
+        asdict(operacion)
+        for operacion in listar_operaciones(
+            fuente,
+            empresa_id=empresa_id,
+        )
+    ]
 
 
 @router.post("/comprobantes", status_code=201)
