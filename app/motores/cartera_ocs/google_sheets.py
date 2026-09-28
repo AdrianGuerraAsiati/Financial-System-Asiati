@@ -15,6 +15,10 @@ from app.motores.cartera_ocs.mora import (
     RegistroCarteraMora,
     normalizar_fila_mora,
 )
+from app.motores.cartera_ocs.proyeccion import (
+    RegistroProyeccionPago,
+    normalizar_fila_proyeccion,
+)
 
 
 SHEETS_READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
@@ -249,3 +253,66 @@ def construir_fuente_mora_google_sheets_desde_entorno(
         },
     )
     return FuenteMoraGoogleSheets(lector)
+
+
+
+class FuenteProyeccionGoogleSheets:
+    """Adapta filas de PROYECCIONES al contrato de Cartera."""
+
+    def __init__(self, lector: LectorFilasGoogleSheets) -> None:
+        self.lector = lector
+
+    def listar(
+        self,
+        *,
+        empresa_id: int,
+    ) -> tuple[RegistroProyeccionPago, ...]:
+        registros: list[RegistroProyeccionPago] = []
+
+        for fila in self.lector.leer_filas(empresa_id=empresa_id):
+            registro = normalizar_fila_proyeccion(fila)
+            if registro is not None:
+                registros.append(registro)
+
+        return tuple(registros)
+
+
+def construir_fuente_proyeccion_google_sheets_desde_entorno(
+    *,
+    cliente: ClienteValoresGoogleSheets | None = None,
+) -> FuenteProyeccionGoogleSheets:
+    empresa_id = os.getenv("CARTERA_SHEETS_EMPRESA_ID", "").strip()
+    spreadsheet_id = os.getenv("CARTERA_SHEETS_SPREADSHEET_ID", "").strip()
+    rango = os.getenv("CARTERA_SHEETS_PROYECCION_RANGE", "").strip()
+
+    faltantes = [
+        nombre
+        for nombre, valor in (
+            ("CARTERA_SHEETS_EMPRESA_ID", empresa_id),
+            ("CARTERA_SHEETS_SPREADSHEET_ID", spreadsheet_id),
+            ("CARTERA_SHEETS_PROYECCION_RANGE", rango),
+        )
+        if not valor
+    ]
+    if faltantes:
+        raise ConfiguracionGoogleSheetsIncompletaError(
+            "Falta configurar: " + ", ".join(faltantes)
+        )
+
+    try:
+        empresa = int(empresa_id)
+    except ValueError as exc:
+        raise ConfiguracionGoogleSheetsIncompletaError(
+            "CARTERA_SHEETS_EMPRESA_ID debe ser entero."
+        ) from exc
+
+    lector = LectorGoogleSheetsApi(
+        cliente=cliente or ClienteGoogleSheetsApi(),
+        configuraciones={
+            empresa: ConfiguracionGoogleSheets(
+                spreadsheet_id=spreadsheet_id,
+                rango=rango,
+            )
+        },
+    )
+    return FuenteProyeccionGoogleSheets(lector)
