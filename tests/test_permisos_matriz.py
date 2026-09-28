@@ -79,7 +79,7 @@ def test_treasury_analyst_has_no_permissions_yet() -> None:
 
 @pytest.mark.parametrize(
     "permiso",
-    ["movimientos.categorizar", "hallazgos.gestionar", "parametros.editar"],
+    ["movimientos.categorizar", "hallazgos.gestionar", "parametros.editar", "cartera.comprobantes.subir"],
 )
 def test_it_support_cannot_change_financial_data(permiso: str) -> None:
     with pytest.raises(SinPermisoError):
