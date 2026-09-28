@@ -258,7 +258,7 @@ No elegir una sola como oficial sin definición de negocio.
 
 Hasta nueva orden corporativa:
 
-> **`INFORME COMPRAS 2024-2026` en Google Sheets es la fuente operativa oficial.**
+> **`INFORME COMPRAS 2024-2026` en Google Sheets es la fuente operativa oficial y de solo lectura para la plataforma.**
 
 El Excel exportado con el mismo nombre sirve como fotografía para análisis, pero el sistema debe trabajar contra el Google Sheet.
 
@@ -273,6 +273,8 @@ Por ahora **no**:
 Patrón:
 
 `Google Sheet actual -> lectura -> snapshot/control -> lógica -> resultado`
+
+Decisión formal: `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`.
 
 ---
 
