@@ -23,6 +23,10 @@ from app.motores.cartera_ocs.financiacion import (
     OperacionFinanciada,
     generar_condicion_pago,
 )
+from app.motores.cartera_ocs.google_sheets import (
+    ConfiguracionGoogleSheetsIncompletaError,
+    construir_fuente_google_sheets_desde_entorno,
+)
 from app.motores.cartera_ocs.persistencia import (
     existe_comprobante_por_hash,
     guardar_comprobante,
@@ -60,10 +64,13 @@ def _max_comprobante_bytes() -> int:
 
 
 def obtener_fuente_operaciones() -> FuenteOperacionesCartera:
-    raise HTTPException(
-        status_code=503,
-        detail="La fuente de operaciones de Cartera todavía no está configurada.",
-    )
+    try:
+        return construir_fuente_google_sheets_desde_entorno()
+    except ConfiguracionGoogleSheetsIncompletaError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
 
 
 def obtener_almacen_comprobantes() -> AlmacenComprobantes:
