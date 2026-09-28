@@ -11,7 +11,10 @@ from app.motores.cartera_ocs.almacenamiento import (
     AlmacenComprobantes,
     AlmacenLocalComprobantes,
 )
-from app.motores.cartera_ocs.bandeja import listar_comprobantes_pendientes
+from app.motores.cartera_ocs.bandeja import (
+    contar_comprobantes_pendientes,
+    listar_comprobantes_pendientes,
+)
 from app.motores.cartera_ocs.comprobantes import radicar_comprobante
 from app.motores.cartera_ocs.consultas import (
     FuenteOperacionesCartera,
@@ -100,6 +103,7 @@ def consultar_detalle_operacion(
     oc: str,
     empresa_id: int,
     fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
+    session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
     try:
         detalle = obtener_detalle_operacion(
@@ -113,7 +117,13 @@ def consultar_detalle_operacion(
             detail=f"No se encontró la operación {oc}.",
         ) from exc
 
-    return asdict(detalle)
+    respuesta = asdict(detalle)
+    respuesta["comprobantes_pendientes"] = contar_comprobantes_pendientes(
+        session,
+        empresa_id=empresa_id,
+        oc=oc,
+    )
+    return respuesta
 
 
 @router.get("/comprobantes/pendientes")
