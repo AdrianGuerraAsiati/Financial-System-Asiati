@@ -22,7 +22,7 @@ def _engine():
     return create_engine(os.environ["DATABASE_URL"])
 
 
-def _crear_comprobante(tmp_path: Path) -> tuple[int, int]:
+def _crear_comprobante(tmp_path: Path) -> tuple[int, int, int]:
     almacen = AlmacenLocalComprobantes(tmp_path)
     condicion = generar_condicion_pago(
         OperacionFinanciada(
@@ -61,17 +61,17 @@ def _crear_comprobante(tmp_path: Path) -> tuple[int, int]:
             ubicacion_archivo=ubicacion,
         )
         session.commit()
-        return registro.id, otra_empresa.id
+        return registro.id, empresa.id, otra_empresa.id
 
 
 def test_web_serves_payment_proof_without_exposing_storage_path(tmp_path: Path) -> None:
-    comprobante_id, _ = _crear_comprobante(tmp_path)
+    comprobante_id, empresa_id, _ = _crear_comprobante(tmp_path)
     app.dependency_overrides[obtener_almacen_comprobantes] = (
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
     try:
         response = TestClient(app).get(
-            f"/cartera/comprobantes/{comprobante_id}/archivo?empresa_id=1"
+            f"/cartera/comprobantes/{comprobante_id}/archivo?empresa_id={empresa_id}"
         )
     finally:
         app.dependency_overrides.clear()
@@ -84,7 +84,7 @@ def test_web_serves_payment_proof_without_exposing_storage_path(tmp_path: Path) 
 
 
 def test_web_does_not_serve_proof_from_another_company(tmp_path: Path) -> None:
-    comprobante_id, otra_empresa_id = _crear_comprobante(tmp_path)
+    comprobante_id, _, otra_empresa_id = _crear_comprobante(tmp_path)
     app.dependency_overrides[obtener_almacen_comprobantes] = (
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
