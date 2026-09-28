@@ -85,3 +85,17 @@ def existe_comprobante_por_hash(
         ComprobantePagoPersistido.contenido_hash == contenido_hash,
     )
     return session.scalar(statement) is not None
+
+
+
+def obtener_comprobante_por_empresa(
+    session: Session,
+    *,
+    empresa_id: int,
+    comprobante_id: int,
+) -> ComprobantePagoPersistido | None:
+    statement = select(ComprobantePagoPersistido).where(
+        ComprobantePagoPersistido.id == comprobante_id,
+        ComprobantePagoPersistido.empresa_id == empresa_id,
+    )
+    return session.scalar(statement)
