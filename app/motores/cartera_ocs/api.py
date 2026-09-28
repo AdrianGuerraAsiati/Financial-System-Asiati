@@ -13,7 +13,9 @@ from app.motores.cartera_ocs.almacenamiento import (
 from app.motores.cartera_ocs.comprobantes import radicar_comprobante
 from app.motores.cartera_ocs.consultas import (
     FuenteOperacionesCartera,
+    OperacionNoEncontradaError,
     listar_operaciones,
+    obtener_detalle_operacion,
 )
 from app.motores.cartera_ocs.financiacion import (
     OperacionFinanciada,
@@ -52,6 +54,27 @@ def consultar_operaciones(
             empresa_id=empresa_id,
         )
     ]
+
+
+@router.get("/operaciones/{oc}")
+def consultar_detalle_operacion(
+    oc: str,
+    empresa_id: int,
+    fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
+) -> dict[str, object]:
+    try:
+        detalle = obtener_detalle_operacion(
+            fuente,
+            empresa_id=empresa_id,
+            oc=oc,
+        )
+    except OperacionNoEncontradaError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No se encontró la operación {oc}.",
+        ) from exc
+
+    return asdict(detalle)
 
 
 @router.post("/comprobantes", status_code=201)
