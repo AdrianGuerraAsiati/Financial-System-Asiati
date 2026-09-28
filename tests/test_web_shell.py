@@ -24,3 +24,4 @@ def test_shell_javascript_consumes_existing_cartera_endpoints() -> None:
     assert "/cartera/operaciones" in response.text
     assert "/cartera/comprobantes/pendientes" in response.text
     assert "/cartera/comprobantes" in response.text
+    assert "/archivo?empresa_id=" in response.text
