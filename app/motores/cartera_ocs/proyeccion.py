@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, Mapping
+from typing import Any, Mapping, Protocol
 
 from app.motores.cartera_ocs.importacion import parsear_numero_cartera
 
@@ -95,3 +95,20 @@ def normalizar_fila_proyeccion(
         monto=monto,
         mes=f"{fecha.year:04d}-{fecha.month:02d}",
     )
+
+
+
+class FuenteProyeccionCartera(Protocol):
+    def listar(
+        self,
+        *,
+        empresa_id: int,
+    ) -> tuple[RegistroProyeccionPago, ...]: ...
+
+
+def listar_proyeccion(
+    fuente: FuenteProyeccionCartera,
+    *,
+    empresa_id: int,
+) -> tuple[RegistroProyeccionPago, ...]:
+    return fuente.listar(empresa_id=empresa_id)
