@@ -55,7 +55,7 @@ def _poner_cookie(
         ),
         max_age=int(configuracion.duracion_sesion.total_seconds()),
         httponly=True,
-        secure=True,
+        secure=configuracion.cookie_secure,
         samesite="strict",
         path="/",
     )
@@ -105,10 +105,16 @@ def login(
 
 
 @router.post("/logout", status_code=204)
-def logout() -> Response:
+def logout(
+    configuracion: ConfiguracionAuth = Depends(obtener_configuracion),
+) -> Response:
     response = Response(status_code=204)
     response.delete_cookie(
-        COOKIE_SESION, path="/", secure=True, httponly=True, samesite="strict"
+        COOKIE_SESION,
+        path="/",
+        secure=configuracion.cookie_secure,
+        httponly=True,
+        samesite="strict",
     )
     return response
 
