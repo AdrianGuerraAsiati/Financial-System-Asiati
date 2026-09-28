@@ -10,6 +10,7 @@ from app.motores.cartera_ocs.almacenamiento import (
     AlmacenComprobantes,
     AlmacenLocalComprobantes,
 )
+from app.motores.cartera_ocs.bandeja import listar_comprobantes_pendientes
 from app.motores.cartera_ocs.comprobantes import radicar_comprobante
 from app.motores.cartera_ocs.consultas import (
     FuenteOperacionesCartera,
@@ -75,6 +76,32 @@ def consultar_detalle_operacion(
         ) from exc
 
     return asdict(detalle)
+
+
+@router.get("/comprobantes/pendientes")
+def consultar_comprobantes_pendientes(
+    empresa_id: int,
+    session: Session = Depends(obtener_session),
+) -> list[dict[str, object]]:
+    pendientes = listar_comprobantes_pendientes(
+        session,
+        empresa_id=empresa_id,
+    )
+
+    return [
+        {
+            "id": item.id,
+            "oc": item.oc,
+            "cliente": item.cliente,
+            "pais": item.pais,
+            "comercial": item.comercial,
+            "monto_esperado": float(item.monto_esperado),
+            "nombre_archivo": item.nombre_archivo,
+            "estado_auditoria": item.estado_auditoria,
+            "creado_en": item.creado_en,
+        }
+        for item in pendientes
+    ]
 
 
 @router.post("/comprobantes", status_code=201)
