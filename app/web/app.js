@@ -1,6 +1,7 @@
 const empresaInput = document.querySelector("#empresa-id");
 const estado = document.querySelector("#estado-global");
 const operacionesBody = document.querySelector("#operaciones-body");
+const moraBody = document.querySelector("#mora-body");
 const detalleTitulo = document.querySelector("#detalle-titulo");
 const detalleContenido = document.querySelector("#detalle-contenido");
 const pendientesLista = document.querySelector("#pendientes-lista");
@@ -64,6 +65,29 @@ async function cargarOperaciones() {
     setEstado("Operaciones actualizadas", "ok");
   } catch (error) {
     operacionesBody.innerHTML = `<tr><td colspan="7" class="empty">${escapar(error.message)}</td></tr>`;
+    setEstado(error.message, "error");
+  }
+}
+
+async function cargarMora() {
+  setEstado("Consultando mora…");
+  moraBody.innerHTML = '<tr><td colspan="5" class="empty">Consultando…</td></tr>';
+  try {
+    const rows = await api(`/cartera/mora?empresa_id=${empresaId()}`);
+    moraBody.innerHTML = rows.length
+      ? rows.map((row) => `
+          <tr>
+            <td>${escapar(row.cliente)}</td>
+            <td>${escapar(row.empresa)}</td>
+            <td>${Number(row.monto || 0).toLocaleString("es-CO")}</td>
+            <td>${escapar(row.estado)}</td>
+            <td>${escapar(row.observacion)}</td>
+          </tr>
+        `).join("")
+      : '<tr><td colspan="5" class="empty">No hay registros de mora.</td></tr>';
+    setEstado("Mora actualizada", "ok");
+  } catch (error) {
+    moraBody.innerHTML = `<tr><td colspan="5" class="empty">${escapar(error.message)}</td></tr>`;
     setEstado(error.message, "error");
   }
 }
@@ -144,4 +168,5 @@ formComprobante.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("#cargar-operaciones").addEventListener("click", cargarOperaciones);
+document.querySelector("#cargar-mora").addEventListener("click", cargarMora);
 document.querySelector("#cargar-pendientes").addEventListener("click", cargarPendientes);

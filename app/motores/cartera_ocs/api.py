@@ -30,6 +30,11 @@ from app.motores.cartera_ocs.financiacion import (
 from app.motores.cartera_ocs.google_sheets import (
     ConfiguracionGoogleSheetsIncompletaError,
     construir_fuente_google_sheets_desde_entorno,
+    construir_fuente_mora_google_sheets_desde_entorno,
+)
+from app.motores.cartera_ocs.mora import (
+    FuenteMoraCartera,
+    listar_mora,
 )
 from app.motores.cartera_ocs.persistencia import (
     existe_comprobante_por_hash,
@@ -78,6 +83,16 @@ def obtener_fuente_operaciones() -> FuenteOperacionesCartera:
         ) from exc
 
 
+def obtener_fuente_mora() -> FuenteMoraCartera:
+    try:
+        return construir_fuente_mora_google_sheets_desde_entorno()
+    except ConfiguracionGoogleSheetsIncompletaError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
+
+
 def obtener_almacen_comprobantes() -> AlmacenComprobantes:
     directorio = os.getenv(
         "CARTERA_COMPROBANTES_DIR",
@@ -94,6 +109,20 @@ def consultar_operaciones(
     return [
         asdict(operacion)
         for operacion in listar_operaciones(
+            fuente,
+            empresa_id=empresa_id,
+        )
+    ]
+
+
+@router.get("/mora")
+def consultar_mora(
+    empresa_id: int,
+    fuente: FuenteMoraCartera = Depends(obtener_fuente_mora),
+) -> list[dict[str, object]]:
+    return [
+        asdict(registro)
+        for registro in listar_mora(
             fuente,
             empresa_id=empresa_id,
         )
