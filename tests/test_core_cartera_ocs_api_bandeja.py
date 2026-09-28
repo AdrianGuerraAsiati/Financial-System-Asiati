@@ -1,12 +1,12 @@
 import os
 from datetime import date
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.empresas import Empresa
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.comprobantes import radicar_comprobante
 from app.motores.cartera_ocs.financiacion import (
     OperacionFinanciada,
@@ -50,8 +50,8 @@ def test_web_returns_pending_proof_inbox() -> None:
         )
         session.commit()
 
-    response = TestClient(app).get(
-        f"/cartera/comprobantes/pendientes?empresa_id={empresa_id}"
+    response = cliente_superadmin().get(
+        f"/api/v1/cartera/comprobantes/pendientes?empresa_id={empresa_id}"
     )
 
     assert response.status_code == 200
