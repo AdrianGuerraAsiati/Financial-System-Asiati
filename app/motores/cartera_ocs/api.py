@@ -1,8 +1,9 @@
+import mimetypes
 import os
 from dataclasses import asdict
 from datetime import date
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -33,6 +34,7 @@ from app.motores.cartera_ocs.google_sheets import (
 from app.motores.cartera_ocs.persistencia import (
     existe_comprobante_por_hash,
     guardar_comprobante,
+    obtener_comprobante_por_empresa,
 )
 
 
@@ -150,6 +152,47 @@ def consultar_comprobantes_pendientes(
         }
         for item in pendientes
     ]
+
+
+@router.get("/comprobantes/{comprobante_id}/archivo")
+def consultar_archivo_comprobante(
+    comprobante_id: int,
+    empresa_id: int,
+    session: Session = Depends(obtener_session),
+    almacen: AlmacenComprobantes = Depends(obtener_almacen_comprobantes),
+) -> Response:
+    comprobante = obtener_comprobante_por_empresa(
+        session,
+        empresa_id=empresa_id,
+        comprobante_id=comprobante_id,
+    )
+    if comprobante is None or not comprobante.ubicacion_archivo:
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontró el archivo del comprobante.",
+        )
+
+    try:
+        contenido = almacen.leer(comprobante.ubicacion_archivo)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontró el archivo del comprobante.",
+        ) from exc
+
+    media_type = (
+        mimetypes.guess_type(comprobante.nombre_archivo)[0]
+        or "application/octet-stream"
+    )
+    return Response(
+        content=contenido,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": (
+                f'inline; filename="{comprobante.nombre_archivo}"'
+            )
+        },
+    )
 
 
 @router.post("/comprobantes", status_code=201)

@@ -113,6 +113,7 @@ async function cargarPendientes() {
             <strong>${escapar(item.oc)} · ${escapar(item.cliente)}</strong>
             <p>${escapar(item.nombre_archivo)}</p>
             <p>USD ${Number(item.monto_esperado || 0).toLocaleString("es-CO")} · ${escapar(item.estado_auditoria)}</p>
+            <p><a href="/cartera/comprobantes/${item.id}/archivo?empresa_id=${empresaId()}" target="_blank" rel="noopener">Ver soporte</a></p>
           </article>
         `).join("")
       : '<p class="empty">No hay comprobantes pendientes.</p>';

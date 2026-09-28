@@ -14,6 +14,8 @@ class AlmacenComprobantes(Protocol):
         contenido: bytes,
     ) -> str: ...
 
+    def leer(self, ubicacion: str) -> bytes: ...
+
     def eliminar(self, ubicacion: str) -> None: ...
 
 
@@ -56,8 +58,22 @@ class AlmacenLocalComprobantes:
 
         return ubicacion.as_posix()
 
+    def _resolver(self, ubicacion: str) -> Path:
+        base = self.directorio_base.resolve()
+        destino = (base / ubicacion).resolve()
+        try:
+            destino.relative_to(base)
+        except ValueError as exc:
+            raise ValueError(
+                "La ubicación del comprobante está fuera del almacenamiento permitido."
+            ) from exc
+        return destino
+
+    def leer(self, ubicacion: str) -> bytes:
+        return self._resolver(ubicacion).read_bytes()
+
     def eliminar(self, ubicacion: str) -> None:
-        destino = self.directorio_base / ubicacion
+        destino = self._resolver(ubicacion)
         try:
             destino.unlink()
         except FileNotFoundError:
