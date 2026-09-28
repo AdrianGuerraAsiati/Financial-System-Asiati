@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Mapping, Protocol
 
 from app.motores.cartera_ocs.importacion import parsear_numero_cartera
 
@@ -28,3 +28,20 @@ def normalizar_fila_mora(
         observacion=str(fila.get("Observación más reciente") or "").strip(),
         estado=str(fila.get("CARTERA") or "").strip().upper(),
     )
+
+
+
+class FuenteMoraCartera(Protocol):
+    def listar(
+        self,
+        *,
+        empresa_id: int,
+    ) -> tuple[RegistroCarteraMora, ...]: ...
+
+
+def listar_mora(
+    fuente: FuenteMoraCartera,
+    *,
+    empresa_id: int,
+) -> tuple[RegistroCarteraMora, ...]:
+    return fuente.listar(empresa_id=empresa_id)
