@@ -401,6 +401,8 @@ Documentación vigente:
 - `docs/compras/ESTADOS_LOGISTICOS.md`
 - `docs/compras/PREGUNTAS_NEGOCIO.md`
 - `docs/compras/CONTRATO_FUENTE.md`
+- `docs/compras/KPIS_MONETARIOS.md`
+- `docs/compras/REPORTE_DUDAS_JUANFE_KPIS.md`
 - `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`
 
 ### Fuente y seguridad
@@ -453,10 +455,18 @@ Todos requieren `compras.ver`:
 - `GET /api/v1/compras/catalogos`
 - `GET /api/v1/compras/calidad`
 - `GET /api/v1/compras/resumen`
+- `GET /api/v1/compras/kpis`
 - `GET /api/v1/compras/ocs`
 - `GET /api/v1/compras/lineas`
 
-`/resumen` solo expone conteos estructurales; no suma dinero.
+`/resumen` solo expone conteos estructurales.
+
+`/kpis` expone dos familias monetarias descriptivas y exactas con `Decimal`:
+
+- `costo_compra` → `VALOR TOTAL COMPRA USD`;
+- `valor_comercial_ddp` → `VALOR OCI (DDP)`.
+
+La hoja derivada `Supply Chain` del snapshot usa `SUM de VALOR OCI (DDP)` por `ESTADO`, por lo que DDP reproduce la lectura monetaria existente. Costo de compra se mantiene en paralelo; no se consideran equivalentes.
 
 ### Calidad y agrupación
 
@@ -495,7 +505,7 @@ Existe una vista protegida de **Compras** en el shell web con:
 - observaciones de calidad;
 - catálogos observados.
 
-Los valores de compra y OCI DDP pueden verse a nivel de línea como evidencia cruda, pero no se agregan ni se presentan como KPI.
+Los valores de compra y OCI DDP pueden verse a nivel de línea y ahora también se agregan como **dos familias descriptivas** en el explorador. No llamar a ninguna de ellas “valor en tránsito / en el mar” ni convertirla en KPI ejecutivo oficial sin validación de negocio.
 
 ### Baseline del snapshot analizado
 
@@ -517,11 +527,11 @@ No inventar ni cerrar por código:
 2. significado de `PENDIENTE DEPÓSITO`;
 3. tratamiento de `PENDIENTE INVIMA`;
 4. definición corporativa de “valor en tránsito / en el mar”;
-5. columna monetaria oficial de cada KPI;
+5. qué familia monetaria usa ese KPI y cuál tiene jerarquía ejecutiva;
 6. estado agregado/cierre de una OC parcial;
 7. tolerancias de ETA y producción.
 
-Hasta que se validen, esos estados permanecen `POR_DEFINIR` y los KPIs financieros no se implementan.
+Las dos familias monetarias descriptivas sí están implementadas. Los estados ambiguos permanecen `POR_DEFINIR` y los KPIs corporativos que dependen de su significado siguen pendientes.
 
 ---
 
