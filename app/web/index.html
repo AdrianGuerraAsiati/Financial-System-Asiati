@@ -9,9 +9,17 @@
 <body>
   <section id="login-view" class="auth-shell">
     <form id="login-form" class="auth-card">
-      <p class="eyebrow">Plataforma Financiera ASIATI</p>
-      <h1>Iniciar sesión</h1>
-      <p>Usa tu correo corporativo y contraseña.</p>
+      <div class="auth-brand">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <div>
+          <p class="eyebrow">ASIATI</p>
+          <strong>Plataforma Financiera</strong>
+        </div>
+      </div>
+      <div class="auth-heading">
+        <h1>Iniciar sesión</h1>
+        <p>Accede a tu espacio financiero con tu cuenta corporativa.</p>
+      </div>
       <label>Correo
         <input name="email" type="email" autocomplete="username" required>
       </label>
@@ -23,9 +31,18 @@
     </form>
 
     <form id="password-form" class="auth-card" hidden>
-      <p class="eyebrow">Primer ingreso</p>
-      <h1>Cambiar contraseña</h1>
-      <p>Debes definir una contraseña propia antes de continuar.</p>
+      <div class="auth-brand">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <div>
+          <p class="eyebrow">ASIATI</p>
+          <strong>Plataforma Financiera</strong>
+        </div>
+      </div>
+      <div class="auth-heading">
+        <p class="eyebrow">Primer ingreso</p>
+        <h1>Cambiar contraseña</h1>
+        <p>Define una contraseña propia antes de continuar.</p>
+      </div>
       <label>Contraseña temporal
         <input name="password_actual" type="password" autocomplete="current-password" required>
       </label>
@@ -39,9 +56,12 @@
 
   <div id="app-shell" hidden>
   <header class="topbar">
-    <div>
-      <p class="eyebrow">Bloque 1</p>
-      <h1>Plataforma Financiera ASIATI</h1>
+    <div class="brand-lockup">
+      <span class="brand-mark brand-mark-small" aria-hidden="true">A</span>
+      <div>
+        <p class="eyebrow">ASIATI</p>
+        <h1>Plataforma Financiera</h1>
+      </div>
     </div>
     <div class="session-controls">
       <label class="empresa-control">
@@ -55,11 +75,37 @@
 
   <div class="layout">
     <nav class="sidebar" aria-label="Módulos">
-      <button class="nav-item active" data-view="inicio" id="nav-inicio">Inicio</button>
-      <button class="nav-item" data-view="cartera" id="nav-cartera">Cartera</button>
-      <button class="nav-item" data-view="compras" id="nav-compras" hidden>Compras</button>
-      <button class="nav-item" disabled>Wallets <span>Pendiente</span></button>
-      <button class="nav-item" disabled>Chin Chin <span>Pendiente</span></button>
+      <div class="sidebar-section-label">Workspace</div>
+      <button class="nav-item active" data-view="inicio" id="nav-inicio">
+        <span class="nav-icon" aria-hidden="true">⌂</span>
+        <span class="nav-label">Inicio</span>
+      </button>
+      <button class="nav-item" data-view="cartera" id="nav-cartera">
+        <span class="nav-icon" aria-hidden="true">▤</span>
+        <span class="nav-label">Cartera</span>
+      </button>
+      <button class="nav-item" data-view="compras" id="nav-compras" hidden>
+        <span class="nav-icon" aria-hidden="true">◇</span>
+        <span class="nav-label">Compras</span>
+      </button>
+
+      <div class="sidebar-section-label sidebar-section-label-spaced">Próximamente</div>
+      <button class="nav-item" disabled>
+        <span class="nav-icon" aria-hidden="true">◫</span>
+        <span class="nav-label">Wallets</span>
+        <span class="nav-badge">Pronto</span>
+      </button>
+      <button class="nav-item" disabled>
+        <span class="nav-icon" aria-hidden="true">◎</span>
+        <span class="nav-label">Chin Chin</span>
+        <span class="nav-badge">Pronto</span>
+      </button>
+
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-footer">
+        <span class="sidebar-footer-dot"></span>
+        <span>Entorno seguro</span>
+      </div>
     </nav>
 
     <main class="content">
