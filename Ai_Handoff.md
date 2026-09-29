@@ -448,6 +448,7 @@ Documentación vigente:
 - `docs/compras/PREGUNTAS_NEGOCIO.md`
 - `docs/compras/CONTRATO_FUENTE.md`
 - `docs/compras/KPIS_MONETARIOS.md`
+- `docs/compras/DASHBOARD_EJECUTIVO.md`
 - `docs/compras/REPORTE_DUDAS_JUANFE_KPIS.md`
 - `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`
 
@@ -502,6 +503,10 @@ Todos requieren `compras.ver`:
 - `GET /api/v1/compras/calidad`
 - `GET /api/v1/compras/resumen`
 - `GET /api/v1/compras/kpis`
+- `GET /api/v1/compras/dashboard`
+- `GET /api/v1/compras/atencion`
+- `GET /api/v1/compras/validacion/tablero`
+- `GET /api/v1/compras/export.zip`
 - `GET /api/v1/compras/ocs`
 - `GET /api/v1/compras/lineas`
 
@@ -514,9 +519,9 @@ Todos requieren `compras.ver`:
 
 La hoja derivada `Supply Chain` del snapshot usa `SUM de VALOR OCI (DDP)` por `ESTADO`, por lo que DDP reproduce la lectura monetaria existente. Costo de compra se mantiene en paralelo; no se consideran equivalentes.
 
-### Calidad y agrupación
+### Calidad, puntos de atención y agrupación
 
-Reglas observacionales implementadas:
+Reglas de calidad observacionales implementadas:
 
 - línea sin OC;
 - cliente vacío;
@@ -527,6 +532,18 @@ Reglas observacionales implementadas:
 - transporte fuera del catálogo conocido;
 - fecha de entrega a bodega con etapa todavía no recibida.
 
+Puntos de atención objetivos implementados, sin severidad de negocio:
+
+- `ENVIADO A DESTINO` sin documento;
+- `ENVIADO A DESTINO` sin ETD;
+- `ENVIADO A DESTINO` sin ETA;
+- ETA vencida sin entrega;
+- ETA no interpretable;
+- entrega registrada con etapa abierta;
+- OC con varios estados;
+- OC con varios proveedores;
+- OC con varios transportes.
+
 Estas señales **no corrigen la fuente** y no afirman por sí solas un error financiero.
 
 La agrupación por OC expone proveedores, estados, etapas y transportes observados, además de banderas de composición mixta.
@@ -535,10 +552,15 @@ No se asigna todavía un único estado agregado a una OC.
 
 Las filas `N/A` o sin OC no se agrupan entre sí.
 
-### Explorador web
+### Vista ejecutiva + explorador web
 
 Existe una vista protegida de **Compras** en el shell web con:
 
+- tarjetas ejecutivas descriptivas de costo, DDP, OCs con líneas en la población actual y observaciones;
+- gráficos descriptivos por estado y transporte;
+- panel de puntos de atención;
+- validación read-only contra el pivote de la hoja derivada `Supply Chain`;
+- exportación ZIP con CSVs de líneas, OCs, puntos de atención y KPIs;
 - estado técnico de la fuente;
 - líneas leídas;
 - estado del snapshot/cache;
@@ -552,6 +574,9 @@ Existe una vista protegida de **Compras** en el shell web con:
 - catálogos observados.
 
 Los valores de compra y OCI DDP pueden verse a nivel de línea y ahora también se agregan como **dos familias descriptivas** en el explorador. No llamar a ninguna de ellas “valor en tránsito / en el mar” ni convertirla en KPI ejecutivo oficial sin validación de negocio.
+
+
+La comparación contra `Supply Chain` usa `COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE` y solo compara cuando puede identificar país, `ESTADO` y DDP sin adivinar. La hoja derivada es referencia de regresión, no source of truth.
 
 ### Baseline del snapshot analizado
 
