@@ -16,6 +16,7 @@ const detalleContenido = document.querySelector("#detalle-contenido");
 const pendientesLista = document.querySelector("#pendientes-lista");
 const formComprobante = document.querySelector("#form-comprobante");
 const carteraFuenteContenido = document.querySelector("#cartera-fuente-contenido");
+const carteraCalidadContenido = document.querySelector("#cartera-calidad-contenido");
 
 const navInicio = document.querySelector("#nav-inicio");
 const navCartera = document.querySelector("#nav-cartera");
@@ -1172,7 +1173,54 @@ async function cargarEstadoFuenteCartera() {
   }
 }
 
+function nombreCasoCalidadCartera(codigo) {
+  const nombres = {
+    sin_numero_oc: "Línea con valores pero sin número de OC",
+    linea_repetida: "Línea repetida por OC + SKU + documento + producto + valor",
+    valor_oci_descuadra: "VALOR OCI distinto de anticipo + financiado",
+    valor_oci_cero_con_componentes: "VALOR OCI cero con anticipo o financiado",
+  };
+  return nombres[codigo] || codigo;
+}
+
+async function cargarCalidadCartera() {
+  carteraCalidadContenido.innerHTML = '<p class="empty">Validando calidad…</p>';
+  try {
+    const calidad = await api(
+      `/api/v1/cartera/calidad?empresa_id=${empresaId()}`
+    );
+    const detalle = calidad.detalle || [];
+    carteraCalidadContenido.innerHTML = detalle.length
+      ? `
+        <article class="proof-card">
+          <strong>${escapar(String(calidad.casos))} tipos de observación</strong>
+          <p>${escapar(String(calidad.registros))} registros revisados. Una línea puede aparecer en más de una validación.</p>
+        </article>
+        ${detalle.map((caso) => `
+          <article class="proof-card">
+            <strong>${escapar(nombreCasoCalidadCartera(caso.codigo))}</strong>
+            <p>${escapar(String(caso.cantidad))} registro(s) · valor asociado USD ${formatearDecimal(caso.valor)}</p>
+            <p>Código: ${escapar(caso.codigo)}</p>
+          </article>
+        `).join("")}
+      `
+      : `
+        <article class="proof-card">
+          <strong>Sin observaciones de calidad</strong>
+          <p>${escapar(String(calidad.registros))} registros revisados con las cuatro validaciones heredadas.</p>
+        </article>
+      `;
+    return calidad;
+  } catch (error) {
+    carteraCalidadContenido.innerHTML =
+      `<p class="empty">${escapar(error.message)}</p>`;
+    return null;
+  }
+}
+
 function mostrarFuenteNoDisponible() {
+  carteraCalidadContenido.innerHTML =
+    '<p class="empty">La calidad se valida cuando la fuente está disponible.</p>';
   operacionesBody.innerHTML =
     '<tr><td colspan="7" class="empty">La fuente de Operaciones todavía no está disponible.</td></tr>';
   moraBody.innerHTML =
@@ -1195,6 +1243,7 @@ async function cargarCarteraTodo() {
     cargarOperaciones(),
     cargarMora(),
     cargarProyeccion(),
+    cargarCalidadCartera(),
     pendientes,
   ]);
 }
@@ -1357,6 +1406,7 @@ document.querySelector("#cargar-mora").addEventListener("click", cargarMora);
 document.querySelector("#cargar-proyeccion").addEventListener("click", cargarProyeccion);
 document.querySelector("#cargar-pendientes").addEventListener("click", cargarPendientes);
 document.querySelector("#cartera-refrescar-fuente").addEventListener("click", cargarCarteraTodo);
+document.querySelector("#cartera-cargar-calidad").addEventListener("click", cargarCalidadCartera);
 
 navInicio.addEventListener("click", () => mostrarModulo("inicio"));
 navCartera.addEventListener("click", () => mostrarModulo("cartera"));
