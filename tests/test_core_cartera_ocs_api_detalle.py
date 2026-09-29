@@ -1,4 +1,6 @@
 
+from decimal import Decimal
+
 from app.main import app
 from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.api import obtener_fuente_operaciones
@@ -19,10 +21,10 @@ def _registro(sku: str) -> RegistroCarteraEnCamino:
         anio_oc=2026,
         eta="2026-09-28",
         etapa="EN CAMINO",
-        valor=500,
-        valor_anticipo=250,
-        valor_financiado=250,
-        porcentaje_anticipo=0.5,
+        valor=Decimal("500.00"),
+        valor_anticipo=Decimal("250.00"),
+        valor_financiado=Decimal("250.00"),
+        porcentaje_anticipo=Decimal("0.5"),
     )
 
 
@@ -45,6 +47,7 @@ def test_web_returns_individual_operation_with_all_lines() -> None:
     assert body["oc"] == "OC-DET"
     assert len(body["lineas"]) == 2
     assert [linea["sku"] for linea in body["lineas"]] == ["SKU-1", "SKU-2"]
+    assert body["lineas"][0]["valor"] == "500.00"
 
 
 def test_web_returns_404_for_unknown_operation() -> None:
