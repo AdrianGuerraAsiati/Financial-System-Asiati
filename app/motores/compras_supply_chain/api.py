@@ -314,6 +314,7 @@ def estado_fuente(
 
     return {
         "estado": "OK" if snapshot.esquema_valido else "DEGRADADO",
+        "modo_fuente": fuente.configuracion.modo_fuente,
         "solo_lectura": True,
         "lineas": len(snapshot.lineas),
         "cargado_en": snapshot.cargado_en.isoformat(),
