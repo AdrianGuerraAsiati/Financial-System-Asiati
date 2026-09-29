@@ -25,8 +25,7 @@ Esta configuración prepara una instalación de un solo servidor para la primera
 6. Crear el primer superadministrador desde la terminal (no hay endpoint público):
    `docker compose -f compose.production.yml exec api python -m app.core.usuarios.crear_superadmin --email <correo> --nombre "<nombre>"`.
 
-Mientras siga vigente `docs/decisiones/0004-endpoints-wiilog-sin-auth-temporal.md`,
-la plataforma no se publica en internet.
+La excepción temporal de la decisión 0004 ya fue cerrada: Cartera y Wiilog están detrás del modelo común de autenticación/autorización. Antes de publicar, mantener HTTPS, `SESSION_COOKIE_SECURE=true` y completar los controles operativos de producción descritos en este documento.
 
 ## Backup
 
