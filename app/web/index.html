@@ -607,6 +607,76 @@
         </section>
 
         <section class="grid-two">
+          <section class="panel" id="compras-timeline">
+            <div class="panel-heading">
+              <div>
+                <h3>Trazabilidad de la OC</h3>
+                <p id="compras-timeline-titulo">Selecciona una OC para revisar los hitos de cada línea sin inventar una fecha agregada.</p>
+              </div>
+            </div>
+            <div id="compras-timeline-lista" class="stack">
+              <p class="empty">No hay una OC seleccionada.</p>
+            </div>
+          </section>
+
+          <section class="panel" id="compras-llegadas">
+            <div class="panel-heading">
+              <div>
+                <h3>Próximas llegadas</h3>
+                <p>ETA interpretables dentro de los próximos 30 días. No equivale a promesa de entrega.</p>
+              </div>
+              <button id="compras-cargar-llegadas" type="button">Actualizar</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>País</th>
+                    <th>OC</th>
+                    <th>ETA</th>
+                    <th>Días</th>
+                    <th>Proveedor</th>
+                    <th>Estado</th>
+                    <th>OCI DDP</th>
+                  </tr>
+                </thead>
+                <tbody id="compras-llegadas-body">
+                  <tr><td colspan="7" class="empty">Carga la proyección para comenzar.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="grid-two">
+          <section class="panel" id="compras-cobertura">
+            <div class="panel-heading">
+              <div>
+                <h3>Cobertura de datos</h3>
+                <p>Presencia de campos en general, población actual y entregados. Un vacío no se clasifica automáticamente como error contable.</p>
+              </div>
+              <button id="compras-cargar-cobertura" type="button">Actualizar</button>
+            </div>
+            <div id="compras-cobertura-contenido" class="stack">
+              <p class="empty">Carga la cobertura para comenzar.</p>
+            </div>
+          </section>
+
+          <section class="panel" id="compras-snapshots">
+            <div class="panel-heading">
+              <div>
+                <h3>Capturas auditables</h3>
+                <p>Histórico inmutable de lo leído desde Google Sheets. Guardar una captura no escribe en la fuente.</p>
+              </div>
+              <button id="compras-guardar-snapshot" type="button">Guardar captura</button>
+            </div>
+            <div id="compras-snapshots-lista" class="stack">
+              <p class="empty">Cargando histórico…</p>
+            </div>
+          </section>
+        </section>
+
+        <section class="grid-two">
           <section class="panel" id="compras-calidad">
             <div class="panel-heading">
               <div>

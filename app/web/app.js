@@ -61,6 +61,11 @@ const comprasLineasBody = document.querySelector("#compras-lineas-body");
 const comprasLineasTitulo = document.querySelector("#compras-lineas-titulo");
 const comprasCalidadLista = document.querySelector("#compras-calidad-lista");
 const comprasCatalogosContenido = document.querySelector("#compras-catalogos-contenido");
+const comprasCoberturaContenido = document.querySelector("#compras-cobertura-contenido");
+const comprasLlegadasBody = document.querySelector("#compras-llegadas-body");
+const comprasTimelineTitulo = document.querySelector("#compras-timeline-titulo");
+const comprasTimelineLista = document.querySelector("#compras-timeline-lista");
+const comprasSnapshotsLista = document.querySelector("#compras-snapshots-lista");
 const comprasFiltroPais = document.querySelector("#compras-filtro-pais");
 const comprasFiltroQ = document.querySelector("#compras-filtro-q");
 const comprasFiltroMixtas = document.querySelector("#compras-filtro-mixtas");
@@ -720,7 +725,10 @@ async function cargarComprasOCs() {
 
     comprasOcsBody.querySelectorAll("[data-compras-oc]").forEach((button) => {
       button.addEventListener("click", () => {
-        cargarComprasLineas(button.dataset.comprasPais, button.dataset.comprasOc);
+        Promise.all([
+          cargarComprasLineas(button.dataset.comprasPais, button.dataset.comprasOc),
+          cargarComprasTimeline(button.dataset.comprasPais, button.dataset.comprasOc),
+        ]).catch(() => {});
       });
     });
   } catch (error) {
@@ -903,9 +911,159 @@ async function cargarComprasCatalogos() {
   }
 }
 
+
+function renderCoberturaSegmento(titulo, segmento) {
+  const campos = Object.entries(segmento?.campos || {});
+  const conFaltantes = campos
+    .filter(([, valor]) => Number(valor.faltantes || 0) > 0)
+    .sort((a, b) => Number(b[1].faltantes || 0) - Number(a[1].faltantes || 0));
+
+  return `
+    <article class="catalog-card">
+      <strong>${escapar(titulo)} · ${Number(segmento?.lineas || 0).toLocaleString("es-CO")} líneas</strong>
+      ${conFaltantes.length
+        ? conFaltantes.map(([, valor]) => `
+            <div class="catalog-row">
+              <span>${escapar(valor.nombre)}</span>
+              <b>${Number(valor.faltantes || 0).toLocaleString("es-CO")} vacías · ${escapar(valor.cobertura_pct)}%</b>
+            </div>
+          `).join("")
+        : '<p class="muted">Sin faltantes en los campos medidos.</p>'}
+    </article>
+  `;
+}
+
+async function cargarComprasCobertura() {
+  comprasCoberturaContenido.innerHTML = '<p class="empty">Calculando cobertura…</p>';
+  const params = new URLSearchParams({empresa_id: String(empresaId())});
+  if (comprasFiltroPais.value) params.set("pais", comprasFiltroPais.value);
+
+  try {
+    const data = await api(`/api/v1/compras/cobertura?${params}`);
+    comprasCoberturaContenido.innerHTML = [
+      renderCoberturaSegmento("General", data.general),
+      renderCoberturaSegmento("Población actual", data.poblacion_actual),
+      renderCoberturaSegmento("Entregado", data.entregado),
+    ].join("");
+  } catch (error) {
+    comprasCoberturaContenido.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+async function cargarComprasLlegadas() {
+  comprasLlegadasBody.innerHTML = '<tr><td colspan="7" class="empty">Consultando próximas ETA…</td></tr>';
+  const params = new URLSearchParams({
+    empresa_id: String(empresaId()),
+    dias: "30",
+  });
+  if (comprasFiltroPais.value) params.set("pais", comprasFiltroPais.value);
+
+  try {
+    const data = await api(`/api/v1/compras/llegadas?${params}`);
+    comprasLlegadasBody.innerHTML = data.items?.length
+      ? data.items.map((item) => `
+          <tr>
+            <td>${escapar(item.pais)}</td>
+            <td>${escapar(item.numero_oc)}</td>
+            <td>${escapar(item.eta)}</td>
+            <td>${Number(item.dias_hasta_eta || 0).toLocaleString("es-CO")}</td>
+            <td>${escapar(item.proveedor)}</td>
+            <td>${escapar(item.estado)}</td>
+            <td>${escapar(item.valor_oci_ddp_origen)}</td>
+          </tr>
+        `).join("")
+      : '<tr><td colspan="7" class="empty">No hay ETA interpretables en los próximos 30 días.</td></tr>';
+  } catch (error) {
+    comprasLlegadasBody.innerHTML = `<tr><td colspan="7" class="empty">${escapar(error.message)}</td></tr>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+async function cargarComprasTimeline(pais, oc) {
+  comprasTimelineTitulo.textContent = `${pais} · ${oc}`;
+  comprasTimelineLista.innerHTML = '<p class="empty">Consultando trazabilidad…</p>';
+  const params = new URLSearchParams({
+    empresa_id: String(empresaId()),
+    pais,
+    oc,
+  });
+
+  try {
+    const data = await api(`/api/v1/compras/timeline?${params}`);
+    comprasTimelineLista.innerHTML = data.items?.length
+      ? data.items.map((item) => `
+          <article class="quality-card">
+            <div class="quality-card-title">
+              <strong>Fila ${Number(item.fila_fuente || 0).toLocaleString("es-CO")} · ${escapar(item.sku || "Sin SKU")}</strong>
+              <span class="tag">${escapar(item.estado)}</span>
+            </div>
+            <p>${escapar(item.proveedor || "Sin proveedor")} · ${escapar(item.modo_transporte || "Sin transporte")}</p>
+            ${item.hitos?.length
+              ? item.hitos.map((hito) => `
+                  <div class="catalog-row">
+                    <span>${escapar(hito.nombre)}</span>
+                    <b>${escapar(hito.fecha_origen)}</b>
+                  </div>
+                `).join("")
+              : '<p class="muted">Sin hitos fechados en los campos consumidos.</p>'}
+          </article>
+        `).join("")
+      : '<p class="empty">No se encontraron líneas para esta OC.</p>';
+  } catch (error) {
+    comprasTimelineLista.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+async function cargarComprasSnapshots() {
+  comprasSnapshotsLista.innerHTML = '<p class="empty">Consultando capturas…</p>';
+  try {
+    const data = await api(`/api/v1/compras/snapshots?empresa_id=${empresaId()}&limit=10`);
+    comprasSnapshotsLista.innerHTML = data.items?.length
+      ? data.items.map((item) => `
+          <article class="quality-card">
+            <div class="quality-card-title">
+              <strong>Snapshot #${Number(item.id).toLocaleString("es-CO")}</strong>
+              <span class="tag">${item.esquema_valido ? "Esquema OK" : "Esquema degradado"}</span>
+            </div>
+            <p>${escapar(item.cargado_en)} · ${Number(item.lineas || 0).toLocaleString("es-CO")} líneas</p>
+            <small>SHA-256 ${escapar(String(item.contenido_hash || "").slice(0, 16))}…</small>
+          </article>
+        `).join("")
+      : '<p class="empty">Todavía no hay capturas persistidas.</p>';
+  } catch (error) {
+    comprasSnapshotsLista.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+async function guardarComprasSnapshot() {
+  setEstadoCompras("Guardando captura auditable…");
+  try {
+    const data = await api(
+      `/api/v1/compras/snapshots?empresa_id=${empresaId()}`,
+      {method: "POST"}
+    );
+    setEstadoCompras(
+      data.creado ? "Captura auditable guardada" : "El contenido ya estaba capturado",
+      "ok"
+    );
+    await cargarComprasSnapshots();
+  } catch (error) {
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
 async function cargarComprasTodo(forzar = false) {
   try {
     const diagnostico = await cargarComprasDiagnostico(forzar);
+    cargarComprasSnapshots().catch(() => {});
     if (diagnostico.estado !== "OK") {
       comprasOcsBody.innerHTML = '<tr><td colspan="9" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
       comprasLineasBody.innerHTML = '<tr><td colspan="9" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
@@ -913,6 +1071,8 @@ async function cargarComprasTodo(forzar = false) {
       comprasAtencionLista.innerHTML = '<p class="empty">Puntos de atención no calculados con esquema degradado.</p>';
       comprasCalidadLista.innerHTML = '<p class="empty">Calidad no calculada con esquema degradado.</p>';
       comprasCatalogosContenido.innerHTML = '<p class="empty">Catálogos no calculados con esquema degradado.</p>';
+      comprasCoberturaContenido.innerHTML = '<p class="empty">Cobertura no calculada con esquema degradado.</p>';
+      comprasLlegadasBody.innerHTML = '<tr><td colspan="7" class="empty">Llegadas no calculadas con esquema degradado.</td></tr>';
       comprasGraficoEstados.innerHTML = '<p class="empty">Dashboard bloqueado por esquema degradado.</p>';
       comprasGraficoTransporte.innerHTML = '<p class="empty">Dashboard bloqueado por esquema degradado.</p>';
       return;
@@ -925,6 +1085,8 @@ async function cargarComprasTodo(forzar = false) {
       cargarComprasAtencion(),
       cargarComprasCalidad(),
       cargarComprasCatalogos(),
+      cargarComprasCobertura(),
+      cargarComprasLlegadas(),
       cargarComprasValidacion(forzar),
     ]);
     setEstadoCompras("Compras actualizadas", "ok");
@@ -1104,6 +1266,9 @@ comprasExportar.addEventListener("click", exportarCompras);
 document.querySelector("#compras-cargar-ocs").addEventListener("click", cargarComprasOCs);
 document.querySelector("#compras-cargar-calidad").addEventListener("click", cargarComprasCalidad);
 document.querySelector("#compras-cargar-catalogos").addEventListener("click", cargarComprasCatalogos);
+document.querySelector("#compras-cargar-cobertura").addEventListener("click", cargarComprasCobertura);
+document.querySelector("#compras-cargar-llegadas").addEventListener("click", cargarComprasLlegadas);
+document.querySelector("#compras-guardar-snapshot").addEventListener("click", guardarComprasSnapshot);
 comprasFiltroPais.addEventListener("change", () => {
   comprasOcsOffset = 0;
   Promise.all([
@@ -1111,6 +1276,8 @@ comprasFiltroPais.addEventListener("change", () => {
     cargarComprasKpis(),
     cargarComprasOCs(),
     cargarComprasAtencion(),
+    cargarComprasCobertura(),
+    cargarComprasLlegadas(),
     cargarComprasValidacion(false),
   ]).catch(() => {});
 });
