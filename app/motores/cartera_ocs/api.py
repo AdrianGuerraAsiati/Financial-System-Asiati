@@ -33,6 +33,7 @@ from app.motores.cartera_ocs.google_sheets import (
     construir_fuente_google_sheets_desde_entorno,
     construir_fuente_mora_google_sheets_desde_entorno,
     construir_fuente_proyeccion_google_sheets_desde_entorno,
+    diagnosticar_fuente_google_sheets_desde_entorno,
 )
 from app.motores.cartera_ocs.mora import (
     FuenteMoraCartera,
@@ -123,12 +124,29 @@ def obtener_fuente_proyeccion() -> FuenteProyeccionCartera:
         ) from exc
 
 
+def obtener_estado_fuente(
+    empresa_id: int,
+) -> dict[str, object]:
+    return diagnosticar_fuente_google_sheets_desde_entorno(
+        empresa_id=empresa_id,
+    )
+
+
 def obtener_almacen_comprobantes() -> AlmacenComprobantes:
     directorio = os.getenv(
         "CARTERA_COMPROBANTES_DIR",
         "./data/comprobantes",
     )
     return AlmacenLocalComprobantes(directorio)
+
+
+@router.get("/fuente/estado")
+def consultar_estado_fuente(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    estado: dict[str, object] = Depends(obtener_estado_fuente),
+) -> dict[str, object]:
+    return estado
 
 
 @router.get("/operaciones")

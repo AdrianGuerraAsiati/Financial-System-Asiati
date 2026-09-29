@@ -1,4 +1,7 @@
+from app.motores.cartera_ocs import google_sheets as google_sheets_mod
 from app.motores.cartera_ocs.google_sheets import (
+    CLOUD_PLATFORM_SCOPE,
+    SHEETS_READONLY_SCOPE,
     ClienteGoogleSheetsApi,
     ConfiguracionGoogleSheets,
     LectorGoogleSheetsApi,
@@ -92,3 +95,46 @@ def test_environment_builds_google_sheets_source(monkeypatch) -> None:
     assert len(operaciones) == 1
     assert operaciones[0].oc == "OC-1"
     assert operaciones[0].valor == 10000
+
+
+def test_google_api_client_supports_keyless_impersonation(monkeypatch) -> None:
+    source_credentials = object()
+    impersonated = object()
+    captured = {}
+
+    def fake_default(*, scopes):
+        captured["source_scopes"] = scopes
+        return source_credentials, "project"
+
+    def fake_impersonated_credentials(**kwargs):
+        captured["impersonation"] = kwargs
+        return impersonated
+
+    class FakeAuthorizedSession:
+        def __init__(self, credentials):
+            captured["session_credentials"] = credentials
+
+    monkeypatch.setattr(google_sheets_mod.google.auth, "default", fake_default)
+    monkeypatch.setattr(
+        google_sheets_mod.impersonated_credentials,
+        "Credentials",
+        fake_impersonated_credentials,
+    )
+    monkeypatch.setattr(
+        google_sheets_mod,
+        "AuthorizedSession",
+        FakeAuthorizedSession,
+    )
+
+    ClienteGoogleSheetsApi(
+        target_principal="financial-system@project.iam.gserviceaccount.com"
+    )
+
+    assert captured["source_scopes"] == [CLOUD_PLATFORM_SCOPE]
+    assert captured["impersonation"] == {
+        "source_credentials": source_credentials,
+        "target_principal": "financial-system@project.iam.gserviceaccount.com",
+        "target_scopes": [SHEETS_READONLY_SCOPE],
+        "lifetime": 3600,
+    }
+    assert captured["session_credentials"] is impersonated
