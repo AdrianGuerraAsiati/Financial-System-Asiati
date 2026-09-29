@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import zipfile
+from decimal import Decimal
 from collections.abc import Iterable
 
 from .agrupacion import agrupar_ocs
@@ -189,7 +190,7 @@ def _csv_kpis(
                 "ACTIVO",
                 familia.activo.lineas,
                 familia.activo.lineas_con_valor,
-                format(familia.activo.monto.quantize(__import__("decimal").Decimal("0.01")), "f"),
+                format(familia.activo.monto.quantize(Decimal("0.01")), "f"),
                 "",
             ]
         )
@@ -201,7 +202,7 @@ def _csv_kpis(
                     f"ESTADO:{estado}",
                     acumulado.lineas,
                     acumulado.lineas_con_valor,
-                    format(acumulado.monto.quantize(__import__("decimal").Decimal("0.01")), "f"),
+                    format(acumulado.monto.quantize(Decimal("0.01")), "f"),
                     "incluido" if incluido else "fuera_poblacion_actual",
                 ]
             )
