@@ -26,6 +26,9 @@ from app.motores.cartera_ocs.consultas import (
     listar_operaciones,
     obtener_detalle_operacion,
 )
+from app.motores.cartera_ocs.descubrimiento import (
+    descubrir_hojas_cartera_desde_entorno,
+)
 from app.motores.cartera_ocs.financiacion import (
     OperacionFinanciada,
     generar_condicion_pago,
@@ -178,12 +181,35 @@ def obtener_estado_fuente(
     )
 
 
+def obtener_descubrimiento_fuente(
+    empresa_id: int,
+) -> dict[str, object]:
+    try:
+        return descubrir_hojas_cartera_desde_entorno(
+            empresa_id=empresa_id,
+        )
+    except ConfiguracionGoogleSheetsIncompletaError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
+
+
 def obtener_almacen_comprobantes() -> AlmacenComprobantes:
     directorio = os.getenv(
         "CARTERA_COMPROBANTES_DIR",
         "./data/comprobantes",
     )
     return AlmacenLocalComprobantes(directorio)
+
+
+@router.get("/fuente/descubrir")
+def consultar_descubrimiento_fuente(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    resultado: dict[str, object] = Depends(obtener_descubrimiento_fuente),
+) -> dict[str, object]:
+    return resultado
 
 
 @router.get("/fuente/estado")
