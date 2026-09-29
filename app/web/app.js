@@ -286,7 +286,10 @@ async function cargarComprasDiagnostico(forzar = false) {
 
   try {
     const data = await api(`/api/v1/compras/fuente/estado?${params}`);
-    comprasFuenteEstado.textContent = data.estado;
+    const etiquetaFuente = data.modo_fuente === "DEMO_LOCAL"
+      ? `${data.estado} · DEMO LOCAL`
+      : data.estado;
+    comprasFuenteEstado.textContent = etiquetaFuente;
     comprasFuenteEstado.className = data.estado === "OK" ? "metric-ok" : "metric-error";
     comprasFuenteLineas.textContent = Number(data.lineas || 0).toLocaleString("es-CO");
     comprasFuenteCache.textContent = data.cache?.tiene_snapshot
