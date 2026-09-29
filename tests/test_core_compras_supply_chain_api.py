@@ -202,3 +202,104 @@ def test_source_diagnostics_stay_available_when_schema_is_degraded() -> None:
 
     assert lineas.status_code == 503
     assert "evitar resultados silenciosamente incorrectos" in lineas.json()["detail"]
+
+
+
+def test_compras_api_exposes_two_monetary_families_with_exact_amount_strings() -> None:
+    from app.motores.compras_supply_chain.google_sheets import (
+        ConfiguracionComprasGoogleSheets,
+        FuenteComprasGoogleSheets,
+    )
+
+    empresa_id = crear_empresa("Compras KPIs")
+
+    class ClienteKpis:
+        def obtener_valores(self, *, spreadsheet_id: str, rango: str):
+            pais = rango.split("!")[0]
+            return [
+                [
+                    "NUMERO OC",
+                    "CLIENTE",
+                    "PROVEEDOR",
+                    "ESTADO",
+                    "MODO TRANSPORTE",
+                    "VALOR TOTAL COMPRA USD",
+                    "VALOR OCI (DDP)",
+                ],
+                [
+                    f"OC-{pais}-1",
+                    "Cliente",
+                    "Proveedor",
+                    "EN PRODUCCION",
+                    "MARITIMO",
+                    "100.25",
+                    "150.50",
+                ],
+                [
+                    f"OC-{pais}-2",
+                    "Cliente",
+                    "Proveedor",
+                    "ENTREGADO",
+                    "MARITIMO",
+                    "50",
+                    "80",
+                ],
+            ]
+
+    fuente = FuenteComprasGoogleSheets(
+        cliente=ClienteKpis(),
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=empresa_id,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={"CO": "CO!A:Z", "EC": "EC!A:Z", "CL": "CL!A:Z"},
+        ),
+    )
+    app.dependency_overrides[obtener_fuente_compras] = lambda: fuente
+    client, _ = cliente_con_rol(ROL_SUPER_ADMINISTRADOR)
+
+    try:
+        response = client.get(
+            "/api/v1/compras/kpis",
+            params={"empresa_id": empresa_id},
+        )
+        colombia = client.get(
+            "/api/v1/compras/kpis",
+            params={"empresa_id": empresa_id, "pais": "CO"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    familias = {
+        familia["codigo"]: familia
+        for familia in response.json()["familias"]
+    }
+    assert familias["costo_compra"]["activo"]["monto_usd"] == "300.75"
+    assert familias["valor_comercial_ddp"]["activo"]["monto_usd"] == "451.50"
+    assert response.json()["poblacion_supply_chain_actual"]["lineas_activas"] == 3
+
+    assert colombia.status_code == 200
+    familias_co = {
+        familia["codigo"]: familia
+        for familia in colombia.json()["familias"]
+    }
+    assert familias_co["costo_compra"]["activo"]["monto_usd"] == "100.25"
+    assert familias_co["valor_comercial_ddp"]["activo"]["monto_usd"] == "150.50"
+
+
+def test_compras_kpis_reject_unknown_country() -> None:
+    empresa_id = crear_empresa("Compras KPI país")
+    fuente = FuenteFake(empresa_id)
+    app.dependency_overrides[obtener_fuente_compras] = lambda: fuente
+    client, _ = cliente_con_rol(ROL_SUPER_ADMINISTRADOR)
+
+    try:
+        response = client.get(
+            "/api/v1/compras/kpis",
+            params={"empresa_id": empresa_id, "pais": "MX"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "pais debe ser CO, EC o CL."
