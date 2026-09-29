@@ -78,16 +78,18 @@ Estado funcional relevante de `main`:
 - PR #55 fusionado: vista ejecutiva de Compras, puntos de atención, validación contra Supply Chain y exportación.
 - PR #56 fusionado: dashboard principal V1 por empresa con resumen transversal y bandeja `Requiere atención`.
 - PR #58 fusionado: sistema visual V1 profesional para login, shell, Inicio, Cartera y Compras.
+- PR #60 fusionado: identidad de producto alineada con ASIATI 360°, usando azul profundo + amarillo como acento de marca sin semántica financiera.
+- PR #61 fusionado: autenticación Google Sheets keyless mediante ADC de usuario + impersonación explícita de service account para Compras.
 - Las APIs protegidas viven bajo `/api/v1`.
 - El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, Inicio, Cartera y vista ejecutiva/explorador de Compras, todos bajo un sistema visual común.
 
 Head de `main` al actualizar este handoff:
 
-`bf923c8ef2d6a936b7bb116df8b599029623d3a4`
+`102ac3f73bb579d6db603a1adcb24a8e2b06bf02`
 
 Último cambio fusionado:
 
-`feat(ui): introduce polished financial visual system`
+`feat(compras): support keyless Google Sheets impersonation`
 
 ### PR #41 — motor de referencia Wiilog + Claude Code kit
 
@@ -215,7 +217,7 @@ Para usar Google Sheets real en desarrollo:
 docker compose -f docker-compose.yml -f compose.google.yml up --build
 ```
 
-con `COMPRAS_DEMO_MODE=false`, el spreadsheet ID y el service account configurados.
+con `COMPRAS_DEMO_MODE=false`, el spreadsheet ID y credenciales Google configuradas. Para el entorno corporativo actual se validó el flujo **ADC de usuario + impersonación explícita** de `financial-system-sheets@asiati-financial-system.iam.gserviceaccount.com`, sin clave privada permanente.
 
 Guía: `DEV_SETUP.md`.
 
@@ -264,8 +266,8 @@ Documento: `docs/UI_VISUAL_SYSTEM.md`.
 
 La UI ya tiene una dirección visual compartida:
 
-- navegación oscura + superficies claras;
-- acento azul único;
+- navegación azul profunda + superficies claras;
+- identidad ASIATI 360° con azul profundo y amarillo como acento de marca;
 - tokens CSS para color, borde, sombra y radios;
 - shell y login refinados;
 - paneles, KPIs, formularios y tablas consistentes;
@@ -274,6 +276,8 @@ La UI ya tiene una dirección visual compartida:
 - sin dependencias de fuentes o imágenes externas.
 
 Regla: futuros módulos deben reutilizar los tokens y componentes existentes antes de introducir estilos aislados.
+
+Paleta de producto provisional mientras no exista un brand book oficial publicado: `#005b8f` azul ASIATI, `#003f64` azul profundo, `#f4cf22` amarillo, `#fff8d7` amarillo suave. El amarillo es identidad de marca, **no** nivel de prioridad, riesgo o éxito.
 
 El sistema visual no agrega semántica financiera: no usar color rojo/verde, scores o semáforos para clasificar estados de negocio sin una regla aprobada.
 
@@ -387,6 +391,10 @@ Por ahora **no**:
 Patrón:
 
 `Google Sheet actual -> lectura -> snapshot/control -> lógica -> resultado`
+
+Autenticación local corporativa validada: ADC de usuario de `sistemas@asiati.com.co` como credencial fuente + impersonación temporal de `financial-system-sheets@asiati-financial-system.iam.gserviceaccount.com`. El target usa únicamente `spreadsheets.readonly`; no se crean claves JSON permanentes.
+
+La pestaña derivada actual se llama exactamente `Supply Chain ` (incluye un espacio final), por lo que el rango configurado debe preservar ese nombre mientras la fuente no cambie.
 
 Decisión formal: `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`.
 
