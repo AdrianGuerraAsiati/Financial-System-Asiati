@@ -1,6 +1,6 @@
 # SPEC funcional — Compras / Supply Chain
 
-**Estado:** borrador funcional  
+**Estado:** V1 cerrada; decisiones de negocio pendientes documentadas  
 **Fecha:** 28 de septiembre de 2026  
 **Fuente operativa oficial temporal:** Google Sheets — `INFORME COMPRAS 2024-2026`
 
@@ -373,7 +373,7 @@ detalle fuente -> regla propia -> resultado -> comparación contra vista existen
 
 - reemplazar Google Sheets;
 - escribir de vuelta al Sheet (prohibido por la decisión 0005 mientras siga vigente);
-- construir base de datos propia de compras;
+- sustituir Google Sheets por una base operativa propia de compras;
 - OCR de comprobantes;
 - reglas de cartera de clientes;
 - UI definitiva;
@@ -405,10 +405,17 @@ Endpoints técnicos de solo lectura:
 - `GET /api/v1/compras/export.zip`
 - `GET /api/v1/compras/ocs`
 - `GET /api/v1/compras/lineas`
+- `GET /api/v1/compras/cobertura`
+- `GET /api/v1/compras/timeline`
+- `GET /api/v1/compras/llegadas`
+- `GET /api/v1/compras/snapshots`
+- `POST /api/v1/compras/snapshots`
 
 Todos requieren `compras.ver`.
 
-La fuente usa un snapshot en memoria con TTL configurable mediante `COMPRAS_SHEETS_CACHE_SECONDS`. El cache existe únicamente para reducir lecturas repetitivas contra Google Sheets; no es una nueva fuente de verdad ni una base de datos.
+La fuente usa un snapshot en memoria con TTL configurable mediante `COMPRAS_SHEETS_CACHE_SECONDS`. El cache existe únicamente para reducir lecturas repetitivas contra Google Sheets.
+
+Adicionalmente, la V1 permite persistir snapshots auditables e inmutables en PostgreSQL para conservar evidencia histórica de qué leyó la plataforma. Esa persistencia no reemplaza Google Sheets como fuente operativa y no hace write-back.
 
 Si desaparece un encabezado crítico o aparecen encabezados duplicados, la plataforma mantiene disponible el diagnóstico pero bloquea los endpoints operativos para evitar resultados silenciosamente incorrectos.
 
@@ -469,3 +476,17 @@ Puede mostrar:
 La validación contra `Supply Chain` solo se ejecuta cuando el parser puede identificar país, `ESTADO` y la columna DDP sin adivinar. La hoja derivada sigue siendo referencia de regresión, no fuente primaria.
 
 Ver `docs/compras/DASHBOARD_EJECUTIVO.md`.
+
+
+---
+
+## 15. Estado de cierre V1
+
+Compras / Supply Chain V1 quedó cerrada el 29 de septiembre de 2026.
+
+El contrato de cierre, criterios de aceptación, non-goals y reglas para cambios posteriores están en:
+
+- `docs/compras/CIERRE_V1.md`
+- `tests/test_compras_v1_contract.py`
+
+Los conceptos financieros o logísticos todavía marcados como `POR_DEFINIR` no deben cerrarse por inferencia técnica.

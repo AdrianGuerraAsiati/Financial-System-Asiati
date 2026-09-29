@@ -81,16 +81,16 @@ Estado funcional relevante de `main`:
 - PR #60 fusionado: identidad de producto alineada con ASIATI 360°, usando azul profundo + amarillo como acento de marca sin semántica financiera.
 - PR #61 fusionado: autenticación Google Sheets keyless mediante ADC de usuario + impersonación explícita de service account para Compras.
 - PR #63 fusionado: compatibilidad con particularidades reales del Sheet (fórmulas arrastradas, duplicado no consumido `CBM` y encabezados reales de entrega a bodega).
+- PR #65 fusionado: validación de los pivotes horizontales de `Supply Chain ` usando metadata real de la hoja origen.
+- PR #66 fusionado: snapshots auditables e inmutables de Compras en PostgreSQL, con hash de contenido y auditoría.
+- PR #67 fusionado: contrato ampliado de trazabilidad, cobertura de campos, timeline por línea y próximas llegadas.
+- PR #68 fusionado: controles de trazabilidad/auditoría visibles en la UI de Compras.
+- PR #69 fusionado: auditoría de la fuente viva y registro formal de huecos/limitaciones.
+- PR #70 fusionado: **cierre formal de Compras / Supply Chain V1**, con contrato de aceptación y non-goals.
 - Las APIs protegidas viven bajo `/api/v1`.
-- El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, Inicio, Cartera y vista ejecutiva/explorador de Compras, todos bajo un sistema visual común.
+- El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, Inicio, Cartera y una Compras V1 cerrada con vista ejecutiva, explorador, trazabilidad y controles auditables.
 
-Head de `main` al actualizar este handoff:
-
-`ff5a0b15bfe3fafbf66f800f7f4a0df2743c632b`
-
-Último cambio fusionado:
-
-`fix(compras): handle live Sheet schema quirks`
+No fijar aquí un SHA de `main`: usar `git rev-parse HEAD` o GitHub cuando se necesite el commit exacto.
 
 ### PR #41 — motor de referencia Wiilog + Claude Code kit
 
@@ -521,9 +521,11 @@ Cada KPI debe declarar:
 
 ---
 
-## 11. Compras / Supply Chain — vertical read-only + observabilidad
+## 11. Compras / Supply Chain — V1 cerrada
 
-Compras / Supply Chain ya existe como módulo independiente en `app/motores/compras_supply_chain/`.
+**Estado:** V1 cerrada el 29 de septiembre de 2026 mediante PR #70.
+
+Compras / Supply Chain existe como módulo independiente en `app/motores/compras_supply_chain/`. El contrato de cierre está en `docs/compras/CIERRE_V1.md`. Cambios posteriores deben tratarse como fix/compatibilidad V1, V1.x sin nueva semántica financiera, o V2 cuando incorporen nuevas reglas/fuentes de negocio.
 
 Documentación vigente:
 
@@ -535,6 +537,7 @@ Documentación vigente:
 - `docs/compras/DASHBOARD_EJECUTIVO.md`
 - `docs/compras/REPORTE_DUDAS_JUANFE_KPIS.md`
 - `docs/compras/AUDITORIA_FUENTE_2026-09-29.md`
+- `docs/compras/CIERRE_V1.md`
 - `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`
 
 ### Fuente y seguridad
@@ -575,9 +578,11 @@ La fuente usa un snapshot en memoria con TTL configurable:
 
 `COMPRAS_SHEETS_CACHE_SECONDS=60`
 
-El cache evita releer CO/EC/CL en cada request. No es una base de datos ni una nueva fuente de verdad.
+El cache evita releer CO/EC/CL en cada request. No es una nueva fuente de verdad.
 
-`GET /api/v1/compras/fuente/estado?forzar_lectura=true` fuerza una nueva lectura y sigue siendo read-only.
+La V1 también puede persistir snapshots auditables e inmutables en PostgreSQL, incluyendo hash SHA-256, diagnóstico, rangos, filas crudas sustantivas y versión normalizada. Esa persistencia conserva evidencia histórica y **no sustituye Google Sheets como fuente operativa**.
+
+`GET /api/v1/compras/fuente/estado?forzar_lectura=true` fuerza una nueva lectura y sigue siendo read-only. `POST /api/v1/compras/snapshots` guarda evidencia interna; no escribe en Google Sheets.
 
 ### API actual
 
@@ -594,6 +599,11 @@ Todos requieren `compras.ver`:
 - `GET /api/v1/compras/export.zip`
 - `GET /api/v1/compras/ocs`
 - `GET /api/v1/compras/lineas`
+- `GET /api/v1/compras/cobertura`
+- `GET /api/v1/compras/timeline`
+- `GET /api/v1/compras/llegadas`
+- `GET /api/v1/compras/snapshots`
+- `POST /api/v1/compras/snapshots`
 
 `/resumen` solo expone conteos estructurales.
 
@@ -655,6 +665,10 @@ Existe una vista protegida de **Compras** en el shell web con:
 - OCs mixtas;
 - paginación;
 - drill-down a líneas originales de una OC;
+- timeline de hitos por línea de OC;
+- próximas llegadas por ETA interpretable;
+- cobertura de datos por población;
+- snapshots auditables y guardado manual de evidencia histórica;
 - observaciones de calidad;
 - catálogos observados.
 
@@ -685,9 +699,12 @@ No inventar ni cerrar por código:
 4. definición corporativa de “valor en tránsito / en el mar”;
 5. qué familia monetaria usa ese KPI y cuál tiene jerarquía ejecutiva;
 6. estado agregado/cierre de una OC parcial;
-7. tolerancias de ETA y producción.
+7. tolerancias de ETA y producción;
+8. fuente oficial de montos pagados/abonados a proveedor;
+9. alcance y moneda de `REPORTE OC`;
+10. columna canónica de CBM en EC/CL.
 
-Las dos familias monetarias descriptivas sí están implementadas. Los estados ambiguos permanecen `POR_DEFINIR` y los KPIs corporativos que dependen de su significado siguen pendientes.
+Estas decisiones **no bloquean la V1 cerrada**; pertenecen a V2 o a una definición funcional posterior. Las dos familias monetarias descriptivas sí están implementadas. Los estados ambiguos permanecen `POR_DEFINIR` y los KPIs corporativos que dependen de su significado siguen pendientes.
 
 ---
 
