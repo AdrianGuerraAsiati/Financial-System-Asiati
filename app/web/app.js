@@ -77,10 +77,14 @@ const comprasFiltroMixtas = document.querySelector("#compras-filtro-mixtas");
 
 let moduloActivo = "inicio";
 let comprasOcsOffset = 0;
+let dashboardVersiones = {};
+let dashboardVersionTimer = null;
 const COMPRAS_OCS_LIMIT = 100;
+const DASHBOARD_VERSION_POLL_MS = 10000;
 
 empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
+  dashboardVersiones = {};
   if (moduloActivo === "inicio") {
     cargarDashboardPrincipal();
   } else if (moduloActivo === "cartera") {
@@ -157,6 +161,7 @@ function escapar(valor) {
 }
 
 function mostrarLogin() {
+  detenerMonitorDashboard();
   appShell.hidden = true;
   passwordForm.hidden = true;
   loginForm.hidden = false;
@@ -190,6 +195,7 @@ function mostrarApp(sesion) {
   navCompras.hidden = !puedeVerCompras;
 
   mostrarModulo("inicio");
+  iniciarMonitorDashboard();
 }
 
 async function api(url, options = {}) {
@@ -328,6 +334,9 @@ function renderModuloInicio(modulo) {
   const accion = modulo.accion
     ? `<button type="button" class="secondary-button" data-home-view="${escapar(modulo.accion.vista)}">${escapar(modulo.accion.texto)}</button>`
     : '<span class="muted home-no-action">Vista dedicada pendiente</span>';
+  const actualizado = modulo.actualizado_en
+    ? `<small class="muted">Datos: ${escapar(new Date(modulo.actualizado_en).toLocaleString("es-CO"))}</small>`
+    : '<small class="muted">Sin snapshot persistido</small>';
 
   return `
     <article class="home-module-card" data-home-module="${escapar(modulo.codigo)}">
@@ -339,7 +348,10 @@ function renderModuloInicio(modulo) {
         ${moduloEstadoDisponible(modulo)}
       </div>
       ${metricas}
-      <div class="home-module-footer">${accion}</div>
+      <div class="home-module-footer">
+        ${actualizado}
+        ${accion}
+      </div>
     </article>
   `;
 }
@@ -415,16 +427,21 @@ function enlazarAccionesInicio() {
   });
 }
 
-async function cargarDashboardPrincipal() {
-  inicioModulos.innerHTML = '<article class="home-module-card"><p class="empty">Cargando módulos visibles…</p></article>';
-  inicioAtencion.innerHTML = '<p class="empty">Cargando…</p>';
-  inicioEstadoDatos.innerHTML = '<p class="empty">Cargando…</p>';
-  inicioActualizado.textContent = "Actualizando…";
+async function cargarDashboardPrincipal({preservar = false} = {}) {
+  const tieneDatos = Boolean(inicioModulos.querySelector("[data-home-module]"));
+  if (!preservar || !tieneDatos) {
+    inicioModulos.innerHTML = '<article class="home-module-card"><p class="empty">Cargando último snapshot…</p></article>';
+    inicioAtencion.innerHTML = '<p class="empty">Cargando…</p>';
+    inicioEstadoDatos.innerHTML = '<p class="empty">Cargando…</p>';
+  }
+  inicioActualizado.textContent = preservar && tieneDatos
+    ? "Actualizando vista…"
+    : "Cargando snapshot…";
 
   try {
     const data = await api(`/api/v1/dashboard/principal?empresa_id=${empresaId()}`);
     inicioSubtitulo.textContent =
-      `${data.empresa.nombre} · Resumen de módulos visibles y elementos que requieren revisión.`;
+      `${data.empresa.nombre} · Resumen persistido; Google se consulta solo cuando la fuente cambia.`;
 
     inicioModulos.innerHTML = data.modulos?.length
       ? data.modulos.map(renderModuloInicio).join("")
@@ -438,15 +455,85 @@ async function cargarDashboardPrincipal() {
       ? data.modulos.map(renderEstadoModulo).join("")
       : '<p class="empty">Sin módulos visibles.</p>';
 
+    dashboardVersiones = {...(data.versiones || {})};
     inicioActualizado.textContent =
-      `Actualizado ${new Date(data.generado_en).toLocaleString("es-CO")}`;
+      `Vista actualizada ${new Date(data.generado_en).toLocaleString("es-CO")}`;
     enlazarAccionesInicio();
   } catch (error) {
-    inicioModulos.innerHTML = `<article class="home-module-card"><p class="empty">${escapar(error.message)}</p></article>`;
-    inicioAtencion.innerHTML = '<p class="empty">No se pudo cargar la bandeja transversal.</p>';
-    inicioEstadoDatos.innerHTML = '<p class="empty">No se pudo consultar el estado de datos.</p>';
-    inicioActualizado.textContent = "Error al actualizar";
+    if (!preservar || !tieneDatos) {
+      inicioModulos.innerHTML = `<article class="home-module-card"><p class="empty">${escapar(error.message)}</p></article>`;
+      inicioAtencion.innerHTML = '<p class="empty">No se pudo cargar la bandeja transversal.</p>';
+      inicioEstadoDatos.innerHTML = '<p class="empty">No se pudo consultar el estado de datos.</p>';
+    }
+    inicioActualizado.textContent = preservar && tieneDatos
+      ? "No se pudo refrescar · conservando datos visibles"
+      : "Error al cargar";
   }
+}
+
+function dashboardTieneCambio(versiones) {
+  const claves = new Set([
+    ...Object.keys(dashboardVersiones || {}),
+    ...Object.keys(versiones || {}),
+  ]);
+  for (const clave of claves) {
+    if ((dashboardVersiones?.[clave] ?? null) !== (versiones?.[clave] ?? null)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function mensajeSincronizacion(fuentes) {
+  const estados = Object.values(fuentes || {});
+  if (estados.some((item) => item.estado === "REFRESHING")) {
+    return "Actualizando fuente en segundo plano…";
+  }
+  if (estados.some((item) => item.estado === "PENDING")) {
+    return "Cambios detectados · esperando que termine la edición…";
+  }
+  const error = estados.find((item) => item.estado === "ERROR");
+  if (error) {
+    return "No se pudo actualizar la fuente · mostrando el último snapshot";
+  }
+  return null;
+}
+
+async function consultarVersionDashboard() {
+  if (appShell.hidden || !empresaInput.value) return;
+
+  const data = await api(
+    `/api/v1/dashboard/version?empresa_id=${empresaId()}`
+  );
+  const mensaje = mensajeSincronizacion(data.fuentes);
+  if (moduloActivo === "inicio" && mensaje) {
+    inicioActualizado.textContent = mensaje;
+  }
+
+  const nuevasVersiones = data.versiones || {};
+  if (dashboardTieneCambio(nuevasVersiones)) {
+    dashboardVersiones = {...nuevasVersiones};
+    if (moduloActivo === "inicio") {
+      await cargarDashboardPrincipal({preservar: true});
+    }
+  }
+}
+
+function detenerMonitorDashboard() {
+  if (dashboardVersionTimer !== null) {
+    window.clearInterval(dashboardVersionTimer);
+    dashboardVersionTimer = null;
+  }
+}
+
+function iniciarMonitorDashboard() {
+  detenerMonitorDashboard();
+  window.setTimeout(() => {
+    consultarVersionDashboard().catch(() => {});
+  }, 1000);
+  dashboardVersionTimer = window.setInterval(() => {
+    consultarVersionDashboard().catch(() => {});
+  }, DASHBOARD_VERSION_POLL_MS);
 }
 
 function formatearUSD(valor) {
