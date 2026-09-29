@@ -27,6 +27,8 @@ const comprasFuenteCache = document.querySelector("#compras-fuente-cache");
 const comprasHojas = document.querySelector("#compras-hojas");
 const comprasOcsBody = document.querySelector("#compras-ocs-body");
 const comprasOcsTotal = document.querySelector("#compras-ocs-total");
+const comprasLineasBody = document.querySelector("#compras-lineas-body");
+const comprasLineasTitulo = document.querySelector("#compras-lineas-titulo");
 const comprasCalidadLista = document.querySelector("#compras-calidad-lista");
 const comprasCatalogosContenido = document.querySelector("#compras-catalogos-contenido");
 const comprasFiltroPais = document.querySelector("#compras-filtro-pais");
@@ -274,7 +276,7 @@ function parametrosOcs() {
 }
 
 async function cargarComprasOCs() {
-  comprasOcsBody.innerHTML = '<tr><td colspan="8" class="empty">Consultando…</td></tr>';
+  comprasOcsBody.innerHTML = '<tr><td colspan="9" class="empty">Consultando…</td></tr>';
   try {
     const data = await api(`/api/v1/compras/ocs?${parametrosOcs()}`);
     comprasOcsTotal.textContent = `${Number(data.total || 0).toLocaleString("es-CO")} agrupaciones encontradas`;
@@ -296,15 +298,59 @@ async function cargarComprasOCs() {
               <td>${listaEtiquetas(oc.etapas_logisticas)}</td>
               <td>${listaEtiquetas(oc.modos_transporte)}</td>
               <td>${composicion}</td>
+              <td>${oc.oc_identificada
+                ? `<button type="button" data-compras-oc="${escapar(oc.numero_oc)}" data-compras-pais="${escapar(oc.pais)}">Ver líneas</button>`
+                : ""}</td>
             </tr>
           `;
         }).join("")
-      : '<tr><td colspan="8" class="empty">No hay OCs con esos filtros.</td></tr>';
+      : '<tr><td colspan="9" class="empty">No hay OCs con esos filtros.</td></tr>';
+
+    comprasOcsBody.querySelectorAll("[data-compras-oc]").forEach((button) => {
+      button.addEventListener("click", () => {
+        cargarComprasLineas(button.dataset.comprasPais, button.dataset.comprasOc);
+      });
+    });
   } catch (error) {
-    comprasOcsBody.innerHTML = `<tr><td colspan="8" class="empty">${escapar(error.message)}</td></tr>`;
+    comprasOcsBody.innerHTML = `<tr><td colspan="9" class="empty">${escapar(error.message)}</td></tr>`;
     comprasOcsTotal.textContent = "";
     setEstadoCompras(error.message, "error");
     throw error;
+  }
+}
+
+
+async function cargarComprasLineas(pais, oc) {
+  comprasLineasTitulo.textContent = `${pais} · ${oc}`;
+  comprasLineasBody.innerHTML = '<tr><td colspan="9" class="empty">Consultando líneas…</td></tr>';
+
+  const params = new URLSearchParams({
+    empresa_id: String(empresaId()),
+    pais,
+    oc,
+    limit: "500",
+  });
+
+  try {
+    const data = await api(`/api/v1/compras/lineas?${params}`);
+    comprasLineasBody.innerHTML = data.items.length
+      ? data.items.map((linea) => `
+          <tr>
+            <td>${Number(linea.fila_fuente || 0).toLocaleString("es-CO")}</td>
+            <td>${escapar(linea.sku)}</td>
+            <td>${escapar(linea.proveedor)}</td>
+            <td>${escapar(linea.estado_origen)}</td>
+            <td>${escapar(linea.etapa_logistica)}</td>
+            <td>${escapar(linea.modo_transporte_origen)}</td>
+            <td>${escapar(linea.eta)}</td>
+            <td>${escapar(linea.valor_total_compra_usd_origen)}</td>
+            <td>${escapar(linea.valor_oci_ddp_origen)}</td>
+          </tr>
+        `).join("")
+      : '<tr><td colspan="9" class="empty">No se encontraron líneas para esta OC.</td></tr>';
+  } catch (error) {
+    comprasLineasBody.innerHTML = `<tr><td colspan="9" class="empty">${escapar(error.message)}</td></tr>`;
+    setEstadoCompras(error.message, "error");
   }
 }
 
@@ -370,7 +416,9 @@ async function cargarComprasTodo(forzar = false) {
   try {
     const diagnostico = await cargarComprasDiagnostico(forzar);
     if (diagnostico.estado !== "OK") {
-      comprasOcsBody.innerHTML = '<tr><td colspan="8" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
+      comprasOcsBody.innerHTML = '<tr><td colspan="9" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
+      comprasLineasBody.innerHTML = '<tr><td colspan="9" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
+      comprasLineasTitulo.textContent = "Esquema degradado";
       comprasCalidadLista.innerHTML = '<p class="empty">Calidad no calculada con esquema degradado.</p>';
       comprasCatalogosContenido.innerHTML = '<p class="empty">Catálogos no calculados con esquema degradado.</p>';
       return;
