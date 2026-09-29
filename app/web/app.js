@@ -27,6 +27,12 @@ const comprasFuenteCache = document.querySelector("#compras-fuente-cache");
 const comprasResumenOcs = document.querySelector("#compras-resumen-ocs");
 const comprasResumenMixtas = document.querySelector("#compras-resumen-mixtas");
 const comprasResumenPendientes = document.querySelector("#compras-resumen-pendientes");
+const comprasKpiCosto = document.querySelector("#compras-kpi-costo");
+const comprasKpiDdp = document.querySelector("#compras-kpi-ddp");
+const comprasKpiCostoCalidad = document.querySelector("#compras-kpi-costo-calidad");
+const comprasKpiDdpCalidad = document.querySelector("#compras-kpi-ddp-calidad");
+const comprasKpisEstadosBody = document.querySelector("#compras-kpis-estados-body");
+const comprasKpisNota = document.querySelector("#compras-kpis-nota");
 const comprasHojas = document.querySelector("#compras-hojas");
 const comprasOcsBody = document.querySelector("#compras-ocs-body");
 const comprasOcsTotal = document.querySelector("#compras-ocs-total");
@@ -209,6 +215,32 @@ logoutButton.addEventListener("click", async () => {
 });
 
 
+function formatearUSD(valor) {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return escapar(valor);
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numero);
+}
+
+function descripcionCalidadMonetaria(familia) {
+  if (!familia?.disponible) {
+    const hojas = familia?.hojas_sin_campo?.join(", ") || "fuente";
+    return `No disponible: falta el campo en ${hojas}`;
+  }
+  const activo = familia.activo || {};
+  const problemas =
+    Number(activo.lineas_sin_valor || 0) +
+    Number(activo.lineas_valor_invalido || 0);
+  return problemas
+    ? `${problemas} líneas activas sin valor utilizable`
+    : `${Number(activo.lineas_con_valor || 0).toLocaleString("es-CO")} líneas activas con valor`;
+}
+
 function listaEtiquetas(valores) {
   if (!valores?.length) return '<span class="muted">—</span>';
   return valores.map((valor) => `<span class="tag">${escapar(valor)}</span>`).join(" ");
@@ -372,6 +404,69 @@ async function cargarComprasLineas(pais, oc) {
   }
 }
 
+async function cargarComprasKpis() {
+  const params = new URLSearchParams({empresa_id: String(empresaId())});
+  if (comprasFiltroPais.value) params.set("pais", comprasFiltroPais.value);
+
+  comprasKpisEstadosBody.innerHTML = '<tr><td colspan="4" class="empty">Calculando…</td></tr>';
+
+  try {
+    const data = await api(`/api/v1/compras/kpis?${params}`);
+    const porCodigo = Object.fromEntries(
+      (data.familias || []).map((familia) => [familia.codigo, familia])
+    );
+    const costo = porCodigo.costo_compra;
+    const ddp = porCodigo.valor_comercial_ddp;
+
+    comprasKpiCosto.textContent = costo?.disponible
+      ? formatearUSD(costo.activo?.monto_usd)
+      : "No disponible";
+    comprasKpiDdp.textContent = ddp?.disponible
+      ? formatearUSD(ddp.activo?.monto_usd)
+      : "No disponible";
+    comprasKpiCostoCalidad.textContent = descripcionCalidadMonetaria(costo);
+    comprasKpiDdpCalidad.textContent = descripcionCalidadMonetaria(ddp);
+
+    const costoEstados = Object.fromEntries(
+      (costo?.por_estado || []).map((item) => [item.estado, item])
+    );
+    const ddpEstados = Object.fromEntries(
+      (ddp?.por_estado || []).map((item) => [item.estado, item])
+    );
+    const estados = data.poblacion_supply_chain_actual?.estados_incluidos || [];
+
+    comprasKpisEstadosBody.innerHTML = estados.length
+      ? estados.map((estadoFuente) => {
+          const costoEstado = costoEstados[estadoFuente];
+          const ddpEstado = ddpEstados[estadoFuente];
+          const lineas = costoEstado?.lineas ?? ddpEstado?.lineas ?? 0;
+          return `
+            <tr>
+              <td>${escapar(estadoFuente)}</td>
+              <td>${Number(lineas).toLocaleString("es-CO")}</td>
+              <td>${costo?.disponible ? formatearUSD(costoEstado?.monto_usd || "0") : "—"}</td>
+              <td>${ddp?.disponible ? formatearUSD(ddpEstado?.monto_usd || "0") : "—"}</td>
+            </tr>
+          `;
+        }).join("")
+      : '<tr><td colspan="4" class="empty">No hay estados en la población configurada.</td></tr>';
+
+    const alcance = data.pais ? ` · ${data.pais}` : " · CO + EC + CL";
+    comprasKpisNota.textContent =
+      `Población: estados del pivote Supply Chain actual${alcance}. ` +
+      "Las dos familias responden preguntas distintas; no se ha definido todavía el KPI ejecutivo de “en tránsito / en el mar”.";
+  } catch (error) {
+    comprasKpiCosto.textContent = "—";
+    comprasKpiDdp.textContent = "—";
+    comprasKpiCostoCalidad.textContent = error.message;
+    comprasKpiDdpCalidad.textContent = error.message;
+    comprasKpisEstadosBody.innerHTML = `<tr><td colspan="4" class="empty">${escapar(error.message)}</td></tr>`;
+    comprasKpisNota.textContent = "";
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
 async function cargarComprasCalidad() {
   comprasCalidadLista.innerHTML = '<p class="empty">Consultando…</p>';
   try {
@@ -459,6 +554,7 @@ async function cargarComprasTodo(forzar = false) {
     }
     await Promise.all([
       cargarComprasResumen(),
+      cargarComprasKpis(),
       cargarComprasOCs(),
       cargarComprasCalidad(),
       cargarComprasCatalogos(),
@@ -631,12 +727,13 @@ document.querySelector("#cargar-pendientes").addEventListener("click", cargarPen
 navCartera.addEventListener("click", () => mostrarModulo("cartera"));
 navCompras.addEventListener("click", () => mostrarModulo("compras"));
 document.querySelector("#compras-refrescar-fuente").addEventListener("click", () => cargarComprasTodo(true));
+document.querySelector("#compras-cargar-kpis").addEventListener("click", cargarComprasKpis);
 document.querySelector("#compras-cargar-ocs").addEventListener("click", cargarComprasOCs);
 document.querySelector("#compras-cargar-calidad").addEventListener("click", cargarComprasCalidad);
 document.querySelector("#compras-cargar-catalogos").addEventListener("click", cargarComprasCatalogos);
 comprasFiltroPais.addEventListener("change", () => {
   comprasOcsOffset = 0;
-  cargarComprasOCs();
+  Promise.all([cargarComprasKpis(), cargarComprasOCs()]).catch(() => {});
 });
 comprasFiltroMixtas.addEventListener("change", () => {
   comprasOcsOffset = 0;

@@ -138,13 +138,16 @@ GET /api/v1/compras/fuente/estado
 GET /api/v1/compras/catalogos
 GET /api/v1/compras/calidad
 GET /api/v1/compras/resumen
+GET /api/v1/compras/kpis
 GET /api/v1/compras/ocs
 GET /api/v1/compras/lineas
 ```
 
 `/fuente/estado?forzar_lectura=true` relee Google Sheets ignorando el snapshot vigente. Sigue siendo una operación de lectura.
 
-`/resumen` expone únicamente conteos estructurales (líneas, OCs identificadas, OCs mixtas, líneas sin OC y líneas con etapa por definir). No agrega valores monetarios ni decide un KPI financiero.
+`/resumen` expone únicamente conteos estructurales (líneas, OCs identificadas, OCs mixtas, líneas sin OC y líneas con etapa por definir).
+
+`/kpis` expone las dos familias monetarias descriptivas. Cada familia se marca como no disponible si su columna fuente falta en alguna hoja del alcance solicitado; no se suman países parcialmente sin advertencia.
 
 ## 10. Fuera de este contrato
 

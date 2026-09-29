@@ -266,6 +266,48 @@
           </article>
         </section>
 
+        <section class="panel" id="compras-kpis-monetarios">
+          <div class="panel-heading">
+            <div>
+              <h3>Familias monetarias</h3>
+              <p>Costo de compra y valor comercial DDP sobre la población del Supply Chain actual. No define todavía “en tránsito / en el mar”.</p>
+            </div>
+            <button id="compras-cargar-kpis" type="button">Actualizar</button>
+          </div>
+
+          <div class="monetary-family-grid">
+            <article class="monetary-family-card">
+              <span class="eyebrow">VALOR TOTAL COMPRA USD</span>
+              <h4>Costo de compra activo</h4>
+              <strong id="compras-kpi-costo">—</strong>
+              <small id="compras-kpi-costo-calidad">Sin consultar</small>
+            </article>
+            <article class="monetary-family-card">
+              <span class="eyebrow">VALOR OCI (DDP)</span>
+              <h4>Valor comercial DDP activo</h4>
+              <strong id="compras-kpi-ddp">—</strong>
+              <small id="compras-kpi-ddp-calidad">Sin consultar</small>
+            </article>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estado fuente</th>
+                  <th>Líneas</th>
+                  <th>Costo compra USD</th>
+                  <th>Valor DDP USD</th>
+                </tr>
+              </thead>
+              <tbody id="compras-kpis-estados-body">
+                <tr><td colspan="4" class="empty">Carga las familias monetarias para comenzar.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p id="compras-kpis-nota" class="table-footnote"></p>
+        </section>
+
         <section class="panel" id="compras-diagnostico">
           <div class="panel-heading">
             <div>

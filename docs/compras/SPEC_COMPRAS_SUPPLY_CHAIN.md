@@ -149,7 +149,12 @@ Los nombres siguientes son conceptos del módulo; la fuente puede usar encabezad
 | `fecha_solicitud_pago_abono` | `FECHA SOLICITUD PAGO (abono)` |
 | `motivo_demora_abono` | `MOTIVO DEMORA ABONO` |
 
-**No se ha definido aún cuál de los valores monetarios será la métrica oficial de cada KPI.**
+Se implementan **dos familias descriptivas en paralelo**:
+
+- costo de compra: `VALOR TOTAL COMPRA USD`;
+- valor comercial DDP: `VALOR OCI (DDP)`.
+
+La hoja derivada `Supply Chain` del snapshot analizado usa `SUM de VALOR OCI (DDP)` por `ESTADO`, por lo que la familia DDP permite reproducir/comparar la lectura actual. Sigue pendiente decidir cuál familia debe tener jerarquía ejecutiva y cuál corresponde a cada KPI corporativo.
 
 ### 4.4 Producción
 
@@ -253,7 +258,30 @@ Esta separación es una **propuesta de diseño funcional**, no una regla corpora
 
 ## 8. KPIs: contrato antes de implementación
 
-Ningún KPI se implementa solo por el nombre.
+### 8.1 Familias monetarias ya implementadas
+
+La plataforma expone dos familias monetarias descriptivas, calculadas a nivel de línea y con `Decimal`:
+
+- `costo_compra` → `VALOR TOTAL COMPRA USD`;
+- `valor_comercial_ddp` → `VALOR OCI (DDP)`.
+
+Para reproducir la población del pivote `Supply Chain` actual, ambas familias pueden calcular el total sobre estos estados fuente:
+
+- `EN BODEGA ASIATI SHENZHEN`;
+- `EN BODEGA ASIATI YIWU`;
+- `EN NACIONALIZACION`;
+- `EN OTM`;
+- `EN PRODUCCION`;
+- `ENVIADO A DESTINO`;
+- `PENDIENTE DEPOSITO`.
+
+Esto no asigna una etapa logística definitiva a `EN OTM` o `PENDIENTE DEPOSITO`.
+
+Ver `docs/compras/KPIS_MONETARIOS.md`.
+
+### 8.2 KPIs corporativos pendientes
+
+Ningún KPI corporativo se implementa solo por el nombre.
 
 Cada KPI debe documentar:
 
@@ -364,6 +392,7 @@ Endpoints técnicos de solo lectura:
 - `GET /api/v1/compras/catalogos`
 - `GET /api/v1/compras/calidad`
 - `GET /api/v1/compras/resumen`
+- `GET /api/v1/compras/kpis`
 - `GET /api/v1/compras/ocs`
 - `GET /api/v1/compras/lineas`
 
@@ -404,6 +433,8 @@ Esta vista puede:
 - mostrar observaciones de calidad;
 - mostrar catálogos observados.
 
-Esta vista **no es el dashboard financiero definitivo** y no debe mostrar totales monetarios agregados como KPI hasta que las preguntas de negocio correspondientes estén cerradas.
+Esta vista **no es el dashboard financiero definitivo**.
 
-Los valores monetarios de una línea pueden mostrarse como evidencia cruda de fuente, sin sumarlos ni interpretarlos.
+Sí puede mostrar las dos familias monetarias descriptivas ya definidas —costo de compra y valor comercial DDP— y su desglose por estados del pivote actual. Esos totales deben etiquetarse como familias descriptivas, no como “valor en tránsito / en el mar” ni como KPI ejecutivo oficial hasta que negocio cierre esas definiciones.
+
+Los valores monetarios de una línea siguen disponibles como evidencia cruda de fuente.
