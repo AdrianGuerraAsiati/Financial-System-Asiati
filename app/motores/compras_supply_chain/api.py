@@ -14,6 +14,7 @@ from .google_sheets import (
     ConfiguracionComprasGoogleSheetsError,
     EsquemaComprasInvalidoError,
     FuenteComprasGoogleSheets,
+    LecturaComprasGoogleSheetsError,
     construir_fuente_compras_desde_entorno,
 )
 from .normalizacion import normalizar_etiqueta
@@ -45,7 +46,11 @@ def _listar_seguro(
 ) -> tuple[LineaCompra, ...]:
     try:
         return fuente.listar(empresa_id=empresa_id)
-    except (ConfiguracionComprasGoogleSheetsError, EsquemaComprasInvalidoError) as exc:
+    except (
+        ConfiguracionComprasGoogleSheetsError,
+        EsquemaComprasInvalidoError,
+        LecturaComprasGoogleSheetsError,
+    ) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
@@ -219,7 +224,10 @@ def estado_fuente(
             empresa_id=empresa_id,
             forzar_lectura=forzar_lectura,
         )
-    except ConfiguracionComprasGoogleSheetsError as exc:
+    except (
+        ConfiguracionComprasGoogleSheetsError,
+        LecturaComprasGoogleSheetsError,
+    ) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return {
