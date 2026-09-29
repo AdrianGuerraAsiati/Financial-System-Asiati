@@ -35,6 +35,9 @@ CAMPOS: tuple[CampoContrato, ...] = (
             "FECHA ENTREGA EN BODEGA BOGOTÁ",
             "FECHA ENTREGA EN BODEGA QUITO",
             "FECHA ENTREGA EN BODEGA SANTIAGO",
+            "FECHA ENTREGA A BODEGA EN BOG",
+            "FECHA ENTREGA A BODEGA EN QUITO",
+            "FECHA ENTREGA A BODEGA EN SANTIAGO",
             "FECHA ENTREGA BODEGA DESTINO",
         ),
         critico=False,
@@ -77,6 +80,10 @@ class DiagnosticoEsquema:
         return data
 
 
+def es_encabezado_consumido(encabezado: Any) -> bool:
+    return normalizar_encabezado(encabezado) in _ALIAS_A_CAMPO
+
+
 def analizar_encabezados(
     encabezados: Iterable[Any],
     *,
@@ -94,7 +101,11 @@ def analizar_encabezados(
         conteos[encabezado] = conteos.get(encabezado, 0) + 1
 
     duplicados = tuple(
-        sorted(encabezado for encabezado, cantidad in conteos.items() if cantidad > 1)
+        sorted(
+            encabezado
+            for encabezado, cantidad in conteos.items()
+            if cantidad > 1 and encabezado in _ALIAS_A_CAMPO
+        )
     )
 
     reconocidos = {

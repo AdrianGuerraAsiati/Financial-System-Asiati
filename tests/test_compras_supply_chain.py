@@ -83,6 +83,30 @@ def test_transport_variants_are_normalized_but_source_value_is_preserved(
     assert linea.hoja_fuente == "INFORME CLIENTES (CO)"
 
 
+
+def test_live_destination_delivery_headers_are_recognized() -> None:
+    casos = {
+        "CO": "FECHA ENTREGA A BODEGA EN BOG",
+        "EC": "FECHA ENTREGA A BODEGA EN QUITO",
+        "CL": "FECHA ENTREGA A BODEGA EN SANTIAGO",
+    }
+
+    for pais, encabezado in casos.items():
+        linea = normalizar_fila_compra(
+            {
+                "NUMERO OC": f"OC-{pais}",
+                "CLIENTE": "Cliente",
+                "PROVEEDOR": "Proveedor",
+                "ESTADO": "ENTREGADO",
+                "MODO TRANSPORTE": "MARITIMO",
+                encabezado: "2026-09-29",
+            },
+            pais=pais,
+            fila_fuente=2,
+        )
+        assert linea.fecha_entrega_bodega_destino == "2026-09-29"
+
+
 def test_na_purchase_order_is_kept_and_marked_unidentified() -> None:
     linea = normalizar_fila_compra(
         {
@@ -186,6 +210,73 @@ def test_source_reads_the_three_country_ranges_and_never_requires_write_api() ->
     assert len(cliente.llamadas) == 3
     assert SHEETS_READONLY_SCOPE.endswith("spreadsheets.readonly")
     assert not hasattr(cliente, "actualizar_valores")
+
+
+
+def test_unconsumed_duplicate_headers_do_not_degrade_operational_schema() -> None:
+    class ClienteConDuplicadoNoConsumido:
+        def obtener_valores(self, *, spreadsheet_id: str, rango: str):
+            return [
+                [
+                    "NUMERO OC",
+                    "CLIENTE",
+                    "PROVEEDOR",
+                    "ESTADO",
+                    "MODO TRANSPORTE",
+                    "CBM",
+                    "CBM",
+                ],
+                ["OC-1", "Cliente", "Proveedor", "ENTREGADO", "MARITIMO", "1", "1"],
+            ]
+
+    fuente = FuenteComprasGoogleSheets(
+        cliente=ClienteConDuplicadoNoConsumido(),
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=7,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={"CO": "CO!A:Z", "EC": "EC!A:Z", "CL": "CL!A:Z"},
+        ),
+    )
+
+    snapshot = fuente.obtener_snapshot(empresa_id=7)
+
+    assert snapshot.esquema_valido is True
+    assert all(
+        diagnostico.encabezados_duplicados == ()
+        for diagnostico in snapshot.diagnosticos
+    )
+
+
+def test_formula_only_trailing_rows_are_not_counted_as_purchase_lines() -> None:
+    class ClienteConFormulasArrastradas:
+        def obtener_valores(self, *, spreadsheet_id: str, rango: str):
+            return [
+                [
+                    "NUMERO OC",
+                    "CLIENTE",
+                    "PROVEEDOR",
+                    "ESTADO",
+                    "MODO TRANSPORTE",
+                    "ALERTA PROVEEDOR (auto)",
+                ],
+                ["OC-1", "Cliente", "Proveedor", "ENTREGADO", "MARITIMO", "OK"],
+                ["", "", "", "", "", "FORMULA"],
+                ["", "", "", "", "", "FORMULA"],
+            ]
+
+    fuente = FuenteComprasGoogleSheets(
+        cliente=ClienteConFormulasArrastradas(),
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=7,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={"CO": "CO!A:Z", "EC": "EC!A:Z", "CL": "CL!A:Z"},
+        ),
+    )
+
+    snapshot = fuente.obtener_snapshot(empresa_id=7)
+
+    assert len(snapshot.lineas) == 3
+    assert all(diagnostico.filas_datos == 1 for diagnostico in snapshot.diagnosticos)
 
 
 def test_source_reuses_snapshot_inside_ttl() -> None:
