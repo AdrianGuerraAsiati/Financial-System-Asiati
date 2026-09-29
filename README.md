@@ -52,15 +52,32 @@ Los cinco primeros son motores de conciliación. `flujo_caja` será un motor de 
 
 ## Desarrollo local
 
+Arranque rápido:
+
 ```bash
 docker compose up --build
 ```
 
-API:
+El compose de desarrollo ejecuta automáticamente las migraciones, crea una empresa local y asegura un superadministrador.
+
+Abre:
 
 ```text
 http://localhost:8000
 ```
+
+Credenciales locales por defecto:
+
+```text
+admin@asiati.local
+AsiatiDev2026!
+```
+
+Compras / Supply Chain usa datos sintéticos claramente marcados como **DEMO LOCAL** hasta que conectes Google Sheets.
+
+Guía completa, conexión al Sheet real y reset local:
+
+`DEV_SETUP.md`
 
 Health check:
 
@@ -70,4 +87,4 @@ GET /health
 
 ## Estado
 
-Primer scaffold. Todavía no contiene las reglas reales de conciliación de wallets.
+La plataforma ya incluye núcleo de autenticación/autorización, Cartera, conciliación Wiilog y un vertical read-only de Compras / Supply Chain con explorador, diagnóstico de fuente y familias monetarias de costo y DDP.
