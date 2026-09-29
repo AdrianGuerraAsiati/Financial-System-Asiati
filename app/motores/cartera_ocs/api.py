@@ -4,10 +4,11 @@ from dataclasses import asdict
 from datetime import date
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.auditoria.service import registrar_auditoria
 from app.core.auth.dependencias import Acceso, requiere
 from app.core.session import obtener_session
 from app.motores.cartera_ocs.almacenamiento import (
@@ -45,6 +46,13 @@ from app.motores.cartera_ocs.proyeccion import (
     listar_proyeccion,
 )
 from app.motores.cartera_ocs.validacion import validar_cartera_en_camino
+from app.motores.cartera_ocs.snapshots import (
+    LecturaSnapshotCarteraError,
+    capturar_snapshot_cartera_desde_entorno,
+    guardar_snapshot_cartera,
+    listar_snapshots_cartera,
+    snapshot_cartera_como_dict,
+)
 from app.motores.cartera_ocs.persistencia import (
     existe_comprobante_por_hash,
     guardar_comprobante,
@@ -185,6 +193,82 @@ def consultar_estado_fuente(
     estado: dict[str, object] = Depends(obtener_estado_fuente),
 ) -> dict[str, object]:
     return estado
+
+
+@router.post("/snapshots", status_code=201)
+def capturar_snapshot_cartera(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    session: Session = Depends(obtener_session),
+) -> dict[str, object]:
+    try:
+        snapshot = capturar_snapshot_cartera_desde_entorno(
+            empresa_id=empresa_id,
+        )
+    except (
+        ConfiguracionGoogleSheetsIncompletaError,
+        LecturaSnapshotCarteraError,
+    ) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    persistido, creado = guardar_snapshot_cartera(
+        session,
+        empresa_id=empresa_id,
+        snapshot=snapshot,
+    )
+    if creado:
+        registrar_auditoria(
+            session,
+            usuario_id=_acceso.usuario.id,
+            empresa_id=empresa_id,
+            accion="cartera.snapshot_guardado",
+            entidad="cartera_snapshot",
+            entidad_id=persistido.id,
+            despues={
+                "contenido_hash": persistido.contenido_hash,
+                "filas": persistido.filas,
+                "operaciones": persistido.operaciones,
+                "registros_mora": persistido.registros_mora,
+                "proyecciones": persistido.proyecciones,
+            },
+            ip=_acceso.ip,
+        )
+    session.commit()
+    session.refresh(persistido)
+
+    return {
+        "creado": creado,
+        "snapshot": snapshot_cartera_como_dict(persistido),
+        "nota": (
+            "La captura se guarda en la base de datos de la plataforma. "
+            "Google Sheets permanece estrictamente en modo solo lectura."
+        ),
+    }
+
+
+@router.get("/snapshots")
+def consultar_snapshots_cartera(
+    empresa_id: int,
+    limit: int = Query(50, ge=1, le=200),
+    _acceso: Acceso = Depends(ver_cartera),
+    session: Session = Depends(obtener_session),
+) -> dict[str, object]:
+    snapshots = listar_snapshots_cartera(
+        session,
+        empresa_id=empresa_id,
+        limite=limit,
+    )
+    return {
+        "total": len(snapshots),
+        "items": [
+            snapshot_cartera_como_dict(item)
+            for item in snapshots
+        ],
+        "nota": (
+            "Histórico inmutable de capturas de la fuente de Cartera. "
+            "No sustituye Google Sheets como fuente operativa."
+        ),
+    }
 
 
 @router.get("/calidad")
