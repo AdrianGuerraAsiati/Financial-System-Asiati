@@ -162,6 +162,9 @@ def test_source_reuses_snapshot_inside_ttl() -> None:
     assert len(cliente.llamadas) == 3
     assert fuente.estado_cache()["tiene_snapshot"] is True
 
+    fuente.obtener_snapshot(empresa_id=7, forzar_lectura=True)
+    assert len(cliente.llamadas) == 6
+
 
 def test_source_blocks_operational_read_when_critical_header_disappears() -> None:
     class ClienteConDrift:
@@ -194,3 +197,26 @@ def test_source_blocks_operational_read_when_critical_header_disappears() -> Non
 
     with pytest.raises(EsquemaComprasInvalidoError, match="esquema de Compras cambió"):
         fuente.listar(empresa_id=7)
+
+
+
+def test_source_wraps_external_read_failures() -> None:
+    from app.motores.compras_supply_chain.google_sheets import (
+        LecturaComprasGoogleSheetsError,
+    )
+
+    class ClienteRoto:
+        def obtener_valores(self, *, spreadsheet_id: str, rango: str):
+            raise RuntimeError("Google no disponible")
+
+    fuente = FuenteComprasGoogleSheets(
+        cliente=ClienteRoto(),
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=7,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={"CO": "CO!A:Z", "EC": "EC!A:Z", "CL": "CL!A:Z"},
+        ),
+    )
+
+    with pytest.raises(LecturaComprasGoogleSheetsError, match="CO"):
+        fuente.obtener_snapshot(empresa_id=7)
