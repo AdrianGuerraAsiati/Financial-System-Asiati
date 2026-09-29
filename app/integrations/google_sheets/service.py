@@ -254,7 +254,14 @@ def ejecutar_refresco_reclamado(
             estado.processed_through_at = corte
             estado.last_refresh_at = ahora
             estado.last_error = None
-            if estado.last_event_at is not None and estado.last_event_at > corte:
+            hubo_nuevos_eventos = (
+                estado.estado == "PENDING"
+                or (
+                    estado.last_event_at is not None
+                    and estado.last_event_at > corte
+                )
+            )
+            if hubo_nuevos_eventos:
                 estado.estado = "PENDING"
                 estado.first_event_at = estado.last_event_at
             else:
@@ -279,7 +286,14 @@ def ejecutar_refresco_reclamado(
             ahora = datetime.now(timezone.utc)
             estado.last_refresh_at = ahora
             estado.last_error = str(exc)[:4000]
-            if estado.last_event_at is not None and estado.last_event_at > corte:
+            hubo_nuevos_eventos = (
+                estado.estado == "PENDING"
+                or (
+                    estado.last_event_at is not None
+                    and estado.last_event_at > corte
+                )
+            )
+            if hubo_nuevos_eventos:
                 estado.estado = "PENDING"
                 estado.first_event_at = estado.last_event_at
             else:
