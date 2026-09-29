@@ -101,49 +101,66 @@ El bootstrap es idempotente: no recrea ni reemplaza usuarios existentes.
 
 ## Conectar el Google Sheet real de Compras
 
-1. Copia el archivo del service account a una ruta local, por ejemplo:
+La integración es de **solo lectura**. El adaptador nunca escribe en el Sheet.
 
-```text
-secrets/google-service-account.json
+### Opción recomendada: ADC de usuario + impersonación keyless
+
+Este flujo evita claves privadas permanentes de service accounts y funciona cuando la
+organización tiene bloqueada su creación.
+
+1. Habilita Google Sheets API e IAM Service Account Credentials API en el proyecto de Google Cloud.
+
+2. La cuenta de usuario que hará desarrollo local debe poder impersonar la service account
+con el rol `Service Account Token Creator`. Comparte el Sheet con esa service account como
+**Lector**.
+
+3. Crea ADC de usuario en el host:
+
+```bash
+gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform
 ```
 
-`secrets/` está ignorado por Git y por el build de Docker.
-
-2. Copia el archivo de configuración:
+4. Copia el archivo de configuración:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Cambia al menos:
+En Windows, configura la ruta host del ADC y la service account a impersonar:
 
 ```dotenv
 COMPRAS_DEMO_MODE=false
 COMPRAS_SHEETS_EMPRESA_ID=1
 COMPRAS_SHEETS_SPREADSHEET_ID=<id-del-google-sheet>
-COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE='Supply Chain'!A:Z
-GOOGLE_SERVICE_ACCOUNT_FILE=./secrets/google-service-account.json
+COMPRAS_SHEETS_CO_RANGE="'INFORME CLIENTES (CO)'!A:BG"
+COMPRAS_SHEETS_EC_RANGE="'INFORME CLIENTES (EC)'!A:BG"
+COMPRAS_SHEETS_CL_RANGE="'INFORME CLIENTES (CL)'!A:BG"
+COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE="'Supply Chain '!A:Z"
+GOOGLE_SERVICE_ACCOUNT_FILE=C:/Users/<usuario>/AppData/Roaming/gcloud/application_default_credentials.json
+GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=<service-account>@<proyecto>.iam.gserviceaccount.com
 ```
 
-Los rangos por defecto ya apuntan a:
+El nombre actual de la pestaña oficial `Supply Chain ` contiene un espacio final y debe
+preservarse en el rango mientras la fuente mantenga ese nombre.
 
-```text
-'INFORME CLIENTES (CO)'!A:BG
-'INFORME CLIENTES (EC)'!A:BG
-'INFORME CLIENTES (CL)'!A:BG
-```
-
-4. Levanta con el override que monta la credencial dentro del contenedor:
+5. Levanta con el override de Google:
 
 ```bash
 docker compose -f docker-compose.yml -f compose.google.yml up --build
 ```
 
-El adaptador de Compras solicita únicamente:
+El contenedor monta el ADC como archivo de credenciales fuente. Python obtiene credenciales
+temporales de la service account mediante impersonación y limita el acceso final al scope:
 
 ```text
 https://www.googleapis.com/auth/spreadsheets.readonly
 ```
+
+### Compatibilidad con JSON de service account
+
+Si una instalación autorizada sí utiliza un JSON de service account, puede mantener
+`GOOGLE_IMPERSONATE_SERVICE_ACCOUNT` vacío y apuntar
+`GOOGLE_SERVICE_ACCOUNT_FILE` al JSON. No se debe versionar ninguna credencial.
 
 No existe write-back.
 

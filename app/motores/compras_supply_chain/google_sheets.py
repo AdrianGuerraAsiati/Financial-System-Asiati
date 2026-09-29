@@ -9,6 +9,7 @@ from typing import Any, Protocol
 from urllib.parse import quote
 
 import google.auth
+from google.auth import impersonated_credentials
 from google.auth.transport.requests import AuthorizedSession
 
 from .contrato import DiagnosticoEsquema, analizar_encabezados
@@ -17,6 +18,7 @@ from .normalizacion import normalizar_fila_compra
 
 
 SHEETS_READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
+CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 
 RANGOS_DEFAULT = {
     "CO": "'INFORME CLIENTES (CO)'!A:BG",
@@ -49,9 +51,28 @@ class ClienteValoresGoogleSheets(Protocol):
 class ClienteGoogleSheetsReadonly:
     """Cliente mínimo: solo GET sobre spreadsheets.values de Sheets API v4."""
 
-    def __init__(self, session: Any | None = None) -> None:
+    def __init__(
+        self,
+        session: Any | None = None,
+        *,
+        target_principal: str | None = None,
+    ) -> None:
         if session is None:
-            credentials, _ = google.auth.default(scopes=[SHEETS_READONLY_SCOPE])
+            principal = (target_principal or "").strip()
+            if principal:
+                source_credentials, _ = google.auth.default(
+                    scopes=[CLOUD_PLATFORM_SCOPE]
+                )
+                credentials = impersonated_credentials.Credentials(
+                    source_credentials=source_credentials,
+                    target_principal=principal,
+                    target_scopes=[SHEETS_READONLY_SCOPE],
+                    lifetime=3600,
+                )
+            else:
+                credentials, _ = google.auth.default(
+                    scopes=[SHEETS_READONLY_SCOPE]
+                )
             session = AuthorizedSession(credentials)
         self.session = session
 
@@ -373,7 +394,13 @@ def construir_fuente_compras_desde_entorno(
         )
 
     return FuenteComprasGoogleSheets(
-        cliente=cliente or ClienteGoogleSheetsReadonly(),
+        cliente=cliente
+        or ClienteGoogleSheetsReadonly(
+            target_principal=(
+                os.getenv("GOOGLE_IMPERSONATE_SERVICE_ACCOUNT", "").strip()
+                or None
+            )
+        ),
         configuracion=ConfiguracionComprasGoogleSheets(
             empresa_id=empresa,
             spreadsheet_id=spreadsheet_id,
@@ -385,7 +412,7 @@ def construir_fuente_compras_desde_entorno(
             rango_supply_chain=(
                 os.getenv(
                     "COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE",
-                    "'Supply Chain'!A:Z",
+                    "'Supply Chain '!A:Z",
                 ).strip()
                 or None
             ),
