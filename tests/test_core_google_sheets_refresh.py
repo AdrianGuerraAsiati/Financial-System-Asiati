@@ -14,6 +14,7 @@ from tests.apoyo_auth import cliente, crear_empresa, engine
 def test_change_webhook_coalesces_events_without_reading_google(monkeypatch) -> None:
     empresa_id = crear_empresa("Webhook Sheets")
     monkeypatch.setenv("GOOGLE_SHEETS_CHANGE_SECRET", "secret-test")
+    monkeypatch.setenv("CARTERA_SHEETS_EMPRESA_ID", str(empresa_id))
     monkeypatch.setenv("CARTERA_SHEETS_SPREADSHEET_ID", "sheet-cartera")
 
     client = cliente()
@@ -58,6 +59,7 @@ def test_change_webhook_coalesces_events_without_reading_google(monkeypatch) -> 
 def test_change_webhook_rejects_wrong_secret(monkeypatch) -> None:
     empresa_id = crear_empresa("Webhook Sheets secret")
     monkeypatch.setenv("GOOGLE_SHEETS_CHANGE_SECRET", "secret-test")
+    monkeypatch.setenv("CARTERA_SHEETS_EMPRESA_ID", str(empresa_id))
     monkeypatch.setenv("CARTERA_SHEETS_SPREADSHEET_ID", "sheet-cartera")
 
     response = cliente().post(
