@@ -27,6 +27,17 @@ const comprasFuenteCache = document.querySelector("#compras-fuente-cache");
 const comprasResumenOcs = document.querySelector("#compras-resumen-ocs");
 const comprasResumenMixtas = document.querySelector("#compras-resumen-mixtas");
 const comprasResumenPendientes = document.querySelector("#compras-resumen-pendientes");
+const comprasEjecutivoCosto = document.querySelector("#compras-ejecutivo-costo");
+const comprasEjecutivoDdp = document.querySelector("#compras-ejecutivo-ddp");
+const comprasEjecutivoOcs = document.querySelector("#compras-ejecutivo-ocs");
+const comprasEjecutivoAtencion = document.querySelector("#compras-ejecutivo-atencion");
+const comprasGraficoEstados = document.querySelector("#compras-grafico-estados");
+const comprasGraficoTransporte = document.querySelector("#compras-grafico-transporte");
+const comprasAtencionLista = document.querySelector("#compras-atencion-lista");
+const comprasValidacionEstado = document.querySelector("#compras-validacion-estado");
+const comprasValidacionDetalle = document.querySelector("#compras-validacion-detalle");
+const comprasValidacionBody = document.querySelector("#compras-validacion-body");
+const comprasExportar = document.querySelector("#compras-exportar");
 const comprasKpiCosto = document.querySelector("#compras-kpi-costo");
 const comprasKpiDdp = document.querySelector("#compras-kpi-ddp");
 const comprasKpiCostoCalidad = document.querySelector("#compras-kpi-costo-calidad");
@@ -239,6 +250,168 @@ function descripcionCalidadMonetaria(familia) {
   return problemas
     ? `${problemas} líneas activas sin valor utilizable`
     : `${Number(activo.lineas_con_valor || 0).toLocaleString("es-CO")} líneas activas con valor`;
+}
+
+function parametrosPais() {
+  const params = new URLSearchParams({empresa_id: String(empresaId())});
+  if (comprasFiltroPais.value) params.set("pais", comprasFiltroPais.value);
+  return params;
+}
+
+function renderBarras(conteos) {
+  const entradas = Object.entries(conteos || {});
+  if (!entradas.length) return '<p class="empty">Sin datos para este alcance.</p>';
+  const maximo = Math.max(...entradas.map(([, valor]) => Number(valor || 0)), 1);
+  return entradas
+    .sort((a, b) => Number(b[1]) - Number(a[1]))
+    .map(([nombre, valor]) => {
+      const numero = Number(valor || 0);
+      const ancho = Math.max(4, Math.round((numero / maximo) * 100));
+      return `
+        <div class="bar-row">
+          <div class="bar-label"><span>${escapar(nombre)}</span><strong>${numero.toLocaleString("es-CO")}</strong></div>
+          <div class="bar-track"><span style="width:${ancho}%"></span></div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+async function cargarComprasDashboard() {
+  try {
+    const data = await api(`/api/v1/compras/dashboard?${parametrosPais()}`);
+    const familias = Object.fromEntries(
+      (data.familias_monetarias || []).map((familia) => [familia.codigo, familia])
+    );
+    const costo = familias.costo_compra;
+    const ddp = familias.valor_comercial_ddp;
+    const estructural = data.estructural || {};
+
+    comprasEjecutivoCosto.textContent = costo?.disponible
+      ? formatearUSD(costo.activo?.monto_usd)
+      : "No disponible";
+    comprasEjecutivoDdp.textContent = ddp?.disponible
+      ? formatearUSD(ddp.activo?.monto_usd)
+      : "No disponible";
+    comprasEjecutivoOcs.textContent = Number(
+      estructural.ocs_con_al_menos_una_linea_en_poblacion_actual || 0
+    ).toLocaleString("es-CO");
+    comprasEjecutivoAtencion.textContent = Number(
+      estructural.puntos_atencion_total || 0
+    ).toLocaleString("es-CO");
+
+    comprasGraficoEstados.innerHTML = renderBarras(
+      estructural.lineas_activas_por_estado
+    );
+    comprasGraficoTransporte.innerHTML = renderBarras(
+      estructural.lineas_activas_por_transporte
+    );
+  } catch (error) {
+    comprasEjecutivoCosto.textContent = "—";
+    comprasEjecutivoDdp.textContent = "—";
+    comprasEjecutivoOcs.textContent = "—";
+    comprasEjecutivoAtencion.textContent = "—";
+    comprasGraficoEstados.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    comprasGraficoTransporte.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+function renderPuntoAtencion(item) {
+  return `
+    <article class="attention-card">
+      <div class="quality-card-title">
+        <div>
+          <span class="eyebrow">${escapar(item.categoria)}</span>
+          <strong>${escapar(item.titulo)}</strong>
+        </div>
+        <span class="attention-count">${Number(item.cantidad || 0).toLocaleString("es-CO")}</span>
+      </div>
+      <p>${escapar(item.descripcion)}</p>
+      ${item.muestras?.length
+        ? `<details><summary>Ver ejemplos</summary>${item.muestras.map((muestra) =>
+            `<p class="attention-evidence"><b>${escapar(muestra.pais)}</b> · ${escapar(muestra.numero_oc || "sin OC")} · ${escapar(muestra.evidencia)}</p>`
+          ).join("")}</details>`
+        : ""}
+    </article>
+  `;
+}
+
+async function cargarComprasAtencion() {
+  comprasAtencionLista.innerHTML = '<p class="empty">Consultando…</p>';
+  try {
+    const data = await api(`/api/v1/compras/atencion?${parametrosPais()}`);
+    comprasAtencionLista.innerHTML = data.items?.length
+      ? data.items.map(renderPuntoAtencion).join("")
+      : '<p class="empty">No hay observaciones con las reglas objetivas actuales.</p>';
+    comprasEjecutivoAtencion.textContent = Number(
+      data.total_observaciones || 0
+    ).toLocaleString("es-CO");
+  } catch (error) {
+    comprasAtencionLista.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+async function cargarComprasValidacion(forzar = false) {
+  comprasValidacionEstado.textContent = "Comparando…";
+  comprasValidacionDetalle.textContent = "";
+  comprasValidacionBody.innerHTML = '<tr><td colspan="6" class="empty">Consultando vista derivada…</td></tr>';
+
+  const params = new URLSearchParams({
+    empresa_id: String(empresaId()),
+    forzar_lectura: String(Boolean(forzar)),
+  });
+
+  try {
+    const data = await api(`/api/v1/compras/validacion/tablero?${params}`);
+    if (!data.disponible) {
+      comprasValidacionEstado.textContent = "Comparación no disponible";
+      comprasValidacionEstado.className = "validation-neutral";
+      comprasValidacionDetalle.textContent = data.motivo || "";
+      comprasValidacionBody.innerHTML = '<tr><td colspan="6" class="empty">No hay una referencia comparable todavía.</td></tr>';
+      return;
+    }
+
+    const filtroPais = comprasFiltroPais.value;
+    const filas = (data.comparaciones || []).filter(
+      (item) => !filtroPais || item.pais === filtroPais
+    );
+    const diferencias = filas.filter((item) => item.resultado !== "COINCIDE").length;
+    comprasValidacionEstado.textContent = diferencias
+      ? `${diferencias} diferencias para revisar`
+      : "Detalle y tablero coinciden";
+    comprasValidacionEstado.className = diferencias ? "validation-warning" : "validation-ok";
+    comprasValidacionDetalle.textContent =
+      `${filas.length} comparaciones DDP por estado · ${data.rango || "Supply Chain"}`;
+
+    comprasValidacionBody.innerHTML = filas.length
+      ? filas.map((item) => `
+          <tr>
+            <td>${escapar(item.pais)}</td>
+            <td>${escapar(item.estado)}</td>
+            <td>${formatearUSD(item.detalle_ddp)}</td>
+            <td>${formatearUSD(item.tablero_ddp)}</td>
+            <td>${item.diferencia === null ? "—" : formatearUSD(item.diferencia)}</td>
+            <td><span class="tag ${item.resultado === "COINCIDE" ? "ok-tag" : "warning-tag"}">${escapar(item.resultado)}</span></td>
+          </tr>
+        `).join("")
+      : '<tr><td colspan="6" class="empty">No hay comparaciones para este país.</td></tr>';
+  } catch (error) {
+    comprasValidacionEstado.textContent = "Error de comparación";
+    comprasValidacionEstado.className = "validation-warning";
+    comprasValidacionDetalle.textContent = error.message;
+    comprasValidacionBody.innerHTML = `<tr><td colspan="6" class="empty">${escapar(error.message)}</td></tr>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+function exportarCompras() {
+  const params = new URLSearchParams({empresa_id: String(empresaId())});
+  window.location.href = `/api/v1/compras/export.zip?${params}`;
 }
 
 function listaEtiquetas(valores) {
@@ -551,16 +724,22 @@ async function cargarComprasTodo(forzar = false) {
       comprasOcsBody.innerHTML = '<tr><td colspan="9" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
       comprasLineasBody.innerHTML = '<tr><td colspan="9" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
       comprasLineasTitulo.textContent = "Esquema degradado";
+      comprasAtencionLista.innerHTML = '<p class="empty">Puntos de atención no calculados con esquema degradado.</p>';
       comprasCalidadLista.innerHTML = '<p class="empty">Calidad no calculada con esquema degradado.</p>';
       comprasCatalogosContenido.innerHTML = '<p class="empty">Catálogos no calculados con esquema degradado.</p>';
+      comprasGraficoEstados.innerHTML = '<p class="empty">Dashboard bloqueado por esquema degradado.</p>';
+      comprasGraficoTransporte.innerHTML = '<p class="empty">Dashboard bloqueado por esquema degradado.</p>';
       return;
     }
     await Promise.all([
+      cargarComprasDashboard(),
       cargarComprasResumen(),
       cargarComprasKpis(),
       cargarComprasOCs(),
+      cargarComprasAtencion(),
       cargarComprasCalidad(),
       cargarComprasCatalogos(),
+      cargarComprasValidacion(forzar),
     ]);
     setEstadoCompras("Compras actualizadas", "ok");
   } catch (_) {
@@ -731,12 +910,21 @@ navCartera.addEventListener("click", () => mostrarModulo("cartera"));
 navCompras.addEventListener("click", () => mostrarModulo("compras"));
 document.querySelector("#compras-refrescar-fuente").addEventListener("click", () => cargarComprasTodo(true));
 document.querySelector("#compras-cargar-kpis").addEventListener("click", cargarComprasKpis);
+document.querySelector("#compras-cargar-atencion").addEventListener("click", cargarComprasAtencion);
+document.querySelector("#compras-validar-tablero").addEventListener("click", () => cargarComprasValidacion(true));
+comprasExportar.addEventListener("click", exportarCompras);
 document.querySelector("#compras-cargar-ocs").addEventListener("click", cargarComprasOCs);
 document.querySelector("#compras-cargar-calidad").addEventListener("click", cargarComprasCalidad);
 document.querySelector("#compras-cargar-catalogos").addEventListener("click", cargarComprasCatalogos);
 comprasFiltroPais.addEventListener("change", () => {
   comprasOcsOffset = 0;
-  Promise.all([cargarComprasKpis(), cargarComprasOCs()]).catch(() => {});
+  Promise.all([
+    cargarComprasDashboard(),
+    cargarComprasKpis(),
+    cargarComprasOCs(),
+    cargarComprasAtencion(),
+    cargarComprasValidacion(false),
+  ]).catch(() => {});
 });
 comprasFiltroMixtas.addEventListener("change", () => {
   comprasOcsOffset = 0;

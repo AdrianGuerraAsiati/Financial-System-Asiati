@@ -21,6 +21,9 @@ class ClienteComprasDemo:
         spreadsheet_id: str,
         rango: str,
     ) -> list[list[Any]]:
+        if "Supply Chain" in rango:
+            return _supply_chain_demo()
+
         pais = _pais_desde_rango(rango)
         encabezados = [
             "NUMERO OC",
@@ -38,6 +41,26 @@ class ClienteComprasDemo:
             "VALOR OCI (DDP)",
         ]
         return [encabezados, *_filas_demo(pais)]
+
+
+def _supply_chain_demo() -> list[list[Any]]:
+    return [
+        ["COLOMBIA"],
+        ["ESTADO", "SUM de VALOR OCI (DDP)"],
+        ["EN PRODUCCION", "17800.00"],
+        ["ENVIADO A DESTINO", "6100.00"],
+        ["EN OTM", "1450.75"],
+        ["PENDIENTE DEPÓSITO", "720.00"],
+        [],
+        ["ECUADOR"],
+        ["ESTADO", "SUM de VALOR OCI (DDP)"],
+        ["EN NACIONALIZACION", "9200.00"],
+        ["EN BODEGA ASIATI YIWU", "3200.00"],
+        [],
+        ["CHILE"],
+        ["ESTADO", "SUM de VALOR OCI (DDP)"],
+        ["EN BODEGA ASIATI SHENZHEN", "10400.00"],
+    ]
 
 
 def _pais_desde_rango(rango: str) -> str:
@@ -77,5 +100,6 @@ def construir_fuente_demo(*, empresa_id: int = 1) -> FuenteComprasGoogleSheets:
             rangos_por_pais=RANGOS_DEFAULT,
             cache_ttl_seconds=60,
             modo_fuente="DEMO_LOCAL",
+            rango_supply_chain="'Supply Chain'!A:Z",
         ),
     )

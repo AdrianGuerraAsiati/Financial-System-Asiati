@@ -2,14 +2,19 @@ from __future__ import annotations
 
 from collections import Counter
 from functools import lru_cache
+from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from app.core.auth.dependencias import Acceso, requiere
 
 from .agrupacion import agrupar_ocs
+from .atencion import evaluar_puntos_atencion
 from .calidad import evaluar_calidad_lineas
 from .dominio import LineaCompra
+from .ejecutivo import resumen_ejecutivo
+from .exportes import crear_zip_exportacion
 from .kpis import calcular_familias_monetarias, resumen_poblacion_activa
 from .google_sheets import (
     ConfiguracionComprasGoogleSheetsError,
@@ -19,6 +24,11 @@ from .google_sheets import (
     construir_fuente_compras_desde_entorno,
 )
 from .normalizacion import HOJAS_POR_PAIS, normalizar_etiqueta
+from .validacion import (
+    comparar_con_supply_chain,
+    extraer_referencias_supply_chain,
+    resumen_validacion,
+)
 
 
 router = APIRouter(prefix="/compras", tags=["compras"])
@@ -53,6 +63,15 @@ def _listar_seguro(
         LecturaComprasGoogleSheetsError,
     ) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def _normalizar_pais_query(pais: str | None) -> str | None:
+    if not pais:
+        return None
+    pais_normalizado = normalizar_etiqueta(pais)
+    if pais_normalizado not in HOJAS_POR_PAIS:
+        raise HTTPException(status_code=422, detail="pais debe ser CO, EC o CL.")
+    return pais_normalizado
 
 
 def _filtrar(
@@ -198,14 +217,7 @@ def kpis_monetarios_compras(
     _acceso: Acceso = Depends(ver_compras),
     fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
 ) -> dict[str, object]:
-    pais_normalizado: str | None = None
-    if pais:
-        pais_normalizado = normalizar_etiqueta(pais)
-        if pais_normalizado not in HOJAS_POR_PAIS:
-            raise HTTPException(
-                status_code=422,
-                detail="pais debe ser CO, EC o CL.",
-            )
+    pais_normalizado = _normalizar_pais_query(pais)
 
     lineas = _listar_seguro(fuente, empresa_id=empresa_id)
     try:
@@ -237,6 +249,165 @@ def kpis_monetarios_compras(
             "qué subconjunto constituye 'en tránsito / en el mar'."
         ),
     }
+
+
+@router.get("/dashboard")
+def dashboard_compras(
+    empresa_id: int,
+    pais: str | None = None,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> dict[str, object]:
+    pais_normalizado = _normalizar_pais_query(pais)
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    lineas_filtradas = tuple(
+        linea
+        for linea in lineas
+        if pais_normalizado is None or linea.pais == pais_normalizado
+    )
+    try:
+        snapshot = fuente.obtener_snapshot(empresa_id=empresa_id)
+    except (
+        ConfiguracionComprasGoogleSheetsError,
+        LecturaComprasGoogleSheetsError,
+    ) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    familias = calcular_familias_monetarias(
+        lineas,
+        snapshot.diagnosticos,
+        pais=pais_normalizado,
+    )
+    return {
+        "pais": pais_normalizado,
+        "estructural": resumen_ejecutivo(lineas_filtradas),
+        "familias_monetarias": [
+            familia.como_dict()
+            for familia in familias
+        ],
+        "poblacion_supply_chain_actual": resumen_poblacion_activa(
+            lineas,
+            pais=pais_normalizado,
+        ),
+        "puntos_atencion": [
+            punto.como_dict()
+            for punto in evaluar_puntos_atencion(lineas_filtradas)
+        ],
+        "nota": (
+            "Vista ejecutiva descriptiva. No redefine EN OTM, PENDIENTE DEPOSITO "
+            "ni el KPI corporativo de valor en tránsito / en el mar."
+        ),
+    }
+
+
+@router.get("/atencion")
+def puntos_atencion_compras(
+    empresa_id: int,
+    pais: str | None = None,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> dict[str, object]:
+    pais_normalizado = _normalizar_pais_query(pais)
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    filtradas = tuple(
+        linea
+        for linea in lineas
+        if pais_normalizado is None or linea.pais == pais_normalizado
+    )
+    puntos = evaluar_puntos_atencion(filtradas)
+    return {
+        "pais": pais_normalizado,
+        "total_observaciones": sum(punto.cantidad for punto in puntos),
+        "tipos_con_resultados": len(puntos),
+        "items": [punto.como_dict() for punto in puntos],
+        "nota": (
+            "Son observaciones objetivas de fuente/composición. No tienen severidad "
+            "de negocio y no modifican Google Sheets."
+        ),
+    }
+
+
+@router.get("/validacion/tablero")
+def validar_con_tablero_supply_chain(
+    empresa_id: int,
+    forzar_lectura: bool = False,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> dict[str, object]:
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    try:
+        valores = fuente.obtener_tablero_supply_chain(
+            empresa_id=empresa_id,
+            forzar_lectura=forzar_lectura,
+        )
+    except (
+        ConfiguracionComprasGoogleSheetsError,
+        LecturaComprasGoogleSheetsError,
+    ) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if valores is None:
+        return {
+            "disponible": False,
+            "motivo": "No está configurado COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE.",
+            "referencias": [],
+            "comparaciones": [],
+        }
+
+    referencias = extraer_referencias_supply_chain([list(fila) for fila in valores])
+    if not referencias:
+        return {
+            "disponible": False,
+            "motivo": (
+                "Se leyó la hoja derivada, pero no se encontró un pivote con país, "
+                "ESTADO y VALOR OCI (DDP) que pueda compararse sin adivinar."
+            ),
+            "referencias": [],
+            "comparaciones": [],
+        }
+
+    comparaciones = comparar_con_supply_chain(lineas, referencias)
+    return {
+        "disponible": True,
+        "rango": fuente.configuracion.rango_supply_chain,
+        "referencias": [referencia.como_dict() for referencia in referencias],
+        "resumen": resumen_validacion(comparaciones),
+        "comparaciones": [
+            comparacion.como_dict()
+            for comparacion in comparaciones
+        ],
+        "nota": (
+            "La comparación es read-only y usa DDP por estado dentro de la población "
+            "del pivote Supply Chain actual."
+        ),
+    }
+
+
+@router.get("/export.zip")
+def exportar_compras(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> StreamingResponse:
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    try:
+        snapshot = fuente.obtener_snapshot(empresa_id=empresa_id)
+    except (
+        ConfiguracionComprasGoogleSheetsError,
+        LecturaComprasGoogleSheetsError,
+    ) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    contenido = crear_zip_exportacion(lineas, snapshot.diagnosticos)
+    return StreamingResponse(
+        BytesIO(contenido),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                'attachment; filename="compras_supply_chain_export.zip"'
+            )
+        },
+    )
 
 
 @router.get("/catalogos")

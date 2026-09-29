@@ -79,6 +79,7 @@ class ConfiguracionComprasGoogleSheets:
     rangos_por_pais: Mapping[str, str]
     cache_ttl_seconds: int = 60
     modo_fuente: str = "GOOGLE_SHEETS"
+    rango_supply_chain: str | None = None
 
 
 @dataclass(frozen=True)
@@ -103,6 +104,8 @@ class FuenteComprasGoogleSheets:
         self.configuracion = configuracion
         self._snapshot: SnapshotCompras | None = None
         self._snapshot_monotonic: float | None = None
+        self._tablero_supply_chain: tuple[tuple[Any, ...], ...] | None = None
+        self._tablero_supply_chain_monotonic: float | None = None
 
     def _validar_empresa(self, empresa_id: int) -> None:
         if empresa_id != self.configuracion.empresa_id:
@@ -182,6 +185,42 @@ class FuenteComprasGoogleSheets:
                 + "; ".join(problemas)
             )
         return snapshot.lineas
+
+    def obtener_tablero_supply_chain(
+        self,
+        *,
+        empresa_id: int,
+        forzar_lectura: bool = False,
+    ) -> tuple[tuple[Any, ...], ...] | None:
+        self._validar_empresa(empresa_id)
+        rango = self.configuracion.rango_supply_chain
+        if not rango:
+            return None
+
+        if (
+            not forzar_lectura
+            and self._tablero_supply_chain is not None
+            and self._tablero_supply_chain_monotonic is not None
+            and (
+                time.monotonic() - self._tablero_supply_chain_monotonic
+                < self.configuracion.cache_ttl_seconds
+            )
+        ):
+            return self._tablero_supply_chain
+
+        try:
+            valores = self.cliente.obtener_valores(
+                spreadsheet_id=self.configuracion.spreadsheet_id,
+                rango=rango,
+            )
+        except Exception as exc:
+            raise LecturaComprasGoogleSheetsError(
+                f"No se pudo leer la vista derivada Supply Chain ({rango})."
+            ) from exc
+
+        self._tablero_supply_chain = tuple(tuple(fila) for fila in valores)
+        self._tablero_supply_chain_monotonic = time.monotonic()
+        return self._tablero_supply_chain
 
     def estado_cache(self) -> dict[str, object]:
         if self._snapshot is None or self._snapshot_monotonic is None:
@@ -342,6 +381,13 @@ def construir_fuente_compras_desde_entorno(
             cache_ttl_seconds=_entero_positivo(
                 "COMPRAS_SHEETS_CACHE_SECONDS",
                 60,
+            ),
+            rango_supply_chain=(
+                os.getenv(
+                    "COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE",
+                    "'Supply Chain'!A:Z",
+                ).strip()
+                or None
             ),
         ),
     )

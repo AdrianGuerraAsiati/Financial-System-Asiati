@@ -139,6 +139,10 @@ GET /api/v1/compras/catalogos
 GET /api/v1/compras/calidad
 GET /api/v1/compras/resumen
 GET /api/v1/compras/kpis
+GET /api/v1/compras/dashboard
+GET /api/v1/compras/atencion
+GET /api/v1/compras/validacion/tablero
+GET /api/v1/compras/export.zip
 GET /api/v1/compras/ocs
 GET /api/v1/compras/lineas
 ```
@@ -164,3 +168,16 @@ Este bloque no decide:
 - significado definitivo de `PENDIENTE INVIMA`.
 
 Esas decisiones siguen en `docs/compras/PREGUNTAS_NEGOCIO.md`.
+
+
+## 11. Vista derivada Supply Chain como referencia de regresión
+
+La configuración puede incluir:
+
+```dotenv
+COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE='Supply Chain'!A:Z
+```
+
+Esa hoja se lee con el mismo scope `spreadsheets.readonly`.
+
+No forma parte del snapshot primario de líneas y no reemplaza CO/EC/CL. Se utiliza únicamente para comparar DDP por estado cuando el pivote contiene suficiente contexto para identificar país, estado y valor sin asumir coordenadas fijas.

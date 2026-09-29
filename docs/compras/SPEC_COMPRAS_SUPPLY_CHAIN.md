@@ -311,28 +311,34 @@ KPIs candidatos:
 
 ---
 
-## 9. Puntos de atención candidatos
+## 9. Puntos de atención
 
-Todavía no son reglas aprobadas. Deben validarse antes de codificar:
+### 9.1 Observaciones objetivas implementadas
 
-- enviada a destino sin ETA;
-- ETA vencida y línea no recibida;
-- enviada sin documento de transporte;
-- fecha de entrega a bodega presente con estado incompatible;
-- OC con líneas en etapas diferentes;
-- OC parcialmente recibida;
+La plataforma ya puede señalar, sin asignar severidad de negocio:
+
+- `ENVIADO A DESTINO` sin documento de transporte;
+- `ENVIADO A DESTINO` sin ETD;
+- `ENVIADO A DESTINO` sin ETA;
+- ETA vencida sin entrega registrada;
+- ETA no interpretable;
+- fecha de entrega presente con etapa todavía abierta;
+- OC con varios estados;
+- OC con varios proveedores;
+- OC con varios modos de transporte.
+
+Estas reglas son observacionales: no corrigen la fuente ni concluyen por sí solas que exista un error de negocio.
+
+### 9.2 Alertas todavía pendientes de definición
+
+Siguen pendientes, entre otras:
+
+- OC parcialmente recibida como alerta corporativa;
 - producción por encima del tiempo esperado;
-- pago/abono pendiente con operación en etapa avanzada.
+- pago/abono pendiente con operación en etapa avanzada;
+- severidades, tolerancias y SLA.
 
-Formato futuro:
-
-```
-codigo
-condicion
-severidad
-mensaje
-evidencia
-```
+Ver `docs/compras/DASHBOARD_EJECUTIVO.md`.
 
 ---
 
@@ -393,6 +399,10 @@ Endpoints técnicos de solo lectura:
 - `GET /api/v1/compras/calidad`
 - `GET /api/v1/compras/resumen`
 - `GET /api/v1/compras/kpis`
+- `GET /api/v1/compras/dashboard`
+- `GET /api/v1/compras/atencion`
+- `GET /api/v1/compras/validacion/tablero`
+- `GET /api/v1/compras/export.zip`
 - `GET /api/v1/compras/ocs`
 - `GET /api/v1/compras/lineas`
 
@@ -438,3 +448,24 @@ Esta vista **no es el dashboard financiero definitivo**.
 Sí puede mostrar las dos familias monetarias descriptivas ya definidas —costo de compra y valor comercial DDP— y su desglose por estados del pivote actual. Esos totales deben etiquetarse como familias descriptivas, no como “valor en tránsito / en el mar” ni como KPI ejecutivo oficial hasta que negocio cierre esas definiciones.
 
 Los valores monetarios de una línea siguen disponibles como evidencia cruda de fuente.
+
+
+---
+
+## 14. Vista ejecutiva descriptiva y validación
+
+Existe una primera vista ejecutiva read-only para revisión de producto.
+
+Puede mostrar:
+
+- costo de compra de la población actual;
+- valor comercial DDP de la población actual;
+- OCs con al menos una línea en esa población;
+- observaciones objetivas;
+- distribución por estado y modo de transporte;
+- comparación DDP por estado contra la hoja derivada `Supply Chain`;
+- exportación de líneas, OCs, puntos de atención y KPIs en CSV dentro de un ZIP.
+
+La validación contra `Supply Chain` solo se ejecuta cuando el parser puede identificar país, `ESTADO` y la columna DDP sin adivinar. La hoja derivada sigue siendo referencia de regresión, no fuente primaria.
+
+Ver `docs/compras/DASHBOARD_EJECUTIVO.md`.

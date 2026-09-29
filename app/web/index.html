@@ -228,11 +228,116 @@
           <div>
             <p class="eyebrow">Supply Chain · Solo lectura</p>
             <h2>Compras</h2>
-            <p>Explora la fuente corporativa, su calidad y la estructura real de las órdenes sin modificar el Google Sheet.</p>
+            <p>Vista ejecutiva descriptiva de órdenes, valor, logística y puntos de atención. La plataforma no modifica el Google Sheet.</p>
           </div>
-          <div id="estado-compras" class="status" role="status">Listo</div>
+          <div class="compras-header-actions">
+            <label>País
+              <select id="compras-filtro-pais">
+                <option value="">CO + EC + CL</option>
+                <option value="CO">CO</option>
+                <option value="EC">EC</option>
+                <option value="CL">CL</option>
+              </select>
+            </label>
+            <button id="compras-exportar" type="button" class="secondary-button">Exportar ZIP</button>
+            <div id="estado-compras" class="status" role="status">Listo</div>
+          </div>
         </section>
 
+        <section class="executive-metric-grid" aria-label="Resumen ejecutivo">
+          <article class="executive-metric-card">
+            <span>Costo de compra · población actual</span>
+            <strong id="compras-ejecutivo-costo">—</strong>
+            <small>VALOR TOTAL COMPRA USD</small>
+          </article>
+          <article class="executive-metric-card">
+            <span>Valor comercial DDP · población actual</span>
+            <strong id="compras-ejecutivo-ddp">—</strong>
+            <small>VALOR OCI (DDP)</small>
+          </article>
+          <article class="executive-metric-card">
+            <span>OCs con líneas en población actual</span>
+            <strong id="compras-ejecutivo-ocs">—</strong>
+            <small>No equivale todavía a la definición corporativa de “OC activa”</small>
+          </article>
+          <article class="executive-metric-card">
+            <span>Observaciones de atención</span>
+            <strong id="compras-ejecutivo-atencion">—</strong>
+            <small>Sin severidad de negocio asignada</small>
+          </article>
+        </section>
+
+        <section class="executive-two">
+          <section class="panel executive-panel">
+            <div class="panel-heading">
+              <div>
+                <h3>Población actual por estado</h3>
+                <p>Líneas dentro de la selección observada en el pivote Supply Chain.</p>
+              </div>
+            </div>
+            <div id="compras-grafico-estados" class="bar-chart">
+              <p class="empty">Cargando distribución…</p>
+            </div>
+          </section>
+
+          <section class="panel executive-panel">
+            <div class="panel-heading">
+              <div>
+                <h3>Modos de transporte</h3>
+                <p>Distribución de líneas dentro de la misma población.</p>
+              </div>
+            </div>
+            <div id="compras-grafico-transporte" class="bar-chart">
+              <p class="empty">Cargando distribución…</p>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel" id="compras-atencion">
+          <div class="panel-heading">
+            <div>
+              <h3>Puntos de atención</h3>
+              <p>Hallazgos objetivos de documentación, fechas y composición de OCs. No corrigen la fuente ni asignan severidad.</p>
+            </div>
+            <button id="compras-cargar-atencion" type="button">Actualizar</button>
+          </div>
+          <div id="compras-atencion-lista" class="attention-grid">
+            <p class="empty">Cargando observaciones…</p>
+          </div>
+        </section>
+
+        <section class="panel" id="compras-validacion">
+          <div class="panel-heading">
+            <div>
+              <h3>Validación contra tablero actual</h3>
+              <p>Compara DDP por estado calculado desde detalle contra la vista derivada Supply Chain cuando el pivote puede identificarse sin adivinar.</p>
+            </div>
+            <button id="compras-validar-tablero" type="button">Comparar</button>
+          </div>
+          <div class="validation-summary">
+            <strong id="compras-validacion-estado">Sin comparar</strong>
+            <span id="compras-validacion-detalle" class="muted"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>País</th>
+                  <th>Estado</th>
+                  <th>Detalle DDP</th>
+                  <th>Tablero DDP</th>
+                  <th>Diferencia</th>
+                  <th>Resultado</th>
+                </tr>
+              </thead>
+              <tbody id="compras-validacion-body">
+                <tr><td colspan="6" class="empty">Ejecuta la comparación para revisar el tablero actual.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <h3 class="section-title">Control técnico de fuente</h3>
         <section class="metric-grid" aria-label="Estado de fuente">
           <article class="metric-card">
             <span>Fuente</span>
@@ -329,15 +434,7 @@
             </div>
             <button id="compras-cargar-ocs" type="button">Actualizar</button>
           </div>
-          <div class="filters-inline">
-            <label>País
-              <select id="compras-filtro-pais">
-                <option value="">Todos</option>
-                <option value="CO">CO</option>
-                <option value="EC">EC</option>
-                <option value="CL">CL</option>
-              </select>
-            </label>
+          <div class="filters-inline filters-inline-two">
             <label>Buscar OC / proveedor
               <input id="compras-filtro-q" placeholder="OC o proveedor">
             </label>

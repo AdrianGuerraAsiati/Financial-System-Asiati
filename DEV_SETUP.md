@@ -64,7 +64,11 @@ La vista muestra datos sintéticos suficientes para revisar:
 - catálogos;
 - costo de compra;
 - valor comercial DDP;
-- desglose monetario por estado.
+- desglose monetario por estado;
+- puntos de atención;
+- gráficos descriptivos por estado y transporte;
+- validación contra un pivote Supply Chain sintético;
+- exportación ZIP de CSVs.
 
 La interfaz marca explícitamente la fuente como:
 
@@ -117,6 +121,7 @@ cp .env.example .env
 COMPRAS_DEMO_MODE=false
 COMPRAS_SHEETS_EMPRESA_ID=1
 COMPRAS_SHEETS_SPREADSHEET_ID=<id-del-google-sheet>
+COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE='Supply Chain'!A:Z
 GOOGLE_SERVICE_ACCOUNT_FILE=./secrets/google-service-account.json
 ```
 
