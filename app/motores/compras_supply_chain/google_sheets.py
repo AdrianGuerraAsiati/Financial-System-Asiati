@@ -18,7 +18,7 @@ from .contrato import (
     es_encabezado_consumido,
 )
 from .dominio import LineaCompra
-from .normalizacion import normalizar_fila_compra
+from .normalizacion import HOJAS_POR_PAIS, normalizar_fila_compra
 
 
 SHEETS_READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
@@ -50,6 +50,76 @@ class ClienteValoresGoogleSheets(Protocol):
         spreadsheet_id: str,
         rango: str,
     ) -> list[list[Any]]: ...
+
+
+@dataclass(frozen=True)
+class PivotSupplyChain:
+    pais: str
+    fila_encabezado: int
+    columna_estado: int
+    hoja_origen: str
+
+
+def _extraer_pivotes_supply_chain(
+    metadatos: Mapping[str, Any],
+    grid: Mapping[str, Any],
+) -> tuple[PivotSupplyChain, ...]:
+    titulos_por_id: dict[int, str] = {}
+    for hoja in metadatos.get("sheets", []):
+        propiedades = hoja.get("properties", {})
+        sheet_id = propiedades.get("sheetId")
+        titulo = propiedades.get("title")
+        if isinstance(sheet_id, int) and isinstance(titulo, str):
+            titulos_por_id[sheet_id] = titulo
+
+    pais_por_titulo = {
+        titulo: pais
+        for pais, titulo in HOJAS_POR_PAIS.items()
+    }
+
+    pivotes: list[PivotSupplyChain] = []
+    for hoja in grid.get("sheets", []):
+        for bloque in hoja.get("data", []):
+            inicio_fila = int(bloque.get("startRow", 0))
+            inicio_columna = int(bloque.get("startColumn", 0))
+            for desplazamiento_fila, fila in enumerate(
+                bloque.get("rowData", [])
+            ):
+                for desplazamiento_columna, celda in enumerate(
+                    fila.get("values", [])
+                ):
+                    pivote = celda.get("pivotTable")
+                    if not isinstance(pivote, Mapping):
+                        continue
+                    fuente = pivote.get("source", {})
+                    source_sheet_id = fuente.get("sheetId")
+                    hoja_origen = titulos_por_id.get(source_sheet_id)
+                    pais = pais_por_titulo.get(hoja_origen or "")
+                    if not pais or not hoja_origen:
+                        continue
+                    pivotes.append(
+                        PivotSupplyChain(
+                            pais=pais,
+                            fila_encabezado=(
+                                inicio_fila + desplazamiento_fila
+                            ),
+                            columna_estado=(
+                                inicio_columna + desplazamiento_columna
+                            ),
+                            hoja_origen=hoja_origen,
+                        )
+                    )
+
+    return tuple(
+        sorted(
+            pivotes,
+            key=lambda item: (
+                item.fila_encabezado,
+                item.columna_estado,
+                item.pais,
+            ),
+        )
+    )
 
 
 class ClienteGoogleSheetsReadonly:
@@ -95,6 +165,44 @@ class ClienteGoogleSheetsReadonly:
         response = self.session.get(url, timeout=30)
         response.raise_for_status()
         return response.json().get("values", [])
+
+    def obtener_pivotes(
+        self,
+        *,
+        spreadsheet_id: str,
+        rango: str,
+    ) -> tuple[PivotSupplyChain, ...]:
+        spreadsheet = quote(spreadsheet_id, safe="")
+
+        campos_metadatos = quote(
+            "sheets(properties(sheetId,title))",
+            safe="",
+        )
+        metadatos_url = (
+            "https://sheets.googleapis.com/v4/spreadsheets/"
+            f"{spreadsheet}?includeGridData=false&fields={campos_metadatos}"
+        )
+        metadatos_response = self.session.get(metadatos_url, timeout=30)
+        metadatos_response.raise_for_status()
+
+        rango_codificado = quote(rango, safe="")
+        campos_pivotes = quote(
+            "sheets(data(startRow,startColumn,rowData(values(pivotTable))))",
+            safe="",
+        )
+        pivotes_url = (
+            "https://sheets.googleapis.com/v4/spreadsheets/"
+            f"{spreadsheet}?includeGridData=true"
+            f"&ranges={rango_codificado}"
+            f"&fields={campos_pivotes}"
+        )
+        pivotes_response = self.session.get(pivotes_url, timeout=30)
+        pivotes_response.raise_for_status()
+
+        return _extraer_pivotes_supply_chain(
+            metadatos_response.json(),
+            pivotes_response.json(),
+        )
 
 
 @dataclass(frozen=True)
@@ -246,6 +354,33 @@ class FuenteComprasGoogleSheets:
         self._tablero_supply_chain = tuple(tuple(fila) for fila in valores)
         self._tablero_supply_chain_monotonic = time.monotonic()
         return self._tablero_supply_chain
+
+    def obtener_pivotes_supply_chain(
+        self,
+        *,
+        empresa_id: int,
+    ) -> tuple[PivotSupplyChain, ...]:
+        self._validar_empresa(empresa_id)
+        rango = self.configuracion.rango_supply_chain
+        if not rango:
+            return ()
+
+        lector = getattr(self.cliente, "obtener_pivotes", None)
+        if not callable(lector):
+            return ()
+
+        try:
+            return tuple(
+                lector(
+                    spreadsheet_id=self.configuracion.spreadsheet_id,
+                    rango=rango,
+                )
+            )
+        except Exception as exc:
+            raise LecturaComprasGoogleSheetsError(
+                "No se pudo leer la metadata de pivotes de Supply Chain "
+                f"({rango})."
+            ) from exc
 
     def estado_cache(self) -> dict[str, object]:
         if self._snapshot is None or self._snapshot_monotonic is None:

@@ -19,6 +19,13 @@ _PAISES = {
 
 
 @dataclass(frozen=True)
+class ContextoPivotTablero:
+    pais: str
+    fila_encabezado: int
+    columna_estado: int
+
+
+@dataclass(frozen=True)
 class ReferenciaTablero:
     pais: str
     fila_encabezado: int
@@ -77,73 +84,113 @@ def _pais_cercano(valores: list[list[Any]], fila: int) -> str | None:
     return None
 
 
+def _extraer_referencia_en_posicion(
+    valores: list[list[Any]],
+    *,
+    pais: str,
+    fila_encabezado: int,
+    columna_estado: int,
+) -> ReferenciaTablero | None:
+    if fila_encabezado < 0 or fila_encabezado >= len(valores):
+        return None
+
+    fila = valores[fila_encabezado]
+    if columna_estado < 0 or columna_estado >= len(fila):
+        return None
+    if normalizar_etiqueta(fila[columna_estado]) != "ESTADO":
+        return None
+
+    columna_valor = None
+    limite = min(len(fila), columna_estado + 6)
+    for indice_columna in range(columna_estado + 1, limite):
+        encabezado = normalizar_etiqueta(fila[indice_columna])
+        if "VALOR OCI" in encabezado and "DDP" in encabezado:
+            columna_valor = indice_columna
+            break
+    if columna_valor is None:
+        return None
+
+    estados: list[tuple[str, Decimal]] = []
+    for fila_datos in valores[fila_encabezado + 1 :]:
+        estado_crudo = (
+            fila_datos[columna_estado]
+            if columna_estado < len(fila_datos)
+            else ""
+        )
+        valor_crudo = (
+            fila_datos[columna_valor]
+            if columna_valor < len(fila_datos)
+            else ""
+        )
+        estado = normalizar_etiqueta(estado_crudo)
+
+        if not estado:
+            if estados:
+                break
+            continue
+        if estado in {"TOTAL GENERAL", "TOTAL", "SUMA TOTAL"}:
+            break
+        if estado == "ESTADO":
+            break
+
+        try:
+            monto = decimal_desde_fuente(str(valor_crudo or ""))
+        except InvalidOperation:
+            if estados:
+                break
+            continue
+        if monto is None:
+            continue
+        estados.append((estado, monto))
+
+    if not estados:
+        return None
+
+    return ReferenciaTablero(
+        pais=pais,
+        fila_encabezado=fila_encabezado + 1,
+        estados_ddp=tuple(estados),
+    )
+
+
 def extraer_referencias_supply_chain(
     valores: list[list[Any]],
+    *,
+    contextos: Iterable[ContextoPivotTablero] | None = None,
 ) -> tuple[ReferenciaTablero, ...]:
     referencias: list[ReferenciaTablero] = []
 
-    for indice_fila, fila in enumerate(valores):
-        normalizados = [normalizar_etiqueta(celda) for celda in fila]
-        try:
-            columna_estado = normalizados.index("ESTADO")
-        except ValueError:
-            continue
-
-        columna_valor = None
-        for indice_columna, encabezado in enumerate(normalizados):
-            if "VALOR OCI" in encabezado and "DDP" in encabezado:
-                columna_valor = indice_columna
-                break
-        if columna_valor is None:
-            continue
-
-        pais = _pais_cercano(valores, indice_fila)
-        if pais is None:
-            # Sin país no se compara para evitar afirmar que un pivote parcial
-            # representa CO+EC+CL.
-            continue
-
-        estados: list[tuple[str, Decimal]] = []
-        for fila_datos in valores[indice_fila + 1 :]:
-            estado_crudo = (
-                fila_datos[columna_estado]
-                if columna_estado < len(fila_datos)
-                else ""
+    if contextos:
+        for contexto in contextos:
+            referencia = _extraer_referencia_en_posicion(
+                valores,
+                pais=contexto.pais,
+                fila_encabezado=contexto.fila_encabezado,
+                columna_estado=contexto.columna_estado,
             )
-            valor_crudo = (
-                fila_datos[columna_valor]
-                if columna_valor < len(fila_datos)
-                else ""
-            )
-            estado = normalizar_etiqueta(estado_crudo)
+            if referencia is not None:
+                referencias.append(referencia)
+    else:
+        for indice_fila, fila in enumerate(valores):
+            normalizados = [normalizar_etiqueta(celda) for celda in fila]
+            for columna_estado, encabezado in enumerate(normalizados):
+                if encabezado != "ESTADO":
+                    continue
 
-            if not estado:
-                if estados:
-                    break
-                continue
-            if estado in {"TOTAL GENERAL", "TOTAL"}:
-                break
-            if estado == "ESTADO":
-                break
+                pais = _pais_cercano(valores, indice_fila)
+                if pais is None:
+                    # Sin país no se compara para evitar afirmar que un pivote
+                    # parcial representa CO+EC+CL.
+                    continue
 
-            try:
-                monto = decimal_desde_fuente(str(valor_crudo or ""))
-            except InvalidOperation:
-                if estados:
-                    break
-                continue
-            if monto is None:
-                continue
-            estados.append((estado, monto))
-
-        if estados:
-            referencias.append(
-                ReferenciaTablero(
+                referencia = _extraer_referencia_en_posicion(
+                    valores,
                     pais=pais,
-                    fila_encabezado=indice_fila + 1,
-                    estados_ddp=tuple(estados),
+                    fila_encabezado=indice_fila,
+                    columna_estado=columna_estado,
                 )
-            )
+                if referencia is not None:
+                    referencias.append(referencia)
 
     # Si el Sheet repite un pivote para el mismo país, conservar el primero y
     # exponer determinísticamente una sola referencia por país.

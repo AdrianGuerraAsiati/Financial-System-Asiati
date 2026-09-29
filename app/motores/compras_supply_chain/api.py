@@ -25,6 +25,7 @@ from .google_sheets import (
 )
 from .normalizacion import HOJAS_POR_PAIS, normalizar_etiqueta
 from .validacion import (
+    ContextoPivotTablero,
     comparar_con_supply_chain,
     extraer_referencias_supply_chain,
     resumen_validacion,
@@ -354,7 +355,25 @@ def validar_con_tablero_supply_chain(
             "comparaciones": [],
         }
 
-    referencias = extraer_referencias_supply_chain([list(fila) for fila in valores])
+    try:
+        pivotes = fuente.obtener_pivotes_supply_chain(
+            empresa_id=empresa_id,
+        )
+    except LecturaComprasGoogleSheetsError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    contextos = tuple(
+        ContextoPivotTablero(
+            pais=pivote.pais,
+            fila_encabezado=pivote.fila_encabezado,
+            columna_estado=pivote.columna_estado,
+        )
+        for pivote in pivotes
+    )
+    referencias = extraer_referencias_supply_chain(
+        [list(fila) for fila in valores],
+        contextos=contextos or None,
+    )
     if not referencias:
         return {
             "disponible": False,
