@@ -80,16 +80,17 @@ Estado funcional relevante de `main`:
 - PR #58 fusionado: sistema visual V1 profesional para login, shell, Inicio, Cartera y Compras.
 - PR #60 fusionado: identidad de producto alineada con ASIATI 360°, usando azul profundo + amarillo como acento de marca sin semántica financiera.
 - PR #61 fusionado: autenticación Google Sheets keyless mediante ADC de usuario + impersonación explícita de service account para Compras.
+- PR #63 fusionado: compatibilidad con particularidades reales del Sheet (fórmulas arrastradas, duplicado no consumido `CBM` y encabezados reales de entrega a bodega).
 - Las APIs protegidas viven bajo `/api/v1`.
 - El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, Inicio, Cartera y vista ejecutiva/explorador de Compras, todos bajo un sistema visual común.
 
 Head de `main` al actualizar este handoff:
 
-`102ac3f73bb579d6db603a1adcb24a8e2b06bf02`
+`ff5a0b15bfe3fafbf66f800f7f4a0df2743c632b`
 
 Último cambio fusionado:
 
-`feat(compras): support keyless Google Sheets impersonation`
+`fix(compras): handle live Sheet schema quirks`
 
 ### PR #41 — motor de referencia Wiilog + Claude Code kit
 
@@ -401,6 +402,20 @@ Decisión formal: `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`.
 ---
 
 ## 8. Estructura conocida del Sheet de compras
+
+### Primera lectura real validada
+
+El 29 de septiembre de 2026 se validó lectura real por Google Sheets API desde Docker usando ADC de usuario + impersonación. La fuente respondió y expuso CO/EC/CL correctamente.
+
+Particularidades observadas en la fuente viva:
+
+- `INFORME CLIENTES (CO)` no presenta duplicados consumidos;
+- EC y CL tienen `CBM` duplicado, pero `CBM` no es consumido por la plataforma y no debe bloquear el esquema;
+- EC/CL tienen fórmulas auxiliares arrastradas muy por debajo de las filas operativas; el adaptador debe ignorar filas que solo tengan valores en columnas no consumidas;
+- los encabezados reales de entrega son `FECHA ENTREGA A BODEGA EN BOG`, `... EN QUITO` y `... EN SANTIAGO`;
+- no se cambió ninguna regla financiera o clasificación de negocio para resolver estos puntos.
+
+PR #63 implementa estas tolerancias sin relajar campos críticos consumidos.
 
 ### Hojas principales de detalle
 
