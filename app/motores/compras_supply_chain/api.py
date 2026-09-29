@@ -10,6 +10,7 @@ from app.core.auth.dependencias import Acceso, requiere
 from .agrupacion import agrupar_ocs
 from .calidad import evaluar_calidad_lineas
 from .dominio import LineaCompra
+from .kpis import calcular_familias_monetarias, resumen_poblacion_activa
 from .google_sheets import (
     ConfiguracionComprasGoogleSheetsError,
     EsquemaComprasInvalidoError,
@@ -17,7 +18,7 @@ from .google_sheets import (
     LecturaComprasGoogleSheetsError,
     construir_fuente_compras_desde_entorno,
 )
-from .normalizacion import normalizar_etiqueta
+from .normalizacion import HOJAS_POR_PAIS, normalizar_etiqueta
 
 
 router = APIRouter(prefix="/compras", tags=["compras"])
@@ -186,6 +187,54 @@ def resumen_estructural(
         "nota": (
             "Resumen estructural sin agregaciones monetarias ni interpretación "
             "financiera de la OC."
+        ),
+    }
+
+
+@router.get("/kpis")
+def kpis_monetarios_compras(
+    empresa_id: int,
+    pais: str | None = None,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> dict[str, object]:
+    pais_normalizado: str | None = None
+    if pais:
+        pais_normalizado = normalizar_etiqueta(pais)
+        if pais_normalizado not in HOJAS_POR_PAIS:
+            raise HTTPException(
+                status_code=422,
+                detail="pais debe ser CO, EC o CL.",
+            )
+
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    try:
+        snapshot = fuente.obtener_snapshot(empresa_id=empresa_id)
+    except (
+        ConfiguracionComprasGoogleSheetsError,
+        LecturaComprasGoogleSheetsError,
+    ) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    familias = calcular_familias_monetarias(
+        lineas,
+        snapshot.diagnosticos,
+        pais=pais_normalizado,
+    )
+
+    return {
+        "moneda": "USD",
+        "pais": pais_normalizado,
+        "poblacion_supply_chain_actual": resumen_poblacion_activa(
+            lineas,
+            pais=pais_normalizado,
+        ),
+        "familias": [familia.como_dict() for familia in familias],
+        "nota": (
+            "Se exponen dos familias descriptivas: costo de compra "
+            "(VALOR TOTAL COMPRA USD) y valor comercial DDP (VALOR OCI (DDP)). "
+            "No se decide todavía cuál debe ser el KPI ejecutivo oficial ni "
+            "qué subconjunto constituye 'en tránsito / en el mar'."
         ),
     }
 
