@@ -61,5 +61,5 @@ def test_web_returns_pending_proof_inbox() -> None:
     assert body[0]["cliente"] == "Cliente Inbox"
     assert body[0]["estado_auditoria"] == "PENDIENTE"
     assert body[0]["nombre_archivo"] == "inbox.pdf"
-    assert body[0]["monto_esperado"] == 1000.0
+    assert body[0]["monto_esperado"] == "1000.00"
     assert "ubicacion_archivo" not in body[0]
