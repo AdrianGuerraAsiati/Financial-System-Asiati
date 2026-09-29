@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from decimal import Decimal
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -35,10 +36,10 @@ class FuenteE2E:
                 anio_oc=2026,
                 eta="2026-09-28",
                 etapa="EN CAMINO",
-                valor=2000,
-                valor_anticipo=1000,
-                valor_financiado=1000,
-                porcentaje_anticipo=0.5,
+                valor=Decimal("2000.00"),
+                valor_anticipo=Decimal("1000.00"),
+                valor_financiado=Decimal("1000.00"),
+                porcentaje_anticipo=Decimal("0.5"),
             ),
         )
 
@@ -60,6 +61,7 @@ def test_cartera_vertical_journey(tmp_path: Path) -> None:
         listado = client.get(f"/api/v1/cartera/operaciones?empresa_id={empresa_id}")
         assert listado.status_code == 200
         assert [item["oc"] for item in listado.json()] == ["OC-E2E"]
+        assert listado.json()[0]["valor"] == "2000.00"
 
         detalle_inicial = client.get(
             f"/api/v1/cartera/operaciones/OC-E2E?empresa_id={empresa_id}"
@@ -89,6 +91,7 @@ def test_cartera_vertical_journey(tmp_path: Path) -> None:
         )
         assert carga.status_code == 201
         assert carga.json()["estado_auditoria"] == "PENDIENTE"
+        assert carga.json()["monto_esperado"] == "1000.00"
 
         detalle_final = client.get(
             f"/api/v1/cartera/operaciones/OC-E2E?empresa_id={empresa_id}"
