@@ -77,16 +77,17 @@ Estado funcional relevante de `main`:
 - PR #53 fusionado: entorno local de un comando con migraciones, bootstrap de desarrollo y fuente sintética de Compras.
 - PR #55 fusionado: vista ejecutiva de Compras, puntos de atención, validación contra Supply Chain y exportación.
 - PR #56 fusionado: dashboard principal V1 por empresa con resumen transversal y bandeja `Requiere atención`.
+- PR #58 fusionado: sistema visual V1 profesional para login, shell, Inicio, Cartera y Compras.
 - Las APIs protegidas viven bajo `/api/v1`.
-- El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, Inicio, Cartera y vista ejecutiva/explorador de Compras.
+- El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, Inicio, Cartera y vista ejecutiva/explorador de Compras, todos bajo un sistema visual común.
 
 Head de `main` al actualizar este handoff:
 
-`74cabd3a867ab78b65fa0ffec6372c166c3797d7`
+`bf923c8ef2d6a936b7bb116df8b599029623d3a4`
 
 Último cambio fusionado:
 
-`feat(dashboard): add principal home dashboard v1`
+`feat(ui): introduce polished financial visual system`
 
 ### PR #41 — motor de referencia Wiilog + Claude Code kit
 
@@ -254,6 +255,27 @@ Cartera en Inicio usa conteos estructurales y comprobantes pendientes; no agrega
 Compras reutiliza las dos familias monetarias y puntos de atención ya validados técnicamente.
 
 Conciliación resume el último período y sus hallazgos abiertos; todavía no tiene vista web dedicada.
+
+---
+
+## 4.3 Sistema visual V1
+
+Documento: `docs/UI_VISUAL_SYSTEM.md`.
+
+La UI ya tiene una dirección visual compartida:
+
+- navegación oscura + superficies claras;
+- acento azul único;
+- tokens CSS para color, borde, sombra y radios;
+- shell y login refinados;
+- paneles, KPIs, formularios y tablas consistentes;
+- responsive para desktop/tablet/móvil;
+- `:focus-visible` y `prefers-reduced-motion`;
+- sin dependencias de fuentes o imágenes externas.
+
+Regla: futuros módulos deben reutilizar los tokens y componentes existentes antes de introducir estilos aislados.
+
+El sistema visual no agrega semántica financiera: no usar color rojo/verde, scores o semáforos para clasificar estados de negocio sin una regla aprobada.
 
 ---
 
