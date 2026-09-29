@@ -67,13 +67,16 @@ Juanfe también desarrolla PRs puntuales, principalmente reglas/documentación d
 
 ## 3. Estado actual de `main`
 
-Al momento de esta actualización:
+Estado funcional relevante de `main`:
 
-`main = dc39b7c5451bce5f8192bb11a94e5e783e281fd0`
+- PR #44 fusionado: usuarios, roles, empresas asignadas, permisos, login, auditoría y supervisión.
+- PR #48 fusionado: Cartera y Wiilog integrados al modelo común de autenticación/autorización.
+- Las APIs protegidas de Cartera y Wiilog viven bajo `/api/v1`.
+- El frontend ya cuenta con login, cambio obligatorio de contraseña, selector de empresa por sesión y logout.
 
-Último cambio fusionado:
+Último cambio funcional fusionado antes de este ajuste documental:
 
-`feat(wallets): apply Wiilog parameters v2`
+`feat(cartera): integrate auth and protect module routes`
 
 ### PR #41 — motor de referencia Wiilog + Claude Code kit
 
@@ -124,44 +127,48 @@ Decisiones vigentes:
 
 ---
 
-## 4. Trabajo de Juanfe en curso
+## 4. Auth / permisos — estado integrado
 
 ### PR #44 — usuarios, roles, empresas asignadas y permisos
 
-Estado al crear este handoff: **abierto y mergeable**.
+**Fusionado.**
 
-Título:
-
-`feat(core): add users, roles, assigned companies and permissions`
-
-Toca `app/core` y contiene, entre otros:
+Entregó el núcleo común de:
 
 - usuarios/login;
 - roles;
 - empresas asignadas;
 - matriz de permisos;
 - Argon2;
-- JWT en cookie segura;
+- JWT en cookie;
 - auditoría;
 - registro de ingresos;
 - escalamiento/respuesta de hallazgos;
 - supervisión;
 - migración `0013_usuarios_auth_auditoria`.
 
-### Coordinación mientras #44 siga abierto
+### PR #48 — integración de Cartera y Wiilog con auth
 
-Evitar cambios estructurales paralelos en `app/core`, salvo necesidad explícita y coordinada.
+**Fusionado.**
 
-Trabajar preferentemente en:
+Incluye:
 
-- lógica de negocio;
-- contratos de datos;
-- documentación funcional;
-- módulos aislados;
-- tests de dominio;
-- análisis de fuentes.
+- permisos propios `cartera.ver` y `cartera.comprobantes.subir`;
+- validación de empresa asignada en Cartera;
+- Cartera bajo `/api/v1/cartera/*`;
+- Wiilog protegido con `conciliacion.ejecutar` y `conciliacion.ver`;
+- Wiilog bajo `/api/v1/wallets/wiilog/*`;
+- pantalla de login;
+- cambio obligatorio de contraseña en primer ingreso;
+- selector de empresa desde `/api/v1/auth/me`;
+- logout;
+- cookie de sesión configurable por entorno: desarrollo local puede usar no-Secure y producción debe usar `SESSION_COOKIE_SECURE=true`.
 
-Juanfe también continuará la conciliación de wallets de **Tiendas y ASIATI**.
+La excepción temporal de endpoints Wiilog sin autenticación (decisión 0004) quedó cerrada.
+
+### Responsabilidad actual
+
+La integración técnica de módulos con el núcleo común queda principalmente del lado de Adrian. Juanfe mantiene la validación funcional/financiera y puede continuar con conciliación de wallets de **Tiendas y ASIATI**.
 
 ---
 
@@ -386,7 +393,7 @@ Cada KPI debe declarar:
 
 ## 11. Compras / Supply Chain — trabajo funcional iniciado
 
-Mientras el PR #44 siga abierto, el frente activo fuera de `app/core` es Compras / Supply Chain.
+Con el núcleo de autenticación ya integrado, Compras / Supply Chain puede avanzar como módulo independiente sin depender de trabajo pendiente en `app/core`.
 
 Ya existen en la rama/PR de documentación:
 
