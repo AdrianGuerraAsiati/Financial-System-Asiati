@@ -78,6 +78,7 @@ class ConfiguracionComprasGoogleSheets:
     spreadsheet_id: str
     rangos_por_pais: Mapping[str, str]
     cache_ttl_seconds: int = 60
+    modo_fuente: str = "GOOGLE_SHEETS"
 
 
 @dataclass(frozen=True)
@@ -243,6 +244,20 @@ def _normalizar_rango(
     return resultado, diagnostico
 
 
+def _booleano(nombre: str, defecto: bool = False) -> bool:
+    crudo = os.getenv(nombre)
+    if crudo is None or not crudo.strip():
+        return defecto
+    valor = crudo.strip().lower()
+    if valor in {"1", "true", "yes", "si", "sí"}:
+        return True
+    if valor in {"0", "false", "no"}:
+        return False
+    raise ConfiguracionComprasGoogleSheetsError(
+        f"{nombre} debe ser true o false."
+    )
+
+
 def _entero_positivo(nombre: str, defecto: int) -> int:
     crudo = os.getenv(nombre, str(defecto)).strip()
     try:
@@ -262,6 +277,22 @@ def construir_fuente_compras_desde_entorno(
     *,
     cliente: ClienteValoresGoogleSheets | None = None,
 ) -> FuenteComprasGoogleSheets:
+    if _booleano("COMPRAS_DEMO_MODE", False):
+        if os.getenv("APP_ENV", "development").strip().lower() == "production":
+            raise ConfiguracionComprasGoogleSheetsError(
+                "COMPRAS_DEMO_MODE no puede usarse en producción."
+            )
+        from .demo import construir_fuente_demo
+
+        empresa_demo = os.getenv("COMPRAS_SHEETS_EMPRESA_ID", "1").strip() or "1"
+        try:
+            empresa_id_demo = int(empresa_demo)
+        except ValueError as exc:
+            raise ConfiguracionComprasGoogleSheetsError(
+                "COMPRAS_SHEETS_EMPRESA_ID debe ser entero."
+            ) from exc
+        return construir_fuente_demo(empresa_id=empresa_id_demo)
+
     empresa_id = os.getenv("COMPRAS_SHEETS_EMPRESA_ID", "").strip()
     spreadsheet_id = os.getenv("COMPRAS_SHEETS_SPREADSHEET_ID", "").strip()
 

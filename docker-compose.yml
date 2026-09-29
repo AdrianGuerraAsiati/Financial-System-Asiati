@@ -1,17 +1,28 @@
-services:
-  api:
-    build: .
-    environment:
-      DATABASE_URL: postgresql+psycopg://asiati:asiati@db:5432/financial_system
-      CARTERA_COMPROBANTES_DIR: /data/comprobantes
-    volumes:
-      - comprobantes_data:/data/comprobantes
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
+x-app-environment: &app-environment
+  APP_ENV: development
+  DATABASE_URL: postgresql+psycopg://asiati:asiati@db:5432/financial_system
+  JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-do-not-use-in-production-1234567890}
+  LOGIN_MAX_INTENTOS_FALLIDOS: ${LOGIN_MAX_INTENTOS_FALLIDOS:-5}
+  LOGIN_VENTANA_MINUTOS: ${LOGIN_VENTANA_MINUTOS:-15}
+  SESION_DURACION_HORAS: ${SESION_DURACION_HORAS:-8}
+  SESSION_COOKIE_SECURE: "false"
+  CARTERA_COMPROBANTES_DIR: /data/comprobantes
+  CARTERA_COMPROBANTES_MAX_BYTES: ${CARTERA_COMPROBANTES_MAX_BYTES:-10485760}
+  CARTERA_COMPROBANTES_MIME_TYPES: ${CARTERA_COMPROBANTES_MIME_TYPES:-application/pdf,image/jpeg,image/png}
+  CARTERA_SHEETS_EMPRESA_ID: ${CARTERA_SHEETS_EMPRESA_ID:-}
+  CARTERA_SHEETS_SPREADSHEET_ID: ${CARTERA_SHEETS_SPREADSHEET_ID:-}
+  CARTERA_SHEETS_RANGE: ${CARTERA_SHEETS_RANGE:-}
+  CARTERA_SHEETS_MORA_RANGE: ${CARTERA_SHEETS_MORA_RANGE:-}
+  CARTERA_SHEETS_PROYECCION_RANGE: ${CARTERA_SHEETS_PROYECCION_RANGE:-}
+  COMPRAS_DEMO_MODE: ${COMPRAS_DEMO_MODE:-true}
+  COMPRAS_SHEETS_EMPRESA_ID: ${COMPRAS_SHEETS_EMPRESA_ID:-1}
+  COMPRAS_SHEETS_SPREADSHEET_ID: ${COMPRAS_SHEETS_SPREADSHEET_ID:-}
+  COMPRAS_SHEETS_CO_RANGE: ${COMPRAS_SHEETS_CO_RANGE:-'INFORME CLIENTES (CO)'!A:BG}
+  COMPRAS_SHEETS_EC_RANGE: ${COMPRAS_SHEETS_EC_RANGE:-'INFORME CLIENTES (EC)'!A:BG}
+  COMPRAS_SHEETS_CL_RANGE: ${COMPRAS_SHEETS_CL_RANGE:-'INFORME CLIENTES (CL)'!A:BG}
+  COMPRAS_SHEETS_CACHE_SECONDS: ${COMPRAS_SHEETS_CACHE_SECONDS:-60}
 
+services:
   db:
     image: postgres:16
     environment:
@@ -19,14 +30,59 @@ services:
       POSTGRES_USER: asiati
       POSTGRES_PASSWORD: asiati
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U asiati -d financial_system"]
-      interval: 5s
+      interval: 3s
       timeout: 5s
-      retries: 10
+      retries: 20
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  migrate:
+    build: .
+    environment:
+      <<: *app-environment
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  bootstrap:
+    build: .
+    environment:
+      <<: *app-environment
+      DEV_ADMIN_EMAIL: ${DEV_ADMIN_EMAIL:-admin@asiati.local}
+      DEV_ADMIN_NAME: ${DEV_ADMIN_NAME:-Administrador local}
+      DEV_ADMIN_PASSWORD: ${DEV_ADMIN_PASSWORD:-AsiatiDev2026!}
+      DEV_EMPRESA_NOMBRE: ${DEV_EMPRESA_NOMBRE:-ASIATI Demo}
+    command: ["python", "-m", "app.core.usuarios.asegurar_superadmin_dev"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  api:
+    build: .
+    environment:
+      <<: *app-environment
+    volumes:
+      - comprobantes_data:/data/comprobantes
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
 volumes:
   postgres_data:
