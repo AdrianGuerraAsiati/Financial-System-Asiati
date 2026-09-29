@@ -109,7 +109,7 @@ def test_normalization_preserves_extended_procurement_and_logistics_fields() -> 
     assert linea.costo_unitario_usd_origen == "3.25"
     assert linea.fecha_abono_compra == "2026-01-10"
     assert linea.fecha_pago_total_compra == "2026-02-10"
-    assert linea.cbm_origen == "0.5"
+    assert linea.cbm_origen == ""  # EC/CL conservan CBM ambiguo solo en crudo.
     assert linea.fecha_fin_produccion == "2026-01-29"
     assert linea.fecha_cargue == "2026-02-03"
     assert linea.telex_bl == "TLX-99"
