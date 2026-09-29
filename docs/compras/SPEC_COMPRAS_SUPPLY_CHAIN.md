@@ -363,6 +363,7 @@ Endpoints técnicos de solo lectura:
 - `GET /api/v1/compras/fuente/estado`
 - `GET /api/v1/compras/catalogos`
 - `GET /api/v1/compras/calidad`
+- `GET /api/v1/compras/resumen`
 - `GET /api/v1/compras/ocs`
 - `GET /api/v1/compras/lineas`
 
