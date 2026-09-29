@@ -721,12 +721,18 @@ input, select {
   --muted: #98a2b3;
   --line: #e4e7ec;
   --line-strong: #d0d5dd;
-  --nav: #0c1322;
-  --nav-soft: #151f33;
-  --nav-hover: #1b2941;
-  --accent: #2f6fed;
-  --accent-hover: #255fd0;
-  --accent-soft: #edf4ff;
+  /* Paleta de producto derivada de la identidad pública ASIATI.
+     Los HEX son provisionales hasta recibir manual de marca oficial. */
+  --asiati-blue: #005b8f;
+  --asiati-blue-deep: #003f64;
+  --asiati-yellow: #f4cf22;
+  --asiati-yellow-soft: #fff8d7;
+  --nav: #06283d;
+  --nav-soft: #0b3650;
+  --nav-hover: #10415e;
+  --accent: var(--asiati-blue);
+  --accent-hover: #004c78;
+  --accent-soft: #eaf5fa;
   --success: #16794a;
   --success-soft: #ecfdf3;
   --warning: #9a6700;
@@ -755,7 +761,7 @@ html {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 88% -10%, rgba(47, 111, 237, .055), transparent 28rem),
+    radial-gradient(circle at 88% -10%, rgba(0, 91, 143, .055), transparent 28rem),
     var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -787,7 +793,7 @@ input:focus-visible,
 select:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 3px solid rgba(47, 111, 237, .18);
+  outline: 3px solid rgba(0, 91, 143, .18);
   outline-offset: 2px;
 }
 
@@ -807,12 +813,39 @@ summary:focus-visible {
   display: inline-grid;
   place-items: center;
   border-radius: .9rem;
-  background: linear-gradient(145deg, #1f5ed9 0%, #3d7bf2 100%);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, var(--asiati-blue-deep) 0%, var(--asiati-blue) 100%);
   color: #fff;
   font-weight: 800;
   font-size: 1.05rem;
   letter-spacing: -.02em;
-  box-shadow: 0 8px 20px rgba(47, 111, 237, .22);
+  box-shadow: 0 8px 20px rgba(0, 91, 143, .22);
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  left: 21%;
+  right: 13%;
+  bottom: 18%;
+  height: 28%;
+  border-bottom: .24rem solid var(--asiati-yellow);
+  border-radius: 0 0 999px 999px;
+  transform: rotate(-7deg);
+  opacity: .98;
+}
+
+.brand-mark::before {
+  content: "";
+  position: absolute;
+  right: 15%;
+  top: 17%;
+  width: .33rem;
+  height: .33rem;
+  border-radius: 50%;
+  background: var(--asiati-yellow);
+  box-shadow: 0 0 0 2px rgba(244, 207, 34, .12);
 }
 
 .brand-mark-small {
@@ -820,7 +853,7 @@ summary:focus-visible {
   height: 2.3rem;
   border-radius: .72rem;
   font-size: .88rem;
-  box-shadow: 0 6px 14px rgba(47, 111, 237, .18);
+  box-shadow: 0 6px 14px rgba(0, 91, 143, .18);
 }
 
 .brand-lockup h1 {
@@ -834,6 +867,25 @@ summary:focus-visible {
 .auth-brand .eyebrow {
   color: var(--accent);
   letter-spacing: .11em;
+}
+
+.brand-copy {
+  min-width: 0;
+}
+
+.brand-copy > span,
+.brand-mantra {
+  display: block;
+  margin-top: .16rem;
+  color: #7c899a;
+  font-size: .61rem;
+  font-weight: 570;
+  letter-spacing: .025em;
+}
+
+.auth-brand .brand-copy > span {
+  color: var(--muted-strong);
+  font-size: .66rem;
 }
 
 /* Topbar ------------------------------------------------------------------ */
@@ -899,7 +951,8 @@ summary:focus-visible {
   gap: .28rem;
   overflow-y: auto;
   background:
-    radial-gradient(circle at 20% 0%, rgba(72, 112, 190, .13), transparent 14rem),
+    radial-gradient(circle at 20% 0%, rgba(244, 207, 34, .08), transparent 13rem),
+    radial-gradient(circle at 95% 8%, rgba(0, 91, 143, .18), transparent 16rem),
     var(--nav);
   border-right: 1px solid rgba(255, 255, 255, .04);
 }
@@ -942,9 +995,9 @@ summary:focus-visible {
 
 .nav-item.active {
   border-color: rgba(111, 157, 246, .18);
-  background: linear-gradient(90deg, rgba(47, 111, 237, .20), rgba(47, 111, 237, .08));
+  background: linear-gradient(90deg, rgba(0, 91, 143, .20), rgba(0, 91, 143, .08));
   color: #fff;
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--asiati-yellow);
 }
 
 .nav-item:disabled {
@@ -964,8 +1017,8 @@ summary:focus-visible {
 }
 
 .nav-item.active .nav-icon {
-  background: rgba(94, 145, 245, .17);
-  color: #dce9ff;
+  background: rgba(244, 207, 34, .12);
+  color: #fff4a8;
 }
 
 .nav-label {
@@ -1065,22 +1118,22 @@ form button,
 .compras-header-actions > button {
   min-height: 2.35rem;
   padding: .55rem .85rem;
-  border: 1px solid #1e56bd;
+  border: 1px solid #004d78;
   border-radius: .62rem;
-  background: linear-gradient(180deg, #3475ef 0%, #2f6fed 100%);
+  background: linear-gradient(180deg, #006a9e 0%, var(--asiati-blue) 100%);
   color: #fff;
   font-size: .76rem;
   font-weight: 650;
-  box-shadow: 0 1px 2px rgba(47, 111, 237, .15);
+  box-shadow: 0 1px 2px rgba(0, 91, 143, .15);
 }
 
 .panel-heading button:not(:disabled):hover,
 form button:not(:disabled):hover,
 #inicio-actualizar:not(:disabled):hover,
 .compras-header-actions > button:not(:disabled):hover {
-  border-color: #1f56c0;
-  background: linear-gradient(180deg, #2f6fed 0%, #2864db 100%);
-  box-shadow: 0 4px 12px rgba(47, 111, 237, .16);
+  border-color: #003f64;
+  background: linear-gradient(180deg, var(--asiati-blue) 0%, var(--asiati-blue-deep) 100%);
+  box-shadow: 0 4px 12px rgba(0, 91, 143, .16);
 }
 
 .secondary-button,
@@ -1139,8 +1192,8 @@ select:hover {
 
 input:focus,
 select:focus {
-  border-color: #84adf8;
-  box-shadow: 0 0 0 3px rgba(47, 111, 237, .10);
+  border-color: #5aa6c8;
+  box-shadow: 0 0 0 3px rgba(0, 91, 143, .10);
 }
 
 input::placeholder {
@@ -1289,7 +1342,7 @@ input::placeholder {
   bottom: 1rem;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: #8baef2;
+  background: linear-gradient(180deg, var(--asiati-blue), var(--asiati-yellow));
 }
 
 .executive-metric-card span {
@@ -1576,7 +1629,7 @@ td {
 
 .bar-track span {
   color: var(--accent);
-  background: linear-gradient(90deg, #4d83ef, #2f6fed);
+  background: linear-gradient(90deg, var(--asiati-blue), #1b7da7);
 }
 
 .notice {
@@ -1591,8 +1644,9 @@ td {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 15%, rgba(47, 111, 237, .12), transparent 26rem),
-    radial-gradient(circle at 90% 90%, rgba(15, 23, 42, .07), transparent 30rem),
+    radial-gradient(circle at 18% 15%, rgba(0, 91, 143, .13), transparent 26rem),
+    radial-gradient(circle at 88% 12%, rgba(244, 207, 34, .09), transparent 22rem),
+    radial-gradient(circle at 90% 90%, rgba(6, 40, 61, .07), transparent 30rem),
     #f6f8fb;
 }
 
@@ -1906,5 +1960,64 @@ summary {
     transition-duration: .001ms !important;
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+
+/* ASIATI brand identity ---------------------------------------------------- */
+
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--asiati-blue) 0%,
+    var(--asiati-blue) 78%,
+    var(--asiati-yellow) 78%,
+    var(--asiati-yellow) 100%
+  );
+  opacity: .72;
+}
+
+.home-intro .eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: .42rem;
+  height: .42rem;
+  margin-right: .38rem;
+  border-radius: 50%;
+  background: var(--asiati-yellow);
+  box-shadow: 0 0 0 3px rgba(244, 207, 34, .12);
+  vertical-align: .02rem;
+}
+
+.auth-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 1.3rem;
+  right: 1.3rem;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, var(--asiati-blue) 0 82%, var(--asiati-yellow) 82% 100%);
+}
+
+.sidebar-footer-dot {
+  background: var(--asiati-yellow);
+  box-shadow: 0 0 0 3px rgba(244, 207, 34, .10);
+}
+
+.brand-lockup .brand-mantra {
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .brand-mantra {
+    display: none;
   }
 }
