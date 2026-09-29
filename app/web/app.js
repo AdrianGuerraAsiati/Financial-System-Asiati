@@ -16,8 +16,40 @@ const detalleContenido = document.querySelector("#detalle-contenido");
 const pendientesLista = document.querySelector("#pendientes-lista");
 const formComprobante = document.querySelector("#form-comprobante");
 
+const navCartera = document.querySelector('[data-view="cartera"]');
+const navCompras = document.querySelector("#nav-compras");
+const vistaCartera = document.querySelector("#vista-cartera");
+const vistaCompras = document.querySelector("#vista-compras");
+const estadoCompras = document.querySelector("#estado-compras");
+const comprasFuenteEstado = document.querySelector("#compras-fuente-estado");
+const comprasFuenteLineas = document.querySelector("#compras-fuente-lineas");
+const comprasFuenteCache = document.querySelector("#compras-fuente-cache");
+const comprasResumenOcs = document.querySelector("#compras-resumen-ocs");
+const comprasResumenMixtas = document.querySelector("#compras-resumen-mixtas");
+const comprasResumenPendientes = document.querySelector("#compras-resumen-pendientes");
+const comprasHojas = document.querySelector("#compras-hojas");
+const comprasOcsBody = document.querySelector("#compras-ocs-body");
+const comprasOcsTotal = document.querySelector("#compras-ocs-total");
+const comprasOcsPagina = document.querySelector("#compras-ocs-pagina");
+const comprasOcsAnterior = document.querySelector("#compras-ocs-anterior");
+const comprasOcsSiguiente = document.querySelector("#compras-ocs-siguiente");
+const comprasLineasBody = document.querySelector("#compras-lineas-body");
+const comprasLineasTitulo = document.querySelector("#compras-lineas-titulo");
+const comprasCalidadLista = document.querySelector("#compras-calidad-lista");
+const comprasCatalogosContenido = document.querySelector("#compras-catalogos-contenido");
+const comprasFiltroPais = document.querySelector("#compras-filtro-pais");
+const comprasFiltroQ = document.querySelector("#compras-filtro-q");
+const comprasFiltroMixtas = document.querySelector("#compras-filtro-mixtas");
+
+let moduloActivo = "cartera";
+let comprasOcsOffset = 0;
+const COMPRAS_OCS_LIMIT = 100;
+
 empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
+  if (moduloActivo === "compras") {
+    cargarComprasTodo();
+  }
 });
 
 function empresaId() {
@@ -27,6 +59,24 @@ function empresaId() {
 function setEstado(mensaje, tipo = "") {
   estado.textContent = mensaje;
   estado.className = `status ${tipo}`.trim();
+}
+
+function setEstadoCompras(mensaje, tipo = "") {
+  estadoCompras.textContent = mensaje;
+  estadoCompras.className = `status ${tipo}`.trim();
+}
+
+function mostrarModulo(modulo) {
+  moduloActivo = modulo;
+  const compras = modulo === "compras";
+  vistaCartera.hidden = compras;
+  vistaCompras.hidden = !compras;
+  navCartera.classList.toggle("active", !compras);
+  navCompras.classList.toggle("active", compras);
+
+  if (compras) {
+    cargarComprasTodo();
+  }
 }
 
 function escapar(valor) {
@@ -61,6 +111,12 @@ function mostrarApp(sesion) {
 
   if (savedEmpresa && sesion.empresas.some((empresa) => String(empresa.id) === savedEmpresa)) {
     empresaInput.value = savedEmpresa;
+  }
+
+  const puedeVerCompras = Boolean(sesion.permisos?.["compras.ver"]);
+  navCompras.hidden = !puedeVerCompras;
+  if (!puedeVerCompras && moduloActivo === "compras") {
+    mostrarModulo("cartera");
   }
 }
 
@@ -151,6 +207,268 @@ logoutButton.addEventListener("click", async () => {
     mostrarLogin();
   }
 });
+
+
+function listaEtiquetas(valores) {
+  if (!valores?.length) return '<span class="muted">—</span>';
+  return valores.map((valor) => `<span class="tag">${escapar(valor)}</span>`).join(" ");
+}
+
+function renderDiagnosticoHoja(hoja) {
+  const faltantes = hoja.campos_criticos_faltantes || [];
+  const duplicados = hoja.encabezados_duplicados || [];
+  const advertencias = [
+    faltantes.length ? `Críticos faltantes: ${faltantes.join(", ")}` : "",
+    duplicados.length ? `Duplicados: ${duplicados.join(", ")}` : "",
+    hoja.campos_esperados_faltantes?.length
+      ? `Esperados no disponibles: ${hoja.campos_esperados_faltantes.join(", ")}`
+      : "",
+  ].filter(Boolean);
+
+  return `
+    <article class="diagnostic-card ${hoja.valido ? "ok-card" : "error-card"}">
+      <div class="diagnostic-title">
+        <strong>${escapar(hoja.pais)}</strong>
+        <span class="tag">${hoja.valido ? "Esquema OK" : "Revisar esquema"}</span>
+      </div>
+      <p>${Number(hoja.filas_datos || 0).toLocaleString("es-CO")} filas · ${hoja.campos_reconocidos.length} campos consumidos</p>
+      <p class="muted">${escapar(hoja.rango)}</p>
+      ${advertencias.length
+        ? `<div class="notice compact">${advertencias.map(escapar).join("<br>")}</div>`
+        : '<p class="ok-text">Sin drift crítico detectado.</p>'}
+      <details>
+        <summary>Ver contrato</summary>
+        <p><strong>Consumidos:</strong> ${escapar(hoja.campos_reconocidos.join(", ") || "Ninguno")}</p>
+        <p><strong>No consumidos:</strong> ${escapar(hoja.encabezados_no_consumidos.join(", ") || "Ninguno")}</p>
+      </details>
+    </article>
+  `;
+}
+
+async function cargarComprasDiagnostico(forzar = false) {
+  setEstadoCompras(forzar ? "Releyendo Google Sheet…" : "Consultando fuente…");
+  const params = new URLSearchParams({
+    empresa_id: String(empresaId()),
+    forzar_lectura: String(Boolean(forzar)),
+  });
+
+  try {
+    const data = await api(`/api/v1/compras/fuente/estado?${params}`);
+    comprasFuenteEstado.textContent = data.estado;
+    comprasFuenteEstado.className = data.estado === "OK" ? "metric-ok" : "metric-error";
+    comprasFuenteLineas.textContent = Number(data.lineas || 0).toLocaleString("es-CO");
+    comprasFuenteCache.textContent = data.cache?.tiene_snapshot
+      ? `${Math.round(data.cache.edad_segundos || 0)}s / ${data.cache.ttl_segundos}s`
+      : "Sin snapshot";
+    comprasHojas.innerHTML = data.hojas.map(renderDiagnosticoHoja).join("");
+    setEstadoCompras(
+      data.estado === "OK" ? "Fuente validada" : "Fuente con cambios de esquema",
+      data.estado === "OK" ? "ok" : "error"
+    );
+    return data;
+  } catch (error) {
+    comprasFuenteEstado.textContent = "ERROR";
+    comprasFuenteEstado.className = "metric-error";
+    comprasHojas.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+function parametrosOcs() {
+  const params = new URLSearchParams({
+    empresa_id: String(empresaId()),
+    limit: String(COMPRAS_OCS_LIMIT),
+    offset: String(comprasOcsOffset),
+  });
+  if (comprasFiltroPais.value) params.set("pais", comprasFiltroPais.value);
+  if (comprasFiltroQ.value.trim()) params.set("q", comprasFiltroQ.value.trim());
+  if (comprasFiltroMixtas.value) params.set("mixtas", comprasFiltroMixtas.value);
+  return params;
+}
+
+async function cargarComprasOCs() {
+  comprasOcsBody.innerHTML = '<tr><td colspan="9" class="empty">Consultando…</td></tr>';
+  try {
+    const data = await api(`/api/v1/compras/ocs?${parametrosOcs()}`);
+    const total = Number(data.total || 0);
+    const pagina = Math.floor(comprasOcsOffset / COMPRAS_OCS_LIMIT) + 1;
+    const paginas = Math.max(1, Math.ceil(total / COMPRAS_OCS_LIMIT));
+    comprasOcsTotal.textContent = `${total.toLocaleString("es-CO")} agrupaciones encontradas`;
+    comprasOcsPagina.textContent = `Página ${pagina} de ${paginas}`;
+    comprasOcsAnterior.disabled = comprasOcsOffset <= 0;
+    comprasOcsSiguiente.disabled = comprasOcsOffset + COMPRAS_OCS_LIMIT >= total;
+    comprasOcsBody.innerHTML = data.items.length
+      ? data.items.map((oc) => {
+          const mixta = oc.estado_mixto || oc.proveedor_mixto || oc.transporte_mixto;
+          const composicion = !oc.oc_identificada
+            ? '<span class="tag warning-tag">Sin OC</span>'
+            : mixta
+              ? '<span class="tag warning-tag">Mixta</span>'
+              : '<span class="tag">Simple</span>';
+          return `
+            <tr>
+              <td>${escapar(oc.pais)}</td>
+              <td>${escapar(oc.numero_oc || "Sin OC")}</td>
+              <td>${Number(oc.lineas || 0).toLocaleString("es-CO")}</td>
+              <td>${listaEtiquetas(oc.proveedores)}</td>
+              <td>${listaEtiquetas(oc.estados)}</td>
+              <td>${listaEtiquetas(oc.etapas_logisticas)}</td>
+              <td>${listaEtiquetas(oc.modos_transporte)}</td>
+              <td>${composicion}</td>
+              <td>${oc.oc_identificada
+                ? `<button type="button" data-compras-oc="${escapar(oc.numero_oc)}" data-compras-pais="${escapar(oc.pais)}">Ver líneas</button>`
+                : ""}</td>
+            </tr>
+          `;
+        }).join("")
+      : '<tr><td colspan="9" class="empty">No hay OCs con esos filtros.</td></tr>';
+
+    comprasOcsBody.querySelectorAll("[data-compras-oc]").forEach((button) => {
+      button.addEventListener("click", () => {
+        cargarComprasLineas(button.dataset.comprasPais, button.dataset.comprasOc);
+      });
+    });
+  } catch (error) {
+    comprasOcsBody.innerHTML = `<tr><td colspan="9" class="empty">${escapar(error.message)}</td></tr>`;
+    comprasOcsTotal.textContent = "";
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+
+async function cargarComprasLineas(pais, oc) {
+  comprasLineasTitulo.textContent = `${pais} · ${oc}`;
+  comprasLineasBody.innerHTML = '<tr><td colspan="9" class="empty">Consultando líneas…</td></tr>';
+
+  const params = new URLSearchParams({
+    empresa_id: String(empresaId()),
+    pais,
+    oc,
+    limit: "500",
+  });
+
+  try {
+    const data = await api(`/api/v1/compras/lineas?${params}`);
+    comprasLineasBody.innerHTML = data.items.length
+      ? data.items.map((linea) => `
+          <tr>
+            <td>${Number(linea.fila_fuente || 0).toLocaleString("es-CO")}</td>
+            <td>${escapar(linea.sku)}</td>
+            <td>${escapar(linea.proveedor)}</td>
+            <td>${escapar(linea.estado_origen)}</td>
+            <td>${escapar(linea.etapa_logistica)}</td>
+            <td>${escapar(linea.modo_transporte_origen)}</td>
+            <td>${escapar(linea.eta)}</td>
+            <td>${escapar(linea.valor_total_compra_usd_origen)}</td>
+            <td>${escapar(linea.valor_oci_ddp_origen)}</td>
+          </tr>
+        `).join("")
+      : '<tr><td colspan="9" class="empty">No se encontraron líneas para esta OC.</td></tr>';
+  } catch (error) {
+    comprasLineasBody.innerHTML = `<tr><td colspan="9" class="empty">${escapar(error.message)}</td></tr>`;
+    setEstadoCompras(error.message, "error");
+  }
+}
+
+async function cargarComprasCalidad() {
+  comprasCalidadLista.innerHTML = '<p class="empty">Consultando…</p>';
+  try {
+    const data = await api(`/api/v1/compras/calidad?empresa_id=${empresaId()}`);
+    comprasCalidadLista.innerHTML = data.observaciones.length
+      ? data.observaciones.map((item) => `
+          <article class="quality-card">
+            <div class="quality-card-title">
+              <strong>${escapar(item.codigo)}</strong>
+              <span class="tag">${Number(item.cantidad || 0).toLocaleString("es-CO")}</span>
+            </div>
+            <p>${escapar(item.descripcion)}</p>
+            <small>${escapar(item.categoria)}</small>
+            ${item.muestras?.length
+              ? `<details><summary>Ejemplos</summary>${item.muestras.map((m) =>
+                  `<p class="muted">${escapar(m.pais)} · fila ${m.fila_fuente} · ${escapar(m.numero_oc || "sin OC")}</p>`
+                ).join("")}</details>`
+              : ""}
+          </article>
+        `).join("")
+      : '<p class="empty">No se encontraron observaciones con las reglas actuales.</p>';
+  } catch (error) {
+    comprasCalidadLista.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+function listaConteos(titulo, valores) {
+  const entradas = Object.entries(valores || {});
+  return `
+    <article class="catalog-card">
+      <strong>${escapar(titulo)}</strong>
+      ${entradas.length
+        ? entradas.map(([nombre, cantidad]) =>
+            `<div class="catalog-row"><span>${escapar(nombre)}</span><b>${Number(cantidad).toLocaleString("es-CO")}</b></div>`
+          ).join("")
+        : '<p class="muted">Sin valores</p>'}
+    </article>
+  `;
+}
+
+
+async function cargarComprasResumen() {
+  try {
+    const data = await api(`/api/v1/compras/resumen?empresa_id=${empresaId()}`);
+    comprasResumenOcs.textContent = Number(data.ocs_identificadas || 0).toLocaleString("es-CO");
+    comprasResumenMixtas.textContent = Number(data.ocs_mixtas || 0).toLocaleString("es-CO");
+    comprasResumenPendientes.textContent = Number(data.lineas_estado_por_definir || 0).toLocaleString("es-CO");
+  } catch (error) {
+    comprasResumenOcs.textContent = "—";
+    comprasResumenMixtas.textContent = "—";
+    comprasResumenPendientes.textContent = "—";
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+async function cargarComprasCatalogos() {
+  comprasCatalogosContenido.innerHTML = '<p class="empty">Consultando…</p>';
+  try {
+    const data = await api(`/api/v1/compras/catalogos?empresa_id=${empresaId()}`);
+    comprasCatalogosContenido.innerHTML = [
+      listaConteos("Estados por definir", data.estados_por_definir),
+      listaConteos("Etapas logísticas", data.etapas_logisticas),
+      listaConteos("Modos de transporte", data.modos_transporte),
+    ].join("");
+  } catch (error) {
+    comprasCatalogosContenido.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
+async function cargarComprasTodo(forzar = false) {
+  try {
+    const diagnostico = await cargarComprasDiagnostico(forzar);
+    if (diagnostico.estado !== "OK") {
+      comprasOcsBody.innerHTML = '<tr><td colspan="9" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
+      comprasLineasBody.innerHTML = '<tr><td colspan="9" class="empty">Lectura bloqueada hasta resolver el drift crítico de esquema.</td></tr>';
+      comprasLineasTitulo.textContent = "Esquema degradado";
+      comprasCalidadLista.innerHTML = '<p class="empty">Calidad no calculada con esquema degradado.</p>';
+      comprasCatalogosContenido.innerHTML = '<p class="empty">Catálogos no calculados con esquema degradado.</p>';
+      return;
+    }
+    await Promise.all([
+      cargarComprasResumen(),
+      cargarComprasOCs(),
+      cargarComprasCalidad(),
+      cargarComprasCatalogos(),
+    ]);
+    setEstadoCompras("Compras actualizadas", "ok");
+  } catch (_) {
+    // Cada bloque deja visible su propio error.
+  }
+}
+
 
 async function cargarOperaciones() {
   setEstado("Consultando operaciones…");
@@ -310,5 +628,34 @@ document.querySelector("#cargar-mora").addEventListener("click", cargarMora);
 document.querySelector("#cargar-proyeccion").addEventListener("click", cargarProyeccion);
 document.querySelector("#cargar-pendientes").addEventListener("click", cargarPendientes);
 
+navCartera.addEventListener("click", () => mostrarModulo("cartera"));
+navCompras.addEventListener("click", () => mostrarModulo("compras"));
+document.querySelector("#compras-refrescar-fuente").addEventListener("click", () => cargarComprasTodo(true));
+document.querySelector("#compras-cargar-ocs").addEventListener("click", cargarComprasOCs);
+document.querySelector("#compras-cargar-calidad").addEventListener("click", cargarComprasCalidad);
+document.querySelector("#compras-cargar-catalogos").addEventListener("click", cargarComprasCatalogos);
+comprasFiltroPais.addEventListener("change", () => {
+  comprasOcsOffset = 0;
+  cargarComprasOCs();
+});
+comprasFiltroMixtas.addEventListener("change", () => {
+  comprasOcsOffset = 0;
+  cargarComprasOCs();
+});
+comprasOcsAnterior.addEventListener("click", () => {
+  comprasOcsOffset = Math.max(0, comprasOcsOffset - COMPRAS_OCS_LIMIT);
+  cargarComprasOCs();
+});
+comprasOcsSiguiente.addEventListener("click", () => {
+  comprasOcsOffset += COMPRAS_OCS_LIMIT;
+  cargarComprasOCs();
+});
+comprasFiltroQ.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    comprasOcsOffset = 0;
+    cargarComprasOCs();
+  }
+});
 
 cargarSesion();

@@ -109,3 +109,96 @@ def test_compras_api_hides_unassigned_company_before_reading_source() -> None:
 
     assert response.status_code == 404
     assert fuente.llamadas == 0
+
+
+
+def test_compras_api_exposes_safe_oc_grouping_and_quality() -> None:
+    empresa_id = crear_empresa("Compras observabilidad")
+    fuente = FuenteFake(empresa_id)
+    app.dependency_overrides[obtener_fuente_compras] = lambda: fuente
+    client, _ = cliente_con_rol(ROL_SUPER_ADMINISTRADOR)
+
+    try:
+        ocs = client.get(
+            "/api/v1/compras/ocs",
+            params={"empresa_id": empresa_id},
+        )
+        calidad = client.get(
+            "/api/v1/compras/calidad",
+            params={"empresa_id": empresa_id},
+        )
+        resumen = client.get(
+            "/api/v1/compras/resumen",
+            params={"empresa_id": empresa_id},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert ocs.status_code == 200
+    assert ocs.json()["total"] == 2
+    assert {item["numero_oc"] for item in ocs.json()["items"]} == {
+        "OC-100",
+        "OC-200",
+    }
+
+    assert resumen.status_code == 200
+    assert resumen.json()["ocs_identificadas"] == 2
+    assert resumen.json()["ocs_mixtas"] == 0
+    assert resumen.json()["lineas_estado_por_definir"] == 1
+
+    assert calidad.status_code == 200
+    body = calidad.json()
+    assert body["lineas_evaluadas"] == 2
+    codigos = {item["codigo"] for item in body["observaciones"]}
+    assert "ESTADO_POR_DEFINIR" in codigos
+    assert "modifican la fuente" in body["nota"]
+
+
+def test_source_diagnostics_stay_available_when_schema_is_degraded() -> None:
+    from app.motores.compras_supply_chain.google_sheets import (
+        ConfiguracionComprasGoogleSheets,
+        FuenteComprasGoogleSheets,
+    )
+
+    empresa_id = crear_empresa("Compras diagnóstico")
+
+    class ClienteConDrift:
+        def obtener_valores(self, *, spreadsheet_id: str, rango: str):
+            return [
+                ["NUMERO OC", "CLIENTE", "ESTADO", "MODO TRANSPORTE"],
+                ["OC-1", "Cliente", "ENTREGADO", "MARITIMO"],
+            ]
+
+    fuente = FuenteComprasGoogleSheets(
+        cliente=ClienteConDrift(),
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=empresa_id,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={"CO": "CO!A:Z", "EC": "EC!A:Z", "CL": "CL!A:Z"},
+        ),
+    )
+    app.dependency_overrides[obtener_fuente_compras] = lambda: fuente
+    client, _ = cliente_con_rol(ROL_SUPER_ADMINISTRADOR)
+
+    try:
+        diagnostico = client.get(
+            "/api/v1/compras/fuente/estado",
+            params={"empresa_id": empresa_id},
+        )
+        lineas = client.get(
+            "/api/v1/compras/lineas",
+            params={"empresa_id": empresa_id},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert diagnostico.status_code == 200
+    assert diagnostico.json()["estado"] == "DEGRADADO"
+    assert diagnostico.json()["solo_lectura"] is True
+    assert all(
+        "proveedor" in hoja["campos_criticos_faltantes"]
+        for hoja in diagnostico.json()["hojas"]
+    )
+
+    assert lineas.status_code == 503
+    assert "evitar resultados silenciosamente incorrectos" in lineas.json()["detail"]

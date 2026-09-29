@@ -110,8 +110,8 @@ class ClienteFake:
     ) -> list[list[object]]:
         self.llamadas.append((spreadsheet_id, rango))
         return [
-            ["NUMERO OC", "CLIENTE", "ESTADO", "MODO TRANSPORTE"],
-            [f"OC-{len(self.llamadas)}", "Cliente", "ENTREGADO", "MARITIMO"],
+            ["NUMERO OC", "CLIENTE", "PROVEEDOR", "ESTADO", "MODO TRANSPORTE"],
+            [f"OC-{len(self.llamadas)}", "Cliente", "Proveedor", "ENTREGADO", "MARITIMO"],
         ]
 
 
@@ -137,3 +137,86 @@ def test_source_reads_the_three_country_ranges_and_never_requires_write_api() ->
     assert len(cliente.llamadas) == 3
     assert SHEETS_READONLY_SCOPE.endswith("spreadsheets.readonly")
     assert not hasattr(cliente, "actualizar_valores")
+
+
+def test_source_reuses_snapshot_inside_ttl() -> None:
+    cliente = ClienteFake()
+    fuente = FuenteComprasGoogleSheets(
+        cliente=cliente,
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=7,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={
+                "CO": "CO!A:Z",
+                "EC": "EC!A:Z",
+                "CL": "CL!A:Z",
+            },
+            cache_ttl_seconds=60,
+        ),
+    )
+
+    primera = fuente.listar(empresa_id=7)
+    segunda = fuente.listar(empresa_id=7)
+
+    assert primera == segunda
+    assert len(cliente.llamadas) == 3
+    assert fuente.estado_cache()["tiene_snapshot"] is True
+
+    fuente.obtener_snapshot(empresa_id=7, forzar_lectura=True)
+    assert len(cliente.llamadas) == 6
+
+
+def test_source_blocks_operational_read_when_critical_header_disappears() -> None:
+    class ClienteConDrift:
+        def obtener_valores(self, *, spreadsheet_id: str, rango: str):
+            return [
+                ["NUMERO OC", "CLIENTE", "ESTADO", "MODO TRANSPORTE"],
+                ["OC-1", "Cliente", "ENTREGADO", "MARITIMO"],
+            ]
+
+    fuente = FuenteComprasGoogleSheets(
+        cliente=ClienteConDrift(),
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=7,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={"CO": "CO!A:Z", "EC": "EC!A:Z", "CL": "CL!A:Z"},
+        ),
+    )
+
+    snapshot = fuente.obtener_snapshot(empresa_id=7)
+
+    assert snapshot.esquema_valido is False
+    assert all(
+        "proveedor" in diagnostico.campos_criticos_faltantes
+        for diagnostico in snapshot.diagnosticos
+    )
+
+    from app.motores.compras_supply_chain.google_sheets import (
+        EsquemaComprasInvalidoError,
+    )
+
+    with pytest.raises(EsquemaComprasInvalidoError, match="esquema de Compras cambió"):
+        fuente.listar(empresa_id=7)
+
+
+
+def test_source_wraps_external_read_failures() -> None:
+    from app.motores.compras_supply_chain.google_sheets import (
+        LecturaComprasGoogleSheetsError,
+    )
+
+    class ClienteRoto:
+        def obtener_valores(self, *, spreadsheet_id: str, rango: str):
+            raise RuntimeError("Google no disponible")
+
+    fuente = FuenteComprasGoogleSheets(
+        cliente=ClienteRoto(),
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=7,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={"CO": "CO!A:Z", "EC": "EC!A:Z", "CL": "CL!A:Z"},
+        ),
+    )
+
+    with pytest.raises(LecturaComprasGoogleSheetsError, match="CO"):
+        fuente.obtener_snapshot(empresa_id=7)

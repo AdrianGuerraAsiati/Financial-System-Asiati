@@ -358,12 +358,22 @@ Sí se permite implementar la **capa de lectura y normalización** antes de cerr
 - deje `EN OTM`, `PENDIENTE DEPÓSITO`, `PENDIENTE INVIMA` y otros estados abiertos como `POR_DEFINIR`;
 - no calcule todavía "valor en tránsito", pagado, saldo pendiente u otros KPIs con criterio financiero abierto.
 
-Endpoints iniciales:
+Endpoints técnicos de solo lectura:
 
-- `GET /api/v1/compras/lineas`
+- `GET /api/v1/compras/fuente/estado`
 - `GET /api/v1/compras/catalogos`
+- `GET /api/v1/compras/calidad`
+- `GET /api/v1/compras/resumen`
+- `GET /api/v1/compras/ocs`
+- `GET /api/v1/compras/lineas`
 
-Ambos son de solo lectura y requieren `compras.ver`.
+Todos requieren `compras.ver`.
+
+La fuente usa un snapshot en memoria con TTL configurable mediante `COMPRAS_SHEETS_CACHE_SECONDS`. El cache existe únicamente para reducir lecturas repetitivas contra Google Sheets; no es una nueva fuente de verdad ni una base de datos.
+
+Si desaparece un encabezado crítico o aparecen encabezados duplicados, la plataforma mantiene disponible el diagnóstico pero bloquea los endpoints operativos para evitar resultados silenciosamente incorrectos.
+
+Ver `docs/compras/CONTRATO_FUENTE.md`.
 
 ### Criterio para comenzar lógica financiera / KPIs
 
@@ -376,3 +386,24 @@ Antes del primer PR que calcule KPIs financieros de Compras deben existir:
 5. tratamiento de líneas sin OC;
 6. fuente/rango exacto de Google Sheets;
 7. preguntas de negocio bloqueantes resueltas o marcadas como `TODO(negocio)`.
+
+---
+
+## 13. Explorador técnico antes del dashboard financiero
+
+Se permite una vista exploratoria protegida de Compras antes de cerrar los KPIs financieros.
+
+Esta vista puede:
+
+- mostrar estado técnico de la fuente;
+- mostrar filas leídas por hoja;
+- mostrar drift de encabezados;
+- listar OCs agrupadas sin asignar un único estado agregado;
+- mostrar proveedores, estados, etapas y transportes observados por OC;
+- abrir las líneas reales de una OC;
+- mostrar observaciones de calidad;
+- mostrar catálogos observados.
+
+Esta vista **no es el dashboard financiero definitivo** y no debe mostrar totales monetarios agregados como KPI hasta que las preguntas de negocio correspondientes estén cerradas.
+
+Los valores monetarios de una línea pueden mostrarse como evidencia cruda de fuente, sin sumarlos ni interpretarlos.
