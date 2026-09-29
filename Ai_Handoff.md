@@ -13,6 +13,7 @@ Debe leerse junto con:
 
 - `CLAUDE.md`
 - `docs/SPEC_NUCLEO.md`
+- `docs/AUDITORIA_ARQUITECTURA_CORE_WALLETS_2026-09-29.md` — auditoría de implementación vs. arquitectura y deuda real del core
 - la SPEC del motor o módulo que se esté trabajando
 - `docs/decisiones/`
 
