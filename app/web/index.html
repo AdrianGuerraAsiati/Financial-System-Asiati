@@ -55,14 +55,65 @@
 
   <div class="layout">
     <nav class="sidebar" aria-label="Módulos">
-      <button class="nav-item active" data-view="cartera">Cartera</button>
+      <button class="nav-item active" data-view="inicio" id="nav-inicio">Inicio</button>
+      <button class="nav-item" data-view="cartera" id="nav-cartera">Cartera</button>
       <button class="nav-item" data-view="compras" id="nav-compras" hidden>Compras</button>
       <button class="nav-item" disabled>Wallets <span>Pendiente</span></button>
       <button class="nav-item" disabled>Chin Chin <span>Pendiente</span></button>
     </nav>
 
     <main class="content">
-      <div id="vista-cartera" class="module-view">
+      <div id="vista-inicio" class="module-view">
+        <section class="intro home-intro">
+          <div>
+            <p class="eyebrow">Resumen general</p>
+            <h2>Inicio</h2>
+            <p id="inicio-subtitulo">Estado de los módulos visibles y elementos que requieren revisión.</p>
+          </div>
+          <div class="home-refresh">
+            <span id="inicio-actualizado" class="muted">Sin actualizar</span>
+            <button id="inicio-actualizar" type="button">Actualizar</button>
+          </div>
+        </section>
+
+        <section id="inicio-modulos" class="home-module-grid" aria-label="Resumen por módulo">
+          <article class="home-module-card">
+            <p class="empty">Cargando módulos visibles…</p>
+          </article>
+        </section>
+
+        <section class="home-main-grid">
+          <section class="panel home-attention-panel">
+            <div class="panel-heading">
+              <div>
+                <h3>Requiere atención</h3>
+                <p>Elementos descriptivos provenientes de cada módulo. No agrega severidades nuevas.</p>
+              </div>
+            </div>
+            <div id="inicio-atencion" class="home-attention-list">
+              <p class="empty">Cargando…</p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h3>Estado de datos</h3>
+                <p>Disponibilidad de las fuentes y del último procesamiento conocido.</p>
+              </div>
+            </div>
+            <div id="inicio-estado-datos" class="home-data-status">
+              <p class="empty">Cargando…</p>
+            </div>
+          </section>
+        </section>
+
+        <p class="home-footnote">
+          Inicio resume información ya calculada por los módulos. No genera scores, rankings ni una calificación financiera global.
+        </p>
+      </div>
+
+      <div id="vista-cartera" class="module-view" hidden>
       <section class="intro">
         <div>
           <p class="eyebrow">ASIATI Comercial</p>
