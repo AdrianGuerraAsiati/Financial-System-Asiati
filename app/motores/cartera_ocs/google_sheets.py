@@ -271,31 +271,36 @@ def diagnosticar_fuente_google_sheets_desde_entorno(
             "",
         ).strip(),
     }
+    variables_rango = {
+        "OPERACIONES": "CARTERA_SHEETS_RANGE",
+        "MORA": "CARTERA_SHEETS_MORA_RANGE",
+        "PROYECCION": "CARTERA_SHEETS_PROYECCION_RANGE",
+    }
 
-    faltantes = [
+    faltantes_globales = [
         nombre
         for nombre, valor in (
             ("CARTERA_SHEETS_EMPRESA_ID", empresa_configurada),
             ("CARTERA_SHEETS_SPREADSHEET_ID", spreadsheet_id),
-            ("CARTERA_SHEETS_RANGE", rangos["OPERACIONES"]),
-            ("CARTERA_SHEETS_MORA_RANGE", rangos["MORA"]),
-            (
-                "CARTERA_SHEETS_PROYECCION_RANGE",
-                rangos["PROYECCION"],
-            ),
         )
         if not valor
     ]
-    if faltantes:
+    faltantes_rangos = [
+        variables_rango[tipo]
+        for tipo, rango in rangos.items()
+        if not rango
+    ]
+    if faltantes_globales:
         return {
             "estado": "NO_CONFIGURADO",
             "empresa_id": empresa_id,
             "modo_fuente": "GOOGLE_SHEETS",
             "solo_lectura": True,
-            "faltantes": faltantes,
+            "faltantes": faltantes_globales + faltantes_rangos,
             "diagnosticos": [],
             "resumen": {
-                "rangos": 0,
+                "rangos": len(rangos),
+                "rangos_configurados": 0,
                 "rangos_validos": 0,
                 "filas": 0,
             },
@@ -312,7 +317,8 @@ def diagnosticar_fuente_google_sheets_desde_entorno(
             "faltantes": ["CARTERA_SHEETS_EMPRESA_ID debe ser entero"],
             "diagnosticos": [],
             "resumen": {
-                "rangos": 0,
+                "rangos": len(rangos),
+                "rangos_configurados": 0,
                 "rangos_validos": 0,
                 "filas": 0,
             },
@@ -332,7 +338,8 @@ def diagnosticar_fuente_google_sheets_desde_entorno(
             ],
             "diagnosticos": [],
             "resumen": {
-                "rangos": 0,
+                "rangos": len(rangos),
+                "rangos_configurados": 0,
                 "rangos_validos": 0,
                 "filas": 0,
             },
@@ -341,8 +348,25 @@ def diagnosticar_fuente_google_sheets_desde_entorno(
     cliente_real = cliente or _cliente_google_desde_entorno()
     diagnosticos: list[dict[str, object]] = []
     errores_lectura = 0
+    configurados = 0
 
     for tipo, rango in rangos.items():
+        if not rango:
+            diagnosticos.append(
+                {
+                    "tipo": tipo,
+                    "rango": "",
+                    "filas_datos": 0,
+                    "valido": False,
+                    "configurado": False,
+                    "configuracion_faltante": variables_rango[tipo],
+                    "campos_criticos_faltantes": [],
+                    "encabezados_duplicados": [],
+                }
+            )
+            continue
+
+        configurados += 1
         try:
             valores = cliente_real.obtener_valores(
                 spreadsheet_id=spreadsheet_id,
@@ -352,8 +376,9 @@ def diagnosticar_fuente_google_sheets_desde_entorno(
                 valores,
                 tipo=tipo,
                 rango=rango,
-            )
-            diagnosticos.append(diagnostico.como_dict())
+            ).como_dict()
+            diagnostico["configurado"] = True
+            diagnosticos.append(diagnostico)
         except Exception as exc:
             errores_lectura += 1
             diagnosticos.append(
@@ -362,6 +387,7 @@ def diagnosticar_fuente_google_sheets_desde_entorno(
                     "rango": rango,
                     "filas_datos": 0,
                     "valido": False,
+                    "configurado": True,
                     "campos_criticos_faltantes": [],
                     "encabezados_duplicados": [],
                     "error_lectura": type(exc).__name__,
@@ -377,7 +403,9 @@ def diagnosticar_fuente_google_sheets_desde_entorno(
         int(item.get("filas_datos", 0))
         for item in diagnosticos
     )
-    if errores_lectura:
+    if configurados == 0:
+        estado = "NO_CONFIGURADO"
+    elif errores_lectura:
         estado = "ERROR"
     elif validos == len(rangos):
         estado = "OK"
@@ -389,10 +417,11 @@ def diagnosticar_fuente_google_sheets_desde_entorno(
         "empresa_id": empresa_id,
         "modo_fuente": "GOOGLE_SHEETS",
         "solo_lectura": True,
-        "faltantes": [],
+        "faltantes": faltantes_rangos,
         "diagnosticos": diagnosticos,
         "resumen": {
             "rangos": len(rangos),
+            "rangos_configurados": configurados,
             "rangos_validos": validos,
             "filas": filas,
         },

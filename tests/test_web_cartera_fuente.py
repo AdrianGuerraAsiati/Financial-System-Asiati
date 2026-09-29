@@ -19,3 +19,14 @@ def test_cartera_view_exposes_source_status_panel() -> None:
     assert "Number(row.valor || 0)" not in js.text
     assert "Number(row.monto || 0)" not in js.text
     assert "Number(item.monto_esperado || 0)" not in js.text
+
+
+def test_cartera_web_loads_each_valid_source_independently() -> None:
+    js = TestClient(app).get("/static/app.js")
+
+    assert js.status_code == 200
+    assert '.filter((item) => item.valido === true)' in js.text
+    assert 'tiposValidos.has("OPERACIONES")' in js.text
+    assert 'tiposValidos.has("MORA")' in js.text
+    assert 'tiposValidos.has("PROYECCION")' in js.text
+    assert 'estadoFuente.estado !== "OK"' not in js.text
