@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from decimal import Decimal
 from datetime import date, datetime
 from typing import Any, Mapping, Protocol
 
@@ -16,11 +17,11 @@ class RegistroProyeccionPago:
     pais: str
     estado: str
     documento_transporte: str
-    dias: float
-    valor_oc: float
+    dias: Decimal
+    valor_oc: Decimal
     comercial: str
     fecha: date
-    monto: float
+    monto: Decimal
     mes: str
 
 
@@ -71,7 +72,7 @@ def normalizar_fila_proyeccion(
     fecha = parsear_fecha_proyeccion(fila.get("FECHA DE PAGO ESPERADA"))
     monto = parsear_numero_cartera(fila.get("MONTO ESPERADO"))
 
-    if fecha is None or monto <= 0:
+    if fecha is None or monto <= Decimal("0"):
         return None
 
     contacto = str(fila.get("CLIENTE") or "").strip()
