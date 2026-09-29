@@ -45,19 +45,36 @@ def _validar_secreto(
         raise HTTPException(status_code=401, detail="Webhook no autorizado.")
 
 
-def _spreadsheet_esperado(modulo: str) -> str:
-    variable = (
-        "CARTERA_SHEETS_SPREADSHEET_ID"
-        if modulo == "cartera"
-        else "COMPRAS_SHEETS_SPREADSHEET_ID"
-    )
-    valor = os.getenv(variable, "").strip()
-    if not valor:
+def _configuracion_esperada(modulo: str) -> tuple[int, str]:
+    prefijo = "CARTERA_SHEETS" if modulo == "cartera" else "COMPRAS_SHEETS"
+    variable_empresa = f"{prefijo}_EMPRESA_ID"
+    variable_spreadsheet = f"{prefijo}_SPREADSHEET_ID"
+    empresa_cruda = os.getenv(variable_empresa, "").strip()
+    spreadsheet_id = os.getenv(variable_spreadsheet, "").strip()
+
+    faltantes = [
+        nombre
+        for nombre, valor in (
+            (variable_empresa, empresa_cruda),
+            (variable_spreadsheet, spreadsheet_id),
+        )
+        if not valor
+    ]
+    if faltantes:
         raise HTTPException(
             status_code=503,
-            detail=f"Falta configurar {variable}.",
+            detail="Falta configurar: " + ", ".join(faltantes),
         )
-    return valor
+
+    try:
+        empresa_id = int(empresa_cruda)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"{variable_empresa} debe ser entero.",
+        ) from exc
+
+    return empresa_id, spreadsheet_id
 
 
 @router.post("/changed", status_code=202)
@@ -66,8 +83,15 @@ def google_sheet_changed(
     _secreto: None = Depends(_validar_secreto),
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
-    esperado = _spreadsheet_esperado(cambio.modulo)
-    if cambio.spreadsheet_id != esperado:
+    empresa_esperada, spreadsheet_esperado = _configuracion_esperada(
+        cambio.modulo
+    )
+    if cambio.empresa_id != empresa_esperada:
+        raise HTTPException(
+            status_code=409,
+            detail="La empresa no corresponde al módulo configurado.",
+        )
+    if cambio.spreadsheet_id != spreadsheet_esperado:
         raise HTTPException(
             status_code=409,
             detail="El spreadsheet no corresponde al módulo configurado.",
