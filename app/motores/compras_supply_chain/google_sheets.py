@@ -12,7 +12,11 @@ import google.auth
 from google.auth import impersonated_credentials
 from google.auth.transport.requests import AuthorizedSession
 
-from .contrato import DiagnosticoEsquema, analizar_encabezados
+from .contrato import (
+    DiagnosticoEsquema,
+    analizar_encabezados,
+    es_encabezado_consumido,
+)
 from .dominio import LineaCompra
 from .normalizacion import normalizar_fila_compra
 
@@ -283,7 +287,11 @@ def _normalizar_rango(
             for posicion, encabezado in enumerate(encabezados)
             if encabezado
         }
-        if any(str(valor or "").strip() for valor in fila.values()):
+        if any(
+            str(valor or "").strip()
+            for encabezado, valor in fila.items()
+            if es_encabezado_consumido(encabezado)
+        ):
             filas_con_datos.append((indice, fila))
 
     diagnostico = analizar_encabezados(
