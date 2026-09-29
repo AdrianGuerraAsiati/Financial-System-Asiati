@@ -16,10 +16,17 @@ const detalleContenido = document.querySelector("#detalle-contenido");
 const pendientesLista = document.querySelector("#pendientes-lista");
 const formComprobante = document.querySelector("#form-comprobante");
 
-const navCartera = document.querySelector('[data-view="cartera"]');
+const navInicio = document.querySelector("#nav-inicio");
+const navCartera = document.querySelector("#nav-cartera");
 const navCompras = document.querySelector("#nav-compras");
+const vistaInicio = document.querySelector("#vista-inicio");
 const vistaCartera = document.querySelector("#vista-cartera");
 const vistaCompras = document.querySelector("#vista-compras");
+const inicioSubtitulo = document.querySelector("#inicio-subtitulo");
+const inicioActualizado = document.querySelector("#inicio-actualizado");
+const inicioModulos = document.querySelector("#inicio-modulos");
+const inicioAtencion = document.querySelector("#inicio-atencion");
+const inicioEstadoDatos = document.querySelector("#inicio-estado-datos");
 const estadoCompras = document.querySelector("#estado-compras");
 const comprasFuenteEstado = document.querySelector("#compras-fuente-estado");
 const comprasFuenteLineas = document.querySelector("#compras-fuente-lineas");
@@ -58,13 +65,15 @@ const comprasFiltroPais = document.querySelector("#compras-filtro-pais");
 const comprasFiltroQ = document.querySelector("#compras-filtro-q");
 const comprasFiltroMixtas = document.querySelector("#compras-filtro-mixtas");
 
-let moduloActivo = "cartera";
+let moduloActivo = "inicio";
 let comprasOcsOffset = 0;
 const COMPRAS_OCS_LIMIT = 100;
 
 empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
-  if (moduloActivo === "compras") {
+  if (moduloActivo === "inicio") {
+    cargarDashboardPrincipal();
+  } else if (moduloActivo === "compras") {
     cargarComprasTodo();
   }
 });
@@ -85,13 +94,21 @@ function setEstadoCompras(mensaje, tipo = "") {
 
 function mostrarModulo(modulo) {
   moduloActivo = modulo;
+  const inicio = modulo === "inicio";
+  const cartera = modulo === "cartera";
   const compras = modulo === "compras";
-  vistaCartera.hidden = compras;
+
+  vistaInicio.hidden = !inicio;
+  vistaCartera.hidden = !cartera;
   vistaCompras.hidden = !compras;
-  navCartera.classList.toggle("active", !compras);
+
+  navInicio.classList.toggle("active", inicio);
+  navCartera.classList.toggle("active", cartera);
   navCompras.classList.toggle("active", compras);
 
-  if (compras) {
+  if (inicio) {
+    cargarDashboardPrincipal();
+  } else if (compras) {
     cargarComprasTodo();
   }
 }
@@ -130,11 +147,12 @@ function mostrarApp(sesion) {
     empresaInput.value = savedEmpresa;
   }
 
+  const puedeVerCartera = Boolean(sesion.permisos?.["cartera.ver"]);
   const puedeVerCompras = Boolean(sesion.permisos?.["compras.ver"]);
+  navCartera.hidden = !puedeVerCartera;
   navCompras.hidden = !puedeVerCompras;
-  if (!puedeVerCompras && moduloActivo === "compras") {
-    mostrarModulo("cartera");
-  }
+
+  mostrarModulo("inicio");
 }
 
 async function api(url, options = {}) {
@@ -225,6 +243,174 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
+
+function numeroInicio(valor) {
+  if (valor === null || valor === undefined) return "—";
+  return Number(valor).toLocaleString("es-CO");
+}
+
+function moduloEstadoDisponible(modulo) {
+  return modulo.disponible
+    ? '<span class="home-status-pill home-status-ok">Disponible</span>'
+    : '<span class="home-status-pill home-status-muted">No disponible</span>';
+}
+
+function renderModuloInicio(modulo) {
+  const resumen = modulo.resumen || {};
+  let metricas = "";
+
+  if (modulo.codigo === "cartera") {
+    metricas = `
+      <div class="home-module-metrics">
+        <div><span>Operaciones</span><strong>${numeroInicio(resumen.operaciones)}</strong></div>
+        <div><span>Registros mora</span><strong>${numeroInicio(resumen.registros_mora)}</strong></div>
+        <div><span>Proyecciones</span><strong>${numeroInicio(resumen.proyecciones)}</strong></div>
+        <div><span>Comprobantes pendientes</span><strong>${numeroInicio(resumen.comprobantes_pendientes)}</strong></div>
+      </div>
+    `;
+  } else if (modulo.codigo === "compras") {
+    metricas = `
+      <div class="home-module-metrics">
+        <div><span>Costo compra</span><strong>${formatearUSD(resumen.costo_compra_usd)}</strong></div>
+        <div><span>Valor DDP</span><strong>${formatearUSD(resumen.valor_comercial_ddp_usd)}</strong></div>
+        <div><span>OCs población actual</span><strong>${numeroInicio(resumen.ocs_poblacion_actual)}</strong></div>
+        <div><span>Observaciones</span><strong>${numeroInicio(resumen.puntos_atencion)}</strong></div>
+      </div>
+    `;
+  } else if (modulo.codigo === "conciliacion") {
+    const periodo = resumen.ultimo_periodo;
+    metricas = `
+      <div class="home-module-metrics">
+        <div><span>Hallazgos abiertos</span><strong>${numeroInicio(resumen.hallazgos_abiertos)}</strong></div>
+        <div><span>Críticos abiertos</span><strong>${numeroInicio(resumen.hallazgos_criticos_abiertos)}</strong></div>
+        <div class="span-home-two"><span>Último período</span><strong class="home-period">${periodo ? `${escapar(periodo.fecha_inicio)} → ${escapar(periodo.fecha_fin)}` : "Sin ejecuciones"}</strong></div>
+      </div>
+    `;
+  }
+
+  const accion = modulo.accion
+    ? `<button type="button" class="secondary-button" data-home-view="${escapar(modulo.accion.vista)}">${escapar(modulo.accion.texto)}</button>`
+    : '<span class="muted home-no-action">Vista dedicada pendiente</span>';
+
+  return `
+    <article class="home-module-card" data-home-module="${escapar(modulo.codigo)}">
+      <div class="home-module-heading">
+        <div>
+          <span class="home-module-kicker">${escapar(modulo.codigo)}</span>
+          <h3>${escapar(modulo.titulo)}</h3>
+        </div>
+        ${moduloEstadoDisponible(modulo)}
+      </div>
+      ${metricas}
+      <div class="home-module-footer">${accion}</div>
+    </article>
+  `;
+}
+
+function estadoFuenteTexto(estado) {
+  if (!estado) return "Sin información";
+  if (estado.estado) return estado.estado.replaceAll("_", " ");
+  return "Sin información";
+}
+
+function renderEstadoModulo(modulo) {
+  const estado = modulo.estado_datos || {};
+
+  if (modulo.codigo === "cartera") {
+    return `
+      <article class="home-data-card">
+        <strong>Cartera</strong>
+        ${Object.entries(estado).map(([fuente, detalle]) => `
+          <div class="home-data-row">
+            <span>${escapar(fuente)}</span>
+            <b class="${detalle.estado === "DISPONIBLE" ? "ok-text" : "muted"}">${escapar(estadoFuenteTexto(detalle))}</b>
+          </div>
+        `).join("")}
+      </article>
+    `;
+  }
+
+  if (modulo.codigo === "compras") {
+    const modo = estado.modo_fuente ? ` · ${estado.modo_fuente}` : "";
+    return `
+      <article class="home-data-card">
+        <strong>Compras</strong>
+        <div class="home-data-row"><span>Fuente</span><b>${escapar(estadoFuenteTexto(estado))}${escapar(modo)}</b></div>
+        <div class="home-data-row"><span>Esquema</span><b>${estado.esquema_valido === false ? "Revisar" : "OK"}</b></div>
+        <small class="muted">${estado.cargado_en ? `Lectura: ${new Date(estado.cargado_en).toLocaleString("es-CO")}` : escapar(estado.detalle || "")}</small>
+      </article>
+    `;
+  }
+
+  const periodo = modulo.resumen?.ultimo_periodo;
+  return `
+    <article class="home-data-card">
+      <strong>Conciliación</strong>
+      <div class="home-data-row"><span>Estado</span><b>${escapar(estadoFuenteTexto(estado))}</b></div>
+      <small class="muted">${periodo ? `Período ${escapar(periodo.fecha_inicio)} → ${escapar(periodo.fecha_fin)}${periodo.cerrado ? " · cerrado" : " · abierto"}` : escapar(estado.detalle || "")}</small>
+    </article>
+  `;
+}
+
+function renderAtencionInicio(item) {
+  const accion = item.url_destino
+    ? `<button type="button" class="secondary-button" data-home-view="${escapar(item.url_destino)}">Abrir</button>`
+    : "";
+  return `
+    <article class="home-attention-item">
+      <div class="home-attention-copy">
+        <div class="home-attention-meta">
+          <span class="tag">${escapar(item.modulo)}</span>
+          <span class="muted">${escapar(item.categoria)}</span>
+        </div>
+        <strong>${escapar(item.titulo)}</strong>
+        <p>${escapar(item.descripcion)}</p>
+        ${item.referencia ? `<small>Referencia: ${escapar(item.referencia)}</small>` : ""}
+      </div>
+      ${accion}
+    </article>
+  `;
+}
+
+function enlazarAccionesInicio() {
+  document.querySelectorAll("[data-home-view]").forEach((button) => {
+    button.addEventListener("click", () => mostrarModulo(button.dataset.homeView));
+  });
+}
+
+async function cargarDashboardPrincipal() {
+  inicioModulos.innerHTML = '<article class="home-module-card"><p class="empty">Cargando módulos visibles…</p></article>';
+  inicioAtencion.innerHTML = '<p class="empty">Cargando…</p>';
+  inicioEstadoDatos.innerHTML = '<p class="empty">Cargando…</p>';
+  inicioActualizado.textContent = "Actualizando…";
+
+  try {
+    const data = await api(`/api/v1/dashboard/principal?empresa_id=${empresaId()}`);
+    inicioSubtitulo.textContent =
+      `${data.empresa.nombre} · Resumen de módulos visibles y elementos que requieren revisión.`;
+
+    inicioModulos.innerHTML = data.modulos?.length
+      ? data.modulos.map(renderModuloInicio).join("")
+      : '<article class="home-module-card"><p class="empty">Tu rol todavía no tiene módulos de consulta habilitados.</p></article>';
+
+    inicioAtencion.innerHTML = data.atencion?.length
+      ? data.atencion.map(renderAtencionInicio).join("")
+      : '<p class="empty">No hay elementos de atención disponibles para los módulos visibles.</p>';
+
+    inicioEstadoDatos.innerHTML = data.modulos?.length
+      ? data.modulos.map(renderEstadoModulo).join("")
+      : '<p class="empty">Sin módulos visibles.</p>';
+
+    inicioActualizado.textContent =
+      `Actualizado ${new Date(data.generado_en).toLocaleString("es-CO")}`;
+    enlazarAccionesInicio();
+  } catch (error) {
+    inicioModulos.innerHTML = `<article class="home-module-card"><p class="empty">${escapar(error.message)}</p></article>`;
+    inicioAtencion.innerHTML = '<p class="empty">No se pudo cargar la bandeja transversal.</p>';
+    inicioEstadoDatos.innerHTML = '<p class="empty">No se pudo consultar el estado de datos.</p>';
+    inicioActualizado.textContent = "Error al actualizar";
+  }
+}
 
 function formatearUSD(valor) {
   if (valor === null || valor === undefined || valor === "") return "—";
@@ -906,8 +1092,10 @@ document.querySelector("#cargar-mora").addEventListener("click", cargarMora);
 document.querySelector("#cargar-proyeccion").addEventListener("click", cargarProyeccion);
 document.querySelector("#cargar-pendientes").addEventListener("click", cargarPendientes);
 
+navInicio.addEventListener("click", () => mostrarModulo("inicio"));
 navCartera.addEventListener("click", () => mostrarModulo("cartera"));
 navCompras.addEventListener("click", () => mostrarModulo("compras"));
+document.querySelector("#inicio-actualizar").addEventListener("click", cargarDashboardPrincipal);
 document.querySelector("#compras-refrescar-fuente").addEventListener("click", () => cargarComprasTodo(true));
 document.querySelector("#compras-cargar-kpis").addEventListener("click", cargarComprasKpis);
 document.querySelector("#compras-cargar-atencion").addEventListener("click", cargarComprasAtencion);
