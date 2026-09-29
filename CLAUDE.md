@@ -9,6 +9,7 @@ tesorería, y cierres con estado de resultados. El primer motor es
 Fuentes de contexto y verdad. Léelas antes de cualquier cambio grande:
 - `Ai_Handoff.md` — estado operativo vivo: qué está en curso, quién toca qué y próximos frentes. No reemplaza las decisiones formales.
 - `docs/SPEC_NUCLEO.md` — el núcleo.
+- `docs/AUDITORIA_ARQUITECTURA_CORE_WALLETS_2026-09-29.md` — estado comparado entre arquitectura, código y deuda real del core.
 - `docs/motores/conciliacion_wallets/PROMPT_MAESTRO.md` — el motor de wallets (C0–C6).
 - `docs/decisiones/` — decisiones tomadas después de la spec. Mandan sobre la spec y sobre el handoff.
 
@@ -69,7 +70,15 @@ No elijas en silencio.
 - `/revisar-spec` — compara el código contra la SPEC y lista diferencias, sin tocar código.
 
 ## Estado actual (se actualiza en cada release)
-- Versión: 0.1.0 — núcleo mínimo: empresas, fuentes, períodos con cierre auditado,
-  cargas con hash, hallazgos explicables.
-- Motor wallets: esqueleto. Reglas C0–C6 sin implementar.
-- Bloqueantes de negocio: `docs/motores/conciliacion_wallets/PROMPT_MAESTRO.md` §0.
+- Versión declarada: 0.1.0.
+- Núcleo integrado: empresas, fuentes, períodos/cierre, cargas con hash, usuarios/auth,
+  empresas asignadas, matriz de permisos, auditoría, ingresos, hallazgos y supervisión.
+- Módulos en `main`: Cartera, Compras / Supply Chain y conciliación Wiilog.
+- Wiilog ya no es un esqueleto: tiene C0, clasificación de movimientos, fulfillment,
+  flete, cruces neto cero, persistencia de hallazgos, API protegida, tests sintéticos y
+  regresión con fixtures reales de septiembre cuando están disponibles.
+- Parámetros Wiilog vigentes: `docs/motores/conciliacion_wallets/parametros_wallet_wiilog.json` v2.
+- Huecos principales del core: parámetros versionados persistidos, entidad de ejecución,
+  ciclo de vida completo de cargas, movimientos/categorización compartidos y registry de módulos.
+- Decisión de negocio pendiente: `docs/decisiones/0001-que-bloquea-un-cierre.md`.
+- Auditoría técnica vigente: `docs/AUDITORIA_ARQUITECTURA_CORE_WALLETS_2026-09-29.md`.
