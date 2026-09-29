@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from app.motores.compras_supply_chain.normalizacion import normalizar_fila_compra
 from app.motores.compras_supply_chain.validacion import (
+    ContextoPivotTablero,
     comparar_con_supply_chain,
     extraer_referencias_supply_chain,
     resumen_validacion,
@@ -85,3 +86,104 @@ def test_validation_reports_difference_and_missing_active_state() -> None:
     assert por_estado["EN PRODUCCION"].resultado == "DIFERENCIA"
     assert por_estado["EN PRODUCCION"].diferencia == Decimal("-10")
     assert por_estado["EN OTM"].resultado == "SOLO_DETALLE"
+
+
+def test_validation_parses_horizontal_pivots_with_explicit_source_context() -> None:
+    valores = [
+        [],
+        [
+            "",
+            "ESTADO",
+            "NUMERO OC",
+            "CBM",
+            "SUM de VALOR OCI (DDP)",
+            "",
+            "",
+            "ESTADO ",
+            "NUMERO OC.",
+            "CBM,",
+            "SUM de VALOR OCI (DDP)",
+            "",
+            "",
+            "ESTADO ",
+            "NUMERO OC.",
+            "CBM,",
+            "SUM de VALOR OCI (DDP)",
+        ],
+        [
+            "",
+            "EN PRODUCCION",
+            "1",
+            "1",
+            "100",
+            "",
+            "",
+            "ENVIADO A DESTINO",
+            "1",
+            "1",
+            "50",
+            "",
+            "",
+            "ENVIADO A DESTINO",
+            "1",
+            "1",
+            "10",
+        ],
+        [
+            "",
+            "Suma total",
+            "1",
+            "1",
+            "100",
+            "",
+            "",
+            "Suma total",
+            "1",
+            "1",
+            "50",
+            "",
+            "",
+            "Suma total",
+            "1",
+            "1",
+            "10",
+        ],
+    ]
+    contextos = (
+        ContextoPivotTablero(
+            pais="CO",
+            fila_encabezado=1,
+            columna_estado=1,
+        ),
+        ContextoPivotTablero(
+            pais="CL",
+            fila_encabezado=1,
+            columna_estado=7,
+        ),
+        ContextoPivotTablero(
+            pais="EC",
+            fila_encabezado=1,
+            columna_estado=13,
+        ),
+    )
+
+    referencias = extraer_referencias_supply_chain(
+        valores,
+        contextos=contextos,
+    )
+    por_pais = {referencia.pais: referencia for referencia in referencias}
+
+    assert set(por_pais) == {"CO", "EC", "CL"}
+    assert dict(por_pais["CO"].estados_ddp) == {
+        "EN PRODUCCION": Decimal("100")
+    }
+    assert dict(por_pais["CL"].estados_ddp) == {
+        "ENVIADO A DESTINO": Decimal("50")
+    }
+    assert dict(por_pais["EC"].estados_ddp) == {
+        "ENVIADO A DESTINO": Decimal("10")
+    }
+    assert all(
+        "SUMA TOTAL" not in dict(referencia.estados_ddp)
+        for referencia in referencias
+    )
