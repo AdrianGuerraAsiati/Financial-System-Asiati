@@ -3,6 +3,7 @@ services:
     environment:
       COMPRAS_DEMO_MODE: "false"
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-service-account.json
+      GOOGLE_IMPERSONATE_SERVICE_ACCOUNT: ${GOOGLE_IMPERSONATE_SERVICE_ACCOUNT:-}
     volumes:
       - type: bind
         source: ${GOOGLE_SERVICE_ACCOUNT_FILE:-./secrets/google-service-account.json}
