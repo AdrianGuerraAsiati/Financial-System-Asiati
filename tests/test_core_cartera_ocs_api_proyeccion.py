@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 
 from app.main import app
@@ -20,11 +21,11 @@ class FuenteFake:
                 pais="China",
                 estado="En tránsito",
                 documento_transporte="BL-P",
-                dias=30,
-                valor_oc=5000,
+                dias=Decimal("30"),
+                valor_oc=Decimal("5000.00"),
                 comercial="COMERCIAL API",
                 fecha=date(2026, 10, 20),
-                monto=2500,
+                monto=Decimal("2500.00"),
                 mes="2026-10",
             ),
         )
@@ -42,5 +43,7 @@ def test_web_lists_payment_projection_for_empresa() -> None:
     assert len(body) == 1
     assert body[0]["oc"] == "OC-P"
     assert body[0]["fecha"] == "2026-10-20"
-    assert body[0]["monto"] == 2500.0
+    assert body[0]["monto"] == "2500.00"
+    assert body[0]["valor_oc"] == "5000.00"
+    assert body[0]["dias"] == "30"
     assert body[0]["mes"] == "2026-10"
