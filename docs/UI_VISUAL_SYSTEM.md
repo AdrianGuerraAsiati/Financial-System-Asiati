@@ -18,12 +18,30 @@ La interfaz debe sentirse como una herramienta financiera interna seria:
 
 ## Dirección visual
 
-La V1 usa una base neutra clara con navegación oscura y un único acento azul.
+La V1 toma como referencia la identidad pública actual de ASIATI: azul profundo, amarillo brillante, superficies limpias y una narrativa corporativa centrada en estructura, método, control y visión global.
+
+La referencia pública utilizada es el sitio corporativo actual y sus piezas visuales. No se encontró un manual de marca público con valores HEX oficiales, por lo que los colores del producto se consideran **aproximaciones provisionales** hasta recibir el brand book o archivos maestros.
+
+Paleta de producto provisional:
+
+```css
+--asiati-blue: #005b8f;
+--asiati-blue-deep: #003f64;
+--asiati-yellow: #f4cf22;
+--asiati-yellow-soft: #fff8d7;
+```
+
+Uso:
+
+- azul ASIATI: marca, navegación seleccionada, acciones primarias y foco;
+- amarillo ASIATI: acento de marca, no semántica financiera;
+- neutros: fondos, superficies, tablas y estructura;
+- verde/ámbar/rojo: permanecen reservados para estados técnicos/operativos ya definidos.
 
 Principios:
 
 1. **Jerarquía antes que color.** Tamaño, peso, espacio y agrupación deben explicar la estructura.
-2. **Color con función.** Azul = acción/selección; verde = disponible/correcto; ámbar = revisión; rojo = error.
+2. **Color con función.** Azul ASIATI = acción/selección; amarillo ASIATI = identidad/acento; verde = disponible/correcto; ámbar = revisión; rojo = error.
 3. **Superficies contenidas.** Cards blancas con bordes finos y sombras discretas.
 4. **Datos primero.** Tablas, KPIs y estados deben tener alta legibilidad.
 5. **Movimiento mínimo.** Solo transiciones cortas de interacción; se respeta `prefers-reduced-motion`.
@@ -34,6 +52,10 @@ Principios:
 Definidos en `app/web/styles.css`:
 
 ```css
+--asiati-blue
+--asiati-blue-deep
+--asiati-yellow
+--asiati-yellow-soft
 --bg
 --surface
 --ink
@@ -58,6 +80,17 @@ Los módulos nuevos deben reutilizar estos tokens antes de introducir colores o 
 
 ## Shell
 
+### Identidad ASIATI
+
+El shell utiliza:
+
+- `ASIATI · 360°` como firma compacta;
+- `Plataforma Financiera` como descriptor de producto;
+- `Método · Control · Datos` como mantra interno del shell;
+- el amarillo como gesto de marca discreto en el monograma y selección activa.
+
+No se recrea ni se sustituye el logotipo corporativo oficial. El monograma CSS es un identificador de producto interno hasta disponer de los assets de marca aprobados.
+
 ### Topbar
 
 Contiene:
@@ -77,7 +110,7 @@ Separa:
 - `Workspace`: módulos disponibles;
 - `Próximamente`: módulos todavía deshabilitados.
 
-El estado activo usa acento azul, no un fondo completamente diferente.
+El estado activo combina azul ASIATI con un acento amarillo fino. El amarillo no implica prioridad, riesgo ni éxito.
 
 En pantallas pequeñas se convierte en navegación horizontal.
 
@@ -178,3 +211,17 @@ Antes de añadir un componente visual nuevo:
 3. documentar semántica si introduce estados;
 4. mantener la lógica en JS/backend, no en CSS;
 5. validar escritorio y móvil.
+
+
+## Lenguaje de marca
+
+La interfaz puede reutilizar conceptos públicos de ASIATI cuando aporten contexto, especialmente:
+
+- Ecosistema 360°;
+- método;
+- control;
+- visión global;
+- cultura de datos y resultados;
+- estructura y trazabilidad.
+
+No convertir lenguaje comercial del sitio público en una regla financiera o KPI. La identidad verbal acompaña al producto; no define la lógica del negocio.
