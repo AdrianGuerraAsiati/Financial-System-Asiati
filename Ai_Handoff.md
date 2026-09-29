@@ -754,21 +754,37 @@ PR #72 alineó el dominio con el contrato financiero del repositorio:
 - montos expuestos por JSON salen como cadenas decimales;
 - PostgreSQL continúa usando `NUMERIC(18,2)` para comprobantes.
 
+Avances posteriores:
+
+- PR #74: estado de fuente visible en la UI y carga automática del módulo;
+- PR #75: las cuatro validaciones heredadas de calidad están expuestas por API/UI;
+- PR #76: Operaciones, Mora y Proyección pueden configurarse y validarse de forma independiente;
+- PR #77: snapshots auditables e inmutables de la fuente en PostgreSQL, con hash y auditoría;
+- PR #78: histórico y captura manual de snapshots desde la UI;
+- PR #79: descubrimiento read-only de pestañas/rangos por coincidencia exacta de encabezados.
+
+Endpoints técnicos relevantes:
+
+- `GET /api/v1/cartera/fuente/estado`;
+- `GET /api/v1/cartera/fuente/descubrir`;
+- `GET /api/v1/cartera/calidad`;
+- `POST /api/v1/cartera/snapshots`;
+- `GET /api/v1/cartera/snapshots`.
+
 ### Fuente real de Cartera — pendiente inmediato
 
 Con el acceso actual de `sistemas@asiati.com.co` no se identificó una hoja dedicada que cumpla el contrato histórico de Cartera. Los spreadsheets visibles durante la revisión no incluyen simultáneamente campos como `VALOR ANTICIPO`, `VALOR FINANCIADO`, `CARTERA`, Mora y Proyección.
 
 **No asumir que `INFORME COMPRAS 2024-2026` es la fuente de Cartera.**
 
-Para validar la fuente viva faltan únicamente:
+Para iniciar la validación viva faltan únicamente:
 
 1. spreadsheet ID real;
-2. rango/pestaña de Operaciones;
-3. rango/pestaña de Mora;
-4. rango/pestaña de Proyección;
-5. acceso de lectura para la identidad Google usada por la plataforma.
+2. acceso de lectura para la identidad Google usada por la plataforma.
 
-Una vez configurados, ejecutar `/api/v1/cartera/fuente/estado` antes de modificar reglas de negocio.
+Con esos dos datos, ejecutar `/api/v1/cartera/fuente/descubrir`. El sistema inspecciona encabezados y propone rangos exactos para Operaciones, Mora y Proyección. Después se pueden configurar uno a uno y validar con `/api/v1/cartera/fuente/estado`.
+
+No modificar reglas de negocio para compensar una fuente que no coincide con el contrato.
 
 Documento técnico: `docs/cartera/FUENTE_Y_VALIDACION.md`.
 
