@@ -28,7 +28,7 @@ class CondicionPago:
     cliente: str
     pais: str
     comercial: str
-    porcentaje_saldo: float
+    porcentaje_saldo: Decimal
     dias_plazo: int
     fecha_pago_esperada: date
     monto_original: Decimal
