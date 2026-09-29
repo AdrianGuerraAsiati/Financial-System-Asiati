@@ -140,3 +140,25 @@ def test_google_api_client_supports_keyless_impersonation(monkeypatch) -> None:
         "lifetime": 3600,
     }
     assert captured["session_credentials"] is impersonated
+
+
+def test_google_api_client_lists_sheet_titles() -> None:
+    session = SesionFake(
+        {
+            "sheets": [
+                {"properties": {"title": "FC"}},
+                {"properties": {"title": "MORA"}},
+                {"properties": {"title": ""}},
+            ]
+        }
+    )
+    client = ClienteGoogleSheetsApi(session=session)
+
+    titles = client.obtener_hojas(spreadsheet_id="sheet 123")
+
+    assert titles == ("FC", "MORA")
+    assert session.url == (
+        "https://sheets.googleapis.com/v4/spreadsheets/"
+        "sheet%20123?includeGridData=false&fields="
+        "sheets%28properties%28title%29%29"
+    )

@@ -183,6 +183,33 @@ class ClienteGoogleSheetsApi:
         return body.get("values", [])
 
 
+    def obtener_hojas(
+        self,
+        *,
+        spreadsheet_id: str,
+    ) -> tuple[str, ...]:
+        encoded_sheet = quote(spreadsheet_id, safe="")
+        fields = quote("sheets(properties(title))", safe="")
+        url = (
+            "https://sheets.googleapis.com/v4/spreadsheets/"
+            f"{encoded_sheet}?includeGridData=false&fields={fields}"
+        )
+        response = self.session.get(url, timeout=30)
+        response.raise_for_status()
+        body = response.json()
+        return tuple(
+            titulo
+            for hoja in body.get("sheets", [])
+            if (
+                isinstance(
+                    titulo := hoja.get("properties", {}).get("title"),
+                    str,
+                )
+                and titulo.strip()
+            )
+        )
+
+
 class LectorFilasGoogleSheets(Protocol):
     def leer_filas(
         self,
