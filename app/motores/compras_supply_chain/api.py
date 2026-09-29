@@ -172,6 +172,11 @@ def resumen_estructural(
         "lineas_por_pais": dict(sorted(Counter(linea.pais for linea in lineas).items())),
         "ocs_identificadas": len(identificadas),
         "lineas_sin_oc": sum(1 for linea in lineas if not linea.oc_identificada),
+        "ocs_mixtas": sum(
+            1
+            for oc in identificadas
+            if oc.estado_mixto or oc.proveedor_mixto or oc.transporte_mixto
+        ),
         "ocs_estado_mixto": sum(1 for oc in identificadas if oc.estado_mixto),
         "ocs_proveedor_mixto": sum(1 for oc in identificadas if oc.proveedor_mixto),
         "ocs_transporte_mixto": sum(1 for oc in identificadas if oc.transporte_mixto),
