@@ -17,6 +17,8 @@ const pendientesLista = document.querySelector("#pendientes-lista");
 const formComprobante = document.querySelector("#form-comprobante");
 const carteraFuenteContenido = document.querySelector("#cartera-fuente-contenido");
 const carteraCalidadContenido = document.querySelector("#cartera-calidad-contenido");
+const carteraSnapshotsLista = document.querySelector("#cartera-snapshots-lista");
+const carteraGuardarSnapshot = document.querySelector("#cartera-guardar-snapshot");
 
 const navInicio = document.querySelector("#nav-inicio");
 const navCartera = document.querySelector("#nav-cartera");
@@ -1135,6 +1137,7 @@ async function cargarEstadoFuenteCartera() {
     const faltantes = estadoFuente.faltantes || [];
     const resumen = estadoFuente.resumen || {};
     const estadoClase = estadoFuente.estado === "OK" ? "ok" : "muted";
+    carteraGuardarSnapshot.disabled = Number(resumen.rangos_configurados || 0) === 0;
 
     carteraFuenteContenido.innerHTML = `
       <article class="proof-card">
@@ -1168,8 +1171,58 @@ async function cargarEstadoFuenteCartera() {
   } catch (error) {
     carteraFuenteContenido.innerHTML =
       `<p class="empty">${escapar(error.message)}</p>`;
+    carteraGuardarSnapshot.disabled = true;
     setEstado(error.message, "error");
     return null;
+  }
+}
+
+async function cargarSnapshotsCartera() {
+  carteraSnapshotsLista.innerHTML = '<p class="empty">Cargando capturas…</p>';
+  try {
+    const respuesta = await api(
+      `/api/v1/cartera/snapshots?empresa_id=${empresaId()}&limit=20`
+    );
+    const items = respuesta.items || [];
+    carteraSnapshotsLista.innerHTML = items.length
+      ? items.map((item) => `
+          <article class="proof-card">
+            <strong>Captura #${escapar(String(item.id))}</strong>
+            <p>${escapar(new Date(item.guardado_en).toLocaleString("es-CO"))}</p>
+            <p>${escapar(String(item.operaciones))} operaciones · ${escapar(String(item.registros_mora))} mora · ${escapar(String(item.proyecciones))} proyecciones</p>
+            <p>${escapar(String(item.filas))} filas · hash ${escapar(String(item.contenido_hash).slice(0, 12))}…</p>
+          </article>
+        `).join("")
+      : '<p class="empty">Todavía no hay capturas guardadas.</p>';
+    return respuesta;
+  } catch (error) {
+    carteraSnapshotsLista.innerHTML =
+      `<p class="empty">${escapar(error.message)}</p>`;
+    return null;
+  }
+}
+
+async function guardarSnapshotCartera() {
+  carteraGuardarSnapshot.disabled = true;
+  setEstado("Guardando captura de Cartera…");
+  try {
+    const respuesta = await api(
+      `/api/v1/cartera/snapshots?empresa_id=${empresaId()}`,
+      {method: "POST"}
+    );
+    setEstado(
+      respuesta.creado
+        ? `Captura #${respuesta.snapshot.id} guardada`
+        : `La captura #${respuesta.snapshot.id} ya existía`,
+      "ok"
+    );
+    await cargarSnapshotsCartera();
+  } catch (error) {
+    setEstado(error.message, "error");
+  } finally {
+    const resumen = await cargarEstadoFuenteCartera();
+    carteraGuardarSnapshot.disabled = !resumen
+      || Number(resumen.resumen?.rangos_configurados || 0) === 0;
   }
 }
 
@@ -1239,7 +1292,7 @@ function mostrarFuenteNoDisponible(tipo) {
 
 async function cargarCarteraTodo() {
   const estadoFuente = await cargarEstadoFuenteCartera();
-  const tareas = [cargarPendientes()];
+  const tareas = [cargarPendientes(), cargarSnapshotsCartera()];
 
   if (!estadoFuente) {
     mostrarFuenteNoDisponible("OPERACIONES");
@@ -1435,6 +1488,7 @@ document.querySelector("#cargar-proyeccion").addEventListener("click", cargarPro
 document.querySelector("#cargar-pendientes").addEventListener("click", cargarPendientes);
 document.querySelector("#cartera-refrescar-fuente").addEventListener("click", cargarCarteraTodo);
 document.querySelector("#cartera-cargar-calidad").addEventListener("click", cargarCalidadCartera);
+carteraGuardarSnapshot.addEventListener("click", guardarSnapshotCartera);
 
 navInicio.addEventListener("click", () => mostrarModulo("inicio"));
 navCartera.addEventListener("click", () => mostrarModulo("cartera"));
