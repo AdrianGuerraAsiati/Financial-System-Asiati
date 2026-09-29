@@ -6,6 +6,7 @@ from app.motores.compras_supply_chain.google_sheets import (
     ConfiguracionComprasGoogleSheets,
     FuenteComprasGoogleSheets,
     SHEETS_READONLY_SCOPE,
+    _extraer_pivotes_supply_chain,
 )
 from app.motores.compras_supply_chain.normalizacion import (
     clasificar_estado,
@@ -360,3 +361,79 @@ def test_source_wraps_external_read_failures() -> None:
 
     with pytest.raises(LecturaComprasGoogleSheetsError, match="CO"):
         fuente.obtener_snapshot(empresa_id=7)
+
+
+def test_pivot_metadata_maps_each_block_to_its_source_country() -> None:
+    metadatos = {
+        "sheets": [
+            {
+                "properties": {
+                    "sheetId": 101,
+                    "title": "INFORME CLIENTES (CO)",
+                }
+            },
+            {
+                "properties": {
+                    "sheetId": 202,
+                    "title": "INFORME CLIENTES (CL)",
+                }
+            },
+            {
+                "properties": {
+                    "sheetId": 303,
+                    "title": "INFORME CLIENTES (EC)",
+                }
+            },
+        ]
+    }
+    grid = {
+        "sheets": [
+            {
+                "data": [
+                    {
+                        "startRow": 1,
+                        "startColumn": 1,
+                        "rowData": [
+                            {
+                                "values": [
+                                    {
+                                        "pivotTable": {
+                                            "source": {"sheetId": 101}
+                                        }
+                                    },
+                                    {},
+                                    {},
+                                    {},
+                                    {},
+                                    {},
+                                    {
+                                        "pivotTable": {
+                                            "source": {"sheetId": 202}
+                                        }
+                                    },
+                                    {},
+                                    {},
+                                    {},
+                                    {},
+                                    {},
+                                    {
+                                        "pivotTable": {
+                                            "source": {"sheetId": 303}
+                                        }
+                                    },
+                                ]
+                            }
+                        ],
+                    }
+                ]
+            }
+        ]
+    }
+
+    pivotes = _extraer_pivotes_supply_chain(metadatos, grid)
+
+    assert [(item.pais, item.fila_encabezado, item.columna_estado) for item in pivotes] == [
+        ("CO", 1, 1),
+        ("CL", 1, 7),
+        ("EC", 1, 13),
+    ]
