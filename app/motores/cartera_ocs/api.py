@@ -44,6 +44,7 @@ from app.motores.cartera_ocs.proyeccion import (
     FuenteProyeccionCartera,
     listar_proyeccion,
 )
+from app.motores.cartera_ocs.validacion import validar_cartera_en_camino
 from app.motores.cartera_ocs.persistencia import (
     existe_comprobante_por_hash,
     guardar_comprobante,
@@ -184,6 +185,36 @@ def consultar_estado_fuente(
     estado: dict[str, object] = Depends(obtener_estado_fuente),
 ) -> dict[str, object]:
     return estado
+
+
+@router.get("/calidad")
+def consultar_calidad(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
+) -> dict[str, object]:
+    registros = listar_operaciones(
+        fuente,
+        empresa_id=empresa_id,
+    )
+    casos = validar_cartera_en_camino(registros)
+
+    return {
+        "registros": len(registros),
+        "casos": len(casos),
+        "detalle": [
+            {
+                "codigo": caso.codigo,
+                "cantidad": caso.cantidad,
+                "valor": _dinero_texto(caso.valor),
+                "registros": [
+                    _operacion_como_dict(registro)
+                    for registro in caso.registros
+                ],
+            }
+            for caso in casos
+        ],
+    }
 
 
 @router.get("/operaciones")
