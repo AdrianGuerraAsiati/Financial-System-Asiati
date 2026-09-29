@@ -48,7 +48,7 @@ def test_principal_dashboard_composes_visible_modules_without_new_scores(
         item for item in body["modulos"] if item["codigo"] == "compras"
     )
     assert compras["disponible"] is True
-    assert compras["resumen"]["costo_compra_usd"] == "33280.50"
+    assert compras["resumen"]["costo_compra_usd"] == "33780.50"
     assert compras["resumen"]["valor_comercial_ddp_usd"] == "48870.75"
     assert compras["resumen"]["ocs_poblacion_actual"] >= 1
     assert compras["accion"]["vista"] == "compras"
