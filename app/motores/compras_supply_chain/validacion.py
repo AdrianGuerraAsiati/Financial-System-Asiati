@@ -64,14 +64,15 @@ class ComparacionEstado:
 def _pais_cercano(valores: list[list[Any]], fila: int) -> str | None:
     inicio = max(0, fila - 5)
     fin = min(len(valores), fila + 1)
-    texto = " ".join(
+    celdas = [
         normalizar_etiqueta(celda)
         for row in valores[inicio:fin]
         for celda in row
         if str(celda or "").strip()
-    )
+    ]
     for pais, aliases in _PAISES.items():
-        if any(alias in texto for alias in aliases):
+        codigo, nombre = aliases
+        if codigo in celdas or any(nombre in celda for celda in celdas):
             return pais
     return None
 
