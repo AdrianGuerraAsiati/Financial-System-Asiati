@@ -49,16 +49,18 @@ Definir significado de:
 
 ## B. KPIs financieros
 
-### Q-COMPRAS-006 — valor oficial de compra
+### Q-COMPRAS-006 — jerarquía de las dos familias monetarias
 
-Para `Valor de compras` y `Valor en tránsito`, ¿qué columna manda?
+Ya se implementan en paralelo:
 
-Candidatas de la fuente:
+- **Costo de compra** → `VALOR TOTAL COMPRA USD`;
+- **Valor comercial DDP** → `VALOR OCI (DDP)`.
 
-- `VALOR TOTAL COMPRA USD`
-- `VALOR OCI (DDP)`
+Evidencia del snapshot: la hoja derivada `Supply Chain` usa una suma de `VALOR OCI (DDP)` agrupada por `ESTADO`.
 
-No son equivalentes.
+**Pregunta pendiente:** ¿cuál debe ser la métrica ejecutiva principal del dashboard: DDP, costo o ambas con igual jerarquía?
+
+No se consideran equivalentes.
 
 ### Q-COMPRAS-007 — valor pagado y saldo pendiente
 
@@ -183,8 +185,11 @@ Orden sugerido para cerrar decisiones:
 2. PENDIENTE DEPÓSITO;
 3. PENDIENTE INVIMA;
 4. definición de “valor en tránsito”;
-5. columna monetaria oficial;
-6. OC parcial;
-7. reglas de ETA/producción.
+5. familia monetaria que usa “valor en tránsito”;
+6. jerarquía DDP vs costo en el dashboard ejecutivo;
+7. OC parcial;
+8. reglas de ETA/producción.
 
-Con esas respuestas se puede cerrar una primera versión de `ESTADOS_LOGISTICOS.md` y definir los primeros KPIs implementables.
+Las dos familias monetarias descriptivas ya son implementables. Con esas respuestas se puede cerrar el KPI ejecutivo de tránsito, el mapa de estados y el conteo de OCs activas.
+
+Reporte listo para revisión: `docs/compras/REPORTE_DUDAS_JUANFE_KPIS.md`.
