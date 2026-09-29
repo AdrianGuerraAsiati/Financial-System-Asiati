@@ -50,7 +50,7 @@ def test_web_upload_radicates_and_stores_payment_proof(tmp_path: Path, monkeypat
     body = response.json()
     assert body["oc"] == "OC-WEB-1"
     assert body["estado_auditoria"] == "PENDIENTE"
-    assert body["monto_esperado"] == 5000.0
+    assert body["monto_esperado"] == "5000.00"
     assert "ubicacion_archivo" not in body
 
     stored_files = list(tmp_path.rglob("*.pdf"))
