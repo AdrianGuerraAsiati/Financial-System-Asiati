@@ -10,4 +10,4 @@ def test_shell_exposes_mora_view() -> None:
     assert html.status_code == 200
     assert 'id="cartera-mora"' in html.text
     assert js.status_code == 200
-    assert "/cartera/mora" in js.text
+    assert "/api/v1/cartera/mora" in js.text

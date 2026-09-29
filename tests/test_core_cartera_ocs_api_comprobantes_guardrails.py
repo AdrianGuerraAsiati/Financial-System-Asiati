@@ -2,12 +2,12 @@ import os
 from datetime import date
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.empresas import Empresa
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.api import obtener_almacen_comprobantes
 from app.motores.cartera_ocs.almacenamiento import AlmacenLocalComprobantes
 
@@ -43,8 +43,8 @@ def test_upload_rejects_unsupported_content_type(tmp_path: Path) -> None:
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
     try:
-        response = TestClient(app).post(
-            "/cartera/comprobantes",
+        response = cliente_superadmin().post(
+            "/api/v1/cartera/comprobantes",
             data=_data(empresa_id),
             files={"archivo": ("soporte.txt", b"texto", "text/plain")},
         )
@@ -64,8 +64,8 @@ def test_upload_rejects_file_above_configured_limit(
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
     try:
-        response = TestClient(app).post(
-            "/cartera/comprobantes",
+        response = cliente_superadmin().post(
+            "/api/v1/cartera/comprobantes",
             data=_data(empresa_id),
             files={"archivo": ("soporte.pdf", b"12345", "application/pdf")},
         )
@@ -80,16 +80,16 @@ def test_upload_rejects_duplicate_content_for_same_empresa(tmp_path: Path) -> No
     app.dependency_overrides[obtener_almacen_comprobantes] = (
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
-    client = TestClient(app)
+    client = cliente_superadmin()
 
     try:
         primero = client.post(
-            "/cartera/comprobantes",
+            "/api/v1/cartera/comprobantes",
             data=_data(empresa_id),
             files={"archivo": ("uno.pdf", b"mismo soporte", "application/pdf")},
         )
         segundo = client.post(
-            "/cartera/comprobantes",
+            "/api/v1/cartera/comprobantes",
             data={**_data(empresa_id), "oc": "OC-GUARD-2"},
             files={"archivo": ("dos.pdf", b"mismo soporte", "application/pdf")},
         )
@@ -106,8 +106,8 @@ def test_upload_response_does_not_expose_internal_storage_path(tmp_path: Path) -
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
     try:
-        response = TestClient(app).post(
-            "/cartera/comprobantes",
+        response = cliente_superadmin().post(
+            "/api/v1/cartera/comprobantes",
             data={**_data(empresa_id), "oc": "OC-SAFE"},
             files={"archivo": ("safe.pdf", b"soporte seguro", "application/pdf")},
         )

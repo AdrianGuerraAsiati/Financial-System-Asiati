@@ -22,6 +22,8 @@ def entorno(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     monkeypatch.delenv("LOGIN_MAX_INTENTOS_FALLIDOS", raising=False)
     monkeypatch.delenv("LOGIN_VENTANA_MINUTOS", raising=False)
     monkeypatch.delenv("SESION_DURACION_HORAS", raising=False)
+    monkeypatch.delenv("SESSION_COOKIE_SECURE", raising=False)
+    monkeypatch.delenv("APP_ENV", raising=False)
     return monkeypatch
 
 
@@ -80,6 +82,39 @@ def test_invalid_limit_value_explains_what_to_do(entorno: pytest.MonkeyPatch) ->
     entorno.setenv("LOGIN_MAX_INTENTOS_FALLIDOS", "cinco")
 
     with pytest.raises(ConfiguracionAuthError, match="LOGIN_MAX_INTENTOS_FALLIDOS"):
+        cargar_configuracion()
+
+
+
+def test_session_cookie_is_not_secure_by_default_in_development(
+    entorno: pytest.MonkeyPatch,
+) -> None:
+    assert cargar_configuracion().cookie_secure is False
+
+
+def test_session_cookie_is_secure_by_default_in_production(
+    entorno: pytest.MonkeyPatch,
+) -> None:
+    entorno.setenv("APP_ENV", "production")
+
+    assert cargar_configuracion().cookie_secure is True
+
+
+def test_session_cookie_secure_can_be_overridden(
+    entorno: pytest.MonkeyPatch,
+) -> None:
+    entorno.setenv("APP_ENV", "production")
+    entorno.setenv("SESSION_COOKIE_SECURE", "false")
+
+    assert cargar_configuracion().cookie_secure is False
+
+
+def test_invalid_session_cookie_secure_value_is_rejected(
+    entorno: pytest.MonkeyPatch,
+) -> None:
+    entorno.setenv("SESSION_COOKIE_SECURE", "quizas")
+
+    with pytest.raises(ConfiguracionAuthError, match="SESSION_COOKIE_SECURE"):
         cargar_configuracion()
 
 

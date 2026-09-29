@@ -22,6 +22,7 @@ class ConfiguracionAuth:
     max_intentos_fallidos: int
     ventana_intentos: timedelta
     duracion_sesion: timedelta
+    cookie_secure: bool
 
 
 def _entero_positivo(nombre: str) -> int:
@@ -38,6 +39,20 @@ def _entero_positivo(nombre: str) -> int:
             f"Corrige la variable de entorno (valor por defecto: {_DEFECTOS[nombre]})."
         )
     return valor
+
+
+def _booleano(nombre: str, *, defecto: bool) -> bool:
+    crudo = os.environ.get(nombre)
+    if crudo is None or crudo.strip() == "":
+        return defecto
+    valor = crudo.strip().lower()
+    if valor in {"1", "true", "yes", "si", "sí"}:
+        return True
+    if valor in {"0", "false", "no"}:
+        return False
+    raise ConfiguracionAuthError(
+        f"{nombre} debe ser true o false. Valor recibido: {crudo!r}."
+    )
 
 
 def cargar_configuracion() -> ConfiguracionAuth:
@@ -58,4 +73,8 @@ def cargar_configuracion() -> ConfiguracionAuth:
         max_intentos_fallidos=_entero_positivo("LOGIN_MAX_INTENTOS_FALLIDOS"),
         ventana_intentos=timedelta(minutes=_entero_positivo("LOGIN_VENTANA_MINUTOS")),
         duracion_sesion=timedelta(hours=_entero_positivo("SESION_DURACION_HORAS")),
+        cookie_secure=_booleano(
+            "SESSION_COOKIE_SECURE",
+            defecto=os.environ.get("APP_ENV", "development").lower() == "production",
+        ),
     )

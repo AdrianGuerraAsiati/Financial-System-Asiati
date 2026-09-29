@@ -1,6 +1,6 @@
-from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.api import obtener_fuente_mora
 from app.motores.cartera_ocs.mora import RegistroCarteraMora
 
@@ -22,7 +22,7 @@ class FuenteFake:
 def test_web_lists_mora_for_empresa() -> None:
     app.dependency_overrides[obtener_fuente_mora] = lambda: FuenteFake()
     try:
-        response = TestClient(app).get("/cartera/mora?empresa_id=3")
+        response = cliente_superadmin().get("/api/v1/cartera/mora?empresa_id=3")
     finally:
         app.dependency_overrides.clear()
 

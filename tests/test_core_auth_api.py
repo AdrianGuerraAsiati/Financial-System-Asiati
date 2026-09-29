@@ -26,6 +26,7 @@ def entorno(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("JWT_SECRET", SECRETO_PRUEBA)
     monkeypatch.setenv("LOGIN_MAX_INTENTOS_FALLIDOS", "5")
     monkeypatch.setenv("LOGIN_VENTANA_MINUTOS", "15")
+    monkeypatch.setenv("SESSION_COOKIE_SECURE", "true")
 
 
 def _ingresos(email: str) -> list[Ingreso]:

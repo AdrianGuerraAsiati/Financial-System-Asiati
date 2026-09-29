@@ -3,7 +3,6 @@ import os
 from datetime import date
 
 import pandas as pd
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -11,6 +10,7 @@ from app.core.empresas import Empresa
 from app.core.fuentes import Fuente
 from app.core.periodos import Periodo
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 
 
 def _engine():
@@ -112,7 +112,7 @@ def _contexto() -> tuple[int, int, int, int]:
 
 def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -> None:
     empresa_id, periodo_id, fuente_ordenes_id, fuente_wallet_id = _contexto()
-    client = TestClient(app)
+    client = cliente_superadmin()
 
     data = {
         "empresa_id": str(empresa_id),
@@ -133,7 +133,7 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
         ),
     }
 
-    response = client.post("/wallets/wiilog/conciliar", data=data, files=files)
+    response = client.post("/api/v1/wallets/wiilog/conciliar", data=data, files=files)
 
     assert response.status_code == 201
     body = response.json()
@@ -143,7 +143,7 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
     assert body["hallazgos_creados"] >= 1
 
     hallazgos = client.get(
-        "/wallets/wiilog/hallazgos",
+        "/api/v1/wallets/wiilog/hallazgos",
         params={"empresa_id": empresa_id, "periodo_id": periodo_id},
     )
 
@@ -157,7 +157,7 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
     assert no_cobrado["evidencia"]["orden_id"] == "2"
     assert no_cobrado["evidencia"]["monto_en_juego_c"] == 250000
 
-    duplicate = client.post("/wallets/wiilog/conciliar", data=data, files=files)
+    duplicate = client.post("/api/v1/wallets/wiilog/conciliar", data=data, files=files)
 
     assert duplicate.status_code == 409
     assert "ya fue cargado" in duplicate.json()["detail"].lower()

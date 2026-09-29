@@ -1,8 +1,8 @@
 from datetime import date
 
-from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.api import obtener_fuente_proyeccion
 from app.motores.cartera_ocs.proyeccion import RegistroProyeccionPago
 
@@ -33,7 +33,7 @@ class FuenteFake:
 def test_web_lists_payment_projection_for_empresa() -> None:
     app.dependency_overrides[obtener_fuente_proyeccion] = lambda: FuenteFake()
     try:
-        response = TestClient(app).get("/cartera/proyeccion?empresa_id=3")
+        response = cliente_superadmin().get("/api/v1/cartera/proyeccion?empresa_id=3")
     finally:
         app.dependency_overrides.clear()
 

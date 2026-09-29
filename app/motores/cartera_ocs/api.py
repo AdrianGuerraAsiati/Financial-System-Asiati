@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, Upl
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.auth.dependencias import Acceso, requiere
 from app.core.session import obtener_session
 from app.motores.cartera_ocs.almacenamiento import (
     AlmacenComprobantes,
@@ -56,6 +57,20 @@ TIPOS_COMPROBANTE_DEFAULT = {
     "image/png",
 }
 MAX_COMPROBANTE_BYTES_DEFAULT = 10 * 1024 * 1024
+
+
+def _empresa_de_query(empresa_id: int) -> int:
+    return empresa_id
+
+
+def _empresa_de_form(empresa_id: int = Form(...)) -> int:
+    return empresa_id
+
+
+ver_cartera = requiere("cartera.ver", empresa_de=_empresa_de_query)
+subir_comprobante_permitido = requiere(
+    "cartera.comprobantes.subir", empresa_de=_empresa_de_form
+)
 
 
 def _tipos_comprobante_permitidos() -> set[str]:
@@ -119,6 +134,7 @@ def obtener_almacen_comprobantes() -> AlmacenComprobantes:
 @router.get("/operaciones")
 def consultar_operaciones(
     empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
     fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
 ) -> list[dict[str, object]]:
     return [
@@ -133,6 +149,7 @@ def consultar_operaciones(
 @router.get("/mora")
 def consultar_mora(
     empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
     fuente: FuenteMoraCartera = Depends(obtener_fuente_mora),
 ) -> list[dict[str, object]]:
     return [
@@ -147,6 +164,7 @@ def consultar_mora(
 @router.get("/proyeccion")
 def consultar_proyeccion(
     empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
     fuente: FuenteProyeccionCartera = Depends(obtener_fuente_proyeccion),
 ) -> list[dict[str, object]]:
     return [
@@ -162,6 +180,7 @@ def consultar_proyeccion(
 def consultar_detalle_operacion(
     oc: str,
     empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
     fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
@@ -189,6 +208,7 @@ def consultar_detalle_operacion(
 @router.get("/comprobantes/pendientes")
 def consultar_comprobantes_pendientes(
     empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
     session: Session = Depends(obtener_session),
 ) -> list[dict[str, object]]:
     pendientes = listar_comprobantes_pendientes(
@@ -216,6 +236,7 @@ def consultar_comprobantes_pendientes(
 def consultar_archivo_comprobante(
     comprobante_id: int,
     empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
     session: Session = Depends(obtener_session),
     almacen: AlmacenComprobantes = Depends(obtener_almacen_comprobantes),
 ) -> Response:
@@ -256,6 +277,7 @@ def consultar_archivo_comprobante(
 @router.post("/comprobantes", status_code=201)
 def subir_comprobante(
     empresa_id: int = Form(...),
+    _acceso: Acceso = Depends(subir_comprobante_permitido),
     oc: str = Form(...),
     cliente: str = Form(...),
     pais: str = Form(...),

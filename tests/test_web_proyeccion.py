@@ -10,4 +10,4 @@ def test_shell_exposes_payment_projection_view() -> None:
     assert html.status_code == 200
     assert 'id="cartera-proyeccion"' in html.text
     assert js.status_code == 200
-    assert "/cartera/proyeccion" in js.text
+    assert "/api/v1/cartera/proyeccion" in js.text

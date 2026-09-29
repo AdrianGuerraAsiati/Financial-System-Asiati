@@ -24,9 +24,8 @@ app.include_router(auth_router, prefix=API_V1)
 app.include_router(usuarios_router, prefix=API_V1)
 app.include_router(supervision_router, prefix=API_V1)
 app.include_router(hallazgos_router, prefix=API_V1)
-# Sin autenticación hasta la pantalla de login: docs/decisiones/0004.
-app.include_router(cartera_router)
-app.include_router(wiilog_wallet_router)
+app.include_router(cartera_router, prefix=API_V1)
+app.include_router(wiilog_wallet_router, prefix=API_V1)
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 

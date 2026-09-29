@@ -7,15 +7,50 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+  <section id="login-view" class="auth-shell">
+    <form id="login-form" class="auth-card">
+      <p class="eyebrow">Plataforma Financiera ASIATI</p>
+      <h1>Iniciar sesión</h1>
+      <p>Usa tu correo corporativo y contraseña.</p>
+      <label>Correo
+        <input name="email" type="email" autocomplete="username" required>
+      </label>
+      <label>Contraseña
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <div id="login-error" class="status error" hidden></div>
+      <button type="submit">Entrar</button>
+    </form>
+
+    <form id="password-form" class="auth-card" hidden>
+      <p class="eyebrow">Primer ingreso</p>
+      <h1>Cambiar contraseña</h1>
+      <p>Debes definir una contraseña propia antes de continuar.</p>
+      <label>Contraseña temporal
+        <input name="password_actual" type="password" autocomplete="current-password" required>
+      </label>
+      <label>Nueva contraseña
+        <input name="password_nueva" type="password" autocomplete="new-password" minlength="12" required>
+      </label>
+      <div id="password-error" class="status error" hidden></div>
+      <button type="submit">Guardar contraseña</button>
+    </form>
+  </section>
+
+  <div id="app-shell" hidden>
   <header class="topbar">
     <div>
       <p class="eyebrow">Bloque 1</p>
       <h1>Plataforma Financiera ASIATI</h1>
     </div>
-    <label class="empresa-control">
-      Empresa ID
-      <input id="empresa-id" type="number" min="1" value="1">
-    </label>
+    <div class="session-controls">
+      <label class="empresa-control">
+        Empresa
+        <select id="empresa-id"></select>
+      </label>
+      <span id="usuario-nombre" class="usuario-nombre"></span>
+      <button id="logout" class="secondary-button" type="button">Salir</button>
+    </div>
   </header>
 
   <div class="layout">
@@ -184,6 +219,8 @@
         </section>
       </section>
     </main>
+  </div>
+
   </div>
 
   <script src="/static/app.js" defer></script>

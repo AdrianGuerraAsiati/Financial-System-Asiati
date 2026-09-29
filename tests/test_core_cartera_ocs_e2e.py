@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.empresas import Empresa
 from app.main import app
+from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.almacenamiento import AlmacenLocalComprobantes
 from app.motores.cartera_ocs.api import (
     obtener_almacen_comprobantes,
@@ -54,21 +54,21 @@ def test_cartera_vertical_journey(tmp_path: Path) -> None:
     app.dependency_overrides[obtener_almacen_comprobantes] = (
         lambda: AlmacenLocalComprobantes(tmp_path)
     )
-    client = TestClient(app)
+    client = cliente_superadmin()
 
     try:
-        listado = client.get(f"/cartera/operaciones?empresa_id={empresa_id}")
+        listado = client.get(f"/api/v1/cartera/operaciones?empresa_id={empresa_id}")
         assert listado.status_code == 200
         assert [item["oc"] for item in listado.json()] == ["OC-E2E"]
 
         detalle_inicial = client.get(
-            f"/cartera/operaciones/OC-E2E?empresa_id={empresa_id}"
+            f"/api/v1/cartera/operaciones/OC-E2E?empresa_id={empresa_id}"
         )
         assert detalle_inicial.status_code == 200
         assert detalle_inicial.json()["comprobantes_pendientes"] == 0
 
         carga = client.post(
-            "/cartera/comprobantes",
+            "/api/v1/cartera/comprobantes",
             data={
                 "empresa_id": str(empresa_id),
                 "oc": "OC-E2E",
@@ -91,13 +91,13 @@ def test_cartera_vertical_journey(tmp_path: Path) -> None:
         assert carga.json()["estado_auditoria"] == "PENDIENTE"
 
         detalle_final = client.get(
-            f"/cartera/operaciones/OC-E2E?empresa_id={empresa_id}"
+            f"/api/v1/cartera/operaciones/OC-E2E?empresa_id={empresa_id}"
         )
         assert detalle_final.status_code == 200
         assert detalle_final.json()["comprobantes_pendientes"] == 1
 
         bandeja = client.get(
-            f"/cartera/comprobantes/pendientes?empresa_id={empresa_id}"
+            f"/api/v1/cartera/comprobantes/pendientes?empresa_id={empresa_id}"
         )
         assert bandeja.status_code == 200
         assert [item["oc"] for item in bandeja.json()] == ["OC-E2E"]
