@@ -44,6 +44,7 @@ PERMISOS: dict[str, dict[str, Alcance]] = {
     "conciliacion.ejecutar": {_SA: _TODAS, _CN: _ASIG},
     "conciliacion.ver": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG, ROL_TI: _TODAS},
     "cartera.ver": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG, ROL_TI: _TODAS},
+    "compras.ver": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG, ROL_TI: _TODAS},
     "cartera.comprobantes.subir": {_SA: _TODAS, _CN: _ASIG},
     "movimientos.categorizar": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG},
     "reglas.crear": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG},
