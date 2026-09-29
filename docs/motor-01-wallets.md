@@ -1,5 +1,7 @@
 # Motor 01 · Conciliación de Wallets
 
+> **Nota de vigencia · 29-sep-2026:** este archivo conserva contexto histórico del Motor 01, pero ya no es la fuente operativa principal para Wiilog. Las secciones que presentan fulfillment, flete y validación Wiilog como pendientes quedaron superadas por `docs/motores/conciliacion_wallets/WALLET_WIILOG.md`, `PROMPT_MAESTRO.md`, `parametros_wallet_wiilog.json` y el código/tests actuales. La referencia 1.555 / 28 / 80 permanece como baseline histórico hasta identificar y conectar su dataset; no debe confundirse con la regresión Wiilog de septiembre 2026.
+
 ## Estado según las fuentes del proyecto
 
 Este es el primer motor que debe llegar a producción.
