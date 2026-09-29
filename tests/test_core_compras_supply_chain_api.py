@@ -303,3 +303,88 @@ def test_compras_kpis_reject_unknown_country() -> None:
 
     assert response.status_code == 422
     assert response.json()["detail"] == "pais debe ser CO, EC o CL."
+
+
+
+def test_compras_executive_dashboard_attention_validation_and_export() -> None:
+    from app.motores.compras_supply_chain.demo import construir_fuente_demo
+
+    empresa_id = crear_empresa("Compras ejecutiva")
+    fuente = construir_fuente_demo(empresa_id=empresa_id)
+    app.dependency_overrides[obtener_fuente_compras] = lambda: fuente
+    client, _ = cliente_con_rol(ROL_SUPER_ADMINISTRADOR)
+
+    try:
+        dashboard = client.get(
+            "/api/v1/compras/dashboard",
+            params={"empresa_id": empresa_id},
+        )
+        atencion = client.get(
+            "/api/v1/compras/atencion",
+            params={"empresa_id": empresa_id},
+        )
+        validacion = client.get(
+            "/api/v1/compras/validacion/tablero",
+            params={"empresa_id": empresa_id},
+        )
+        exportacion = client.get(
+            "/api/v1/compras/export.zip",
+            params={"empresa_id": empresa_id},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert dashboard.status_code == 200
+    dashboard_body = dashboard.json()
+    assert dashboard_body["estructural"]["lineas"] == 9
+    assert (
+        dashboard_body["estructural"][
+            "ocs_con_al_menos_una_linea_en_poblacion_actual"
+        ]
+        >= 1
+    )
+    familias = {
+        item["codigo"]: item
+        for item in dashboard_body["familias_monetarias"]
+    }
+    assert familias["costo_compra"]["disponible"] is True
+    assert familias["valor_comercial_ddp"]["disponible"] is True
+
+    assert atencion.status_code == 200
+    assert atencion.json()["tipos_con_resultados"] >= 1
+
+    assert validacion.status_code == 200
+    validacion_body = validacion.json()
+    assert validacion_body["disponible"] is True
+    assert validacion_body["resumen"]["todo_coincide"] is True
+    assert {
+        referencia["pais"]
+        for referencia in validacion_body["referencias"]
+    } == {"CO", "EC", "CL"}
+
+    assert exportacion.status_code == 200
+    assert exportacion.headers["content-type"] == "application/zip"
+    assert len(exportacion.content) > 100
+
+
+def test_compras_dashboard_country_filter_is_descriptive() -> None:
+    from app.motores.compras_supply_chain.demo import construir_fuente_demo
+
+    empresa_id = crear_empresa("Compras dashboard CO")
+    fuente = construir_fuente_demo(empresa_id=empresa_id)
+    app.dependency_overrides[obtener_fuente_compras] = lambda: fuente
+    client, _ = cliente_con_rol(ROL_SUPER_ADMINISTRADOR)
+
+    try:
+        response = client.get(
+            "/api/v1/compras/dashboard",
+            params={"empresa_id": empresa_id, "pais": "CO"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["pais"] == "CO"
+    assert body["estructural"]["lineas_por_pais"] == {"CO": 5}
+    assert "corporativamente 'activa'" in body["estructural"]["nota"]
