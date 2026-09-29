@@ -33,6 +33,10 @@ class EsquemaComprasInvalidoError(RuntimeError):
     pass
 
 
+class LecturaComprasGoogleSheetsError(RuntimeError):
+    pass
+
+
 class ClienteValoresGoogleSheets(Protocol):
     def obtener_valores(
         self,
@@ -128,10 +132,15 @@ class FuenteComprasGoogleSheets:
 
         for pais in ("CO", "EC", "CL"):
             rango = self.configuracion.rangos_por_pais[pais]
-            valores = self.cliente.obtener_valores(
-                spreadsheet_id=self.configuracion.spreadsheet_id,
-                rango=rango,
-            )
+            try:
+                valores = self.cliente.obtener_valores(
+                    spreadsheet_id=self.configuracion.spreadsheet_id,
+                    rango=rango,
+                )
+            except Exception as exc:
+                raise LecturaComprasGoogleSheetsError(
+                    f"No se pudo leer la hoja de Compras para {pais} ({rango})."
+                ) from exc
             normalizadas, diagnostico = _normalizar_rango(
                 valores,
                 pais=pais,
