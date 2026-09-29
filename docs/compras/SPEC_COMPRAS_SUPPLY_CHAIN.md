@@ -340,7 +340,6 @@ detalle fuente -> regla propia -> resultado -> comparación contra vista existen
 - reemplazar Google Sheets;
 - escribir de vuelta al Sheet (prohibido por la decisión 0005 mientras siga vigente);
 - construir base de datos propia de compras;
-- modificar `app/core` mientras el PR #44 siga en curso;
 - OCR de comprobantes;
 - reglas de cartera de clientes;
 - UI definitiva;
@@ -348,9 +347,27 @@ detalle fuente -> regla propia -> resultado -> comparación contra vista existen
 
 ---
 
-## 12. Criterio para comenzar a programar
+## 12. Vertical slice técnico permitido antes de cerrar KPIs
 
-Antes del primer PR funcional de Compras deben existir:
+Sí se permite implementar la **capa de lectura y normalización** antes de cerrar los KPIs, siempre que:
+
+- use exclusivamente Google Sheets API en modo `spreadsheets.readonly`;
+- no escriba ni corrija la fuente;
+- conserve `estado_origen` y demás valores originales;
+- clasifique solo estados de baja ambigüedad;
+- deje `EN OTM`, `PENDIENTE DEPÓSITO`, `PENDIENTE INVIMA` y otros estados abiertos como `POR_DEFINIR`;
+- no calcule todavía "valor en tránsito", pagado, saldo pendiente u otros KPIs con criterio financiero abierto.
+
+Endpoints iniciales:
+
+- `GET /api/v1/compras/lineas`
+- `GET /api/v1/compras/catalogos`
+
+Ambos son de solo lectura y requieren `compras.ver`.
+
+### Criterio para comenzar lógica financiera / KPIs
+
+Antes del primer PR que calcule KPIs financieros de Compras deben existir:
 
 1. mapa validado de estados;
 2. definición de al menos un KPI;
