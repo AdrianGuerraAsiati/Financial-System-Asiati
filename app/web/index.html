@@ -178,10 +178,16 @@
             <h3>Fuente de datos</h3>
             <p>Google Sheets en modo solo lectura. La plataforma valida el contrato antes de consultar Cartera.</p>
           </div>
-          <button id="cartera-refrescar-fuente" type="button">Validar fuente</button>
+          <div class="panel-actions">
+            <button id="cartera-descubrir-fuente" type="button" class="secondary-button">Descubrir pestañas</button>
+            <button id="cartera-refrescar-fuente" type="button">Validar fuente</button>
+          </div>
         </div>
         <div id="cartera-fuente-contenido" class="stack">
           <p class="empty">Validando configuración…</p>
+        </div>
+        <div id="cartera-descubrimiento-contenido" class="stack">
+          <p class="empty">El descubrimiento inspecciona encabezados del spreadsheet configurado sin modificarlo.</p>
         </div>
       </section>
 
