@@ -5,9 +5,11 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable
 
 from .dominio import LineaCompra
-from .kpis import decimal_desde_fuente
+from .kpis import ESTADOS_ACTIVOS_TABLERO_ACTUAL, decimal_desde_fuente
 from .normalizacion import normalizar_etiqueta
 
+
+_ESTADOS_ACTIVOS = frozenset(ESTADOS_ACTIVOS_TABLERO_ACTUAL)
 
 _PAISES = {
     "CO": ("CO", "COLOMBIA"),
@@ -157,7 +159,11 @@ def _ddp_detalle_por_estado(
 ) -> dict[str, Decimal]:
     resultado: dict[str, Decimal] = {}
     for linea in lineas:
-        if linea.pais != pais or not linea.estado_normalizado:
+        if (
+            linea.pais != pais
+            or not linea.estado_normalizado
+            or linea.estado_normalizado not in _ESTADOS_ACTIVOS
+        ):
             continue
         try:
             monto = decimal_desde_fuente(linea.valor_oci_ddp_origen)
