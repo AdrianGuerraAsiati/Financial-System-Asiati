@@ -2,6 +2,7 @@ import mimetypes
 import os
 from dataclasses import asdict
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy.exc import IntegrityError
@@ -58,6 +59,42 @@ TIPOS_COMPROBANTE_DEFAULT = {
     "image/png",
 }
 MAX_COMPROBANTE_BYTES_DEFAULT = 10 * 1024 * 1024
+
+
+CENTAVO = Decimal("0.01")
+
+
+def _dinero_texto(valor: Decimal) -> str:
+    return format(valor.quantize(CENTAVO), "f")
+
+
+def _decimal_texto(valor: Decimal) -> str:
+    return format(valor, "f")
+
+
+def _operacion_como_dict(operacion: object) -> dict[str, object]:
+    data = asdict(operacion)
+    data["valor"] = _dinero_texto(operacion.valor)
+    data["valor_anticipo"] = _dinero_texto(operacion.valor_anticipo)
+    data["valor_financiado"] = _dinero_texto(operacion.valor_financiado)
+    data["porcentaje_anticipo"] = _decimal_texto(
+        operacion.porcentaje_anticipo
+    )
+    return data
+
+
+def _mora_como_dict(registro: object) -> dict[str, object]:
+    data = asdict(registro)
+    data["monto"] = _dinero_texto(registro.monto)
+    return data
+
+
+def _proyeccion_como_dict(registro: object) -> dict[str, object]:
+    data = asdict(registro)
+    data["dias"] = _decimal_texto(registro.dias)
+    data["valor_oc"] = _dinero_texto(registro.valor_oc)
+    data["monto"] = _dinero_texto(registro.monto)
+    return data
 
 
 def _empresa_de_query(empresa_id: int) -> int:
@@ -156,7 +193,7 @@ def consultar_operaciones(
     fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
 ) -> list[dict[str, object]]:
     return [
-        asdict(operacion)
+        _operacion_como_dict(operacion)
         for operacion in listar_operaciones(
             fuente,
             empresa_id=empresa_id,
@@ -171,7 +208,7 @@ def consultar_mora(
     fuente: FuenteMoraCartera = Depends(obtener_fuente_mora),
 ) -> list[dict[str, object]]:
     return [
-        asdict(registro)
+        _mora_como_dict(registro)
         for registro in listar_mora(
             fuente,
             empresa_id=empresa_id,
@@ -186,7 +223,7 @@ def consultar_proyeccion(
     fuente: FuenteProyeccionCartera = Depends(obtener_fuente_proyeccion),
 ) -> list[dict[str, object]]:
     return [
-        asdict(registro)
+        _proyeccion_como_dict(registro)
         for registro in listar_proyeccion(
             fuente,
             empresa_id=empresa_id,
@@ -214,7 +251,13 @@ def consultar_detalle_operacion(
             detail=f"No se encontró la operación {oc}.",
         ) from exc
 
-    respuesta = asdict(detalle)
+    respuesta = {
+        "oc": detalle.oc,
+        "lineas": [
+            _operacion_como_dict(linea)
+            for linea in detalle.lineas
+        ],
+    }
     respuesta["comprobantes_pendientes"] = contar_comprobantes_pendientes(
         session,
         empresa_id=empresa_id,
@@ -241,7 +284,7 @@ def consultar_comprobantes_pendientes(
             "cliente": item.cliente,
             "pais": item.pais,
             "comercial": item.comercial,
-            "monto_esperado": float(item.monto_esperado),
+            "monto_esperado": _dinero_texto(item.monto_esperado),
             "nombre_archivo": item.nombre_archivo,
             "estado_auditoria": item.estado_auditoria,
             "creado_en": item.creado_en,
@@ -299,7 +342,7 @@ def subir_comprobante(
     oc: str = Form(...),
     cliente: str = Form(...),
     pais: str = Form(...),
-    valor_ddp: float = Form(...),
+    valor_ddp: Decimal = Form(...),
     tipo_negociacion: str = Form(...),
     fecha_entrega: date = Form(...),
     comercial: str = Form(...),
@@ -386,6 +429,6 @@ def subir_comprobante(
         "id": registro.id,
         "oc": registro.oc,
         "estado_auditoria": registro.estado_auditoria,
-        "monto_esperado": float(registro.monto_esperado),
+        "monto_esperado": _dinero_texto(registro.monto_esperado),
         "contenido_hash": registro.contenido_hash,
     }
