@@ -391,15 +391,29 @@ Cada KPI debe declarar:
 
 ---
 
-## 11. Compras / Supply Chain — trabajo funcional iniciado
+## 11. Compras / Supply Chain — vertical técnico iniciado
 
-Con el núcleo de autenticación ya integrado, Compras / Supply Chain puede avanzar como módulo independiente sin depender de trabajo pendiente en `app/core`.
+Con el núcleo de autenticación ya integrado, Compras / Supply Chain avanza como módulo independiente.
 
-Ya existen en la rama/PR de documentación:
+Documentación vigente:
 
 - `docs/compras/SPEC_COMPRAS_SUPPLY_CHAIN.md`
 - `docs/compras/ESTADOS_LOGISTICOS.md`
 - `docs/compras/PREGUNTAS_NEGOCIO.md`
+- `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`
+
+Primer vertical técnico:
+
+- módulo `app/motores/compras_supply_chain/`;
+- lectura de las hojas CO/EC/CL vía Google Sheets API con scope `spreadsheets.readonly`;
+- conservación de país, hoja y fila de origen;
+- conservación de `estado_origen` y `modo_transporte_origen`;
+- normalización de variantes ortográficas;
+- clasificación únicamente de estados de baja ambigüedad;
+- estados abiertos como `EN OTM`, `PENDIENTE DEPÓSITO` y `PENDIENTE INVIMA` permanecen `POR_DEFINIR`;
+- endpoints protegidos `GET /api/v1/compras/lineas` y `GET /api/v1/compras/catalogos`;
+- permiso `compras.ver`;
+- sin write-back, sin base propia de Compras y sin KPIs financieros todavía.
 
 Baseline levantado del snapshot `INFORME COMPRAS 2024-2026.xlsx`:
 
