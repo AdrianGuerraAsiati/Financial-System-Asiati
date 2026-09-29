@@ -11,6 +11,10 @@ def test_shell_exposes_compras_explorer() -> None:
     assert 'id="nav-compras"' in html.text
     assert 'id="vista-compras"' in html.text
     assert 'id="compras-kpis-monetarios"' in html.text
+    assert 'id="compras-atencion"' in html.text
+    assert 'id="compras-validacion"' in html.text
+    assert 'id="compras-exportar"' in html.text
+    assert 'id="compras-grafico-estados"' in html.text
     assert 'id="compras-diagnostico"' in html.text
     assert 'id="compras-ocs"' in html.text
     assert 'id="compras-lineas"' in html.text
@@ -22,6 +26,10 @@ def test_shell_exposes_compras_explorer() -> None:
     assert "/api/v1/compras/ocs" in js.text
     assert "/api/v1/compras/resumen" in js.text
     assert "/api/v1/compras/kpis" in js.text
+    assert "/api/v1/compras/dashboard" in js.text
+    assert "/api/v1/compras/atencion" in js.text
+    assert "/api/v1/compras/validacion/tablero" in js.text
+    assert "/api/v1/compras/export.zip" in js.text
     assert "/api/v1/compras/lineas" in js.text
     assert "/api/v1/compras/calidad" in js.text
     assert "/api/v1/compras/catalogos" in js.text
@@ -45,3 +53,14 @@ def test_compras_explorer_exposes_both_monetary_families() -> None:
     assert "Valor comercial DDP activo" in response.text
     assert "VALOR TOTAL COMPRA USD" in response.text
     assert "VALOR OCI (DDP)" in response.text
+
+
+
+def test_compras_explorer_labels_new_executive_metrics_as_descriptive() -> None:
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 200
+    assert "OCs con líneas en población actual" in response.text
+    assert "No equivale todavía a la definición corporativa" in response.text
+    assert "No define todavía “en tránsito / en el mar”" in response.text
+    assert "Sin severidad de negocio asignada" in response.text
