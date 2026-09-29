@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from app.motores.cartera_ocs import google_sheets as google_sheets_mod
 from app.motores.cartera_ocs.google_sheets import (
     CLOUD_PLATFORM_SCOPE,
@@ -94,7 +96,7 @@ def test_environment_builds_google_sheets_source(monkeypatch) -> None:
 
     assert len(operaciones) == 1
     assert operaciones[0].oc == "OC-1"
-    assert operaciones[0].valor == 10000
+    assert operaciones[0].valor == Decimal("10000.00")
 
 
 def test_google_api_client_supports_keyless_impersonation(monkeypatch) -> None:
