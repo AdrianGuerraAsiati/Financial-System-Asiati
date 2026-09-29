@@ -7,6 +7,8 @@ from sqlalchemy import engine_from_config, pool
 from app.core.db import Base
 from app.core import cargas, empresas, fuentes, hallazgos, periodos  # noqa: F401
 from app.core.periodos import history as periodos_history  # noqa: F401
+from app.core import auditoria, usuarios  # noqa: F401
+from app.core.auth import model as auth_model  # noqa: F401
 
 config = context.config
 

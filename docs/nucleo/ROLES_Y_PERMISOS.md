@@ -12,15 +12,17 @@ Hay tres roles activos desde el primer entregable y dos que se crean ya en el mo
 
 | Código | Nombre visible | Quién | Para qué |
 |---|---|---|---|
-| `SUPERADMIN` | Superadministrador | Juan Felipe | Crea usuarios, asigna roles y empresas, habilita procesos. Puede hacer todo lo que hacen el conciliador y el coordinador. |
-| `COORDINADOR_FINANCIERO` | Coordinador financiero | Supervisor del equipo | Ve el estado de las conciliaciones, los últimos ingresos y las acciones de cada conciliador. Resuelve los casos especiales que le escalan. |
-| `CONCILIADOR_FINANCIERO` | Conciliador financiero | Operativo | Carga archivos, ejecuta conciliaciones, categoriza movimientos y gestiona hallazgos de las empresas que tiene asignadas. |
-| `ANALISTA_TESORERIA` | Analista de tesorería | Futuro | Se activa con el bloque de bancos y tesorería. Hoy existe en el modelo, sin permisos. |
-| `TI` | Soporte técnico | Adrian | Arregla problemas de la plataforma: errores, cargas fallidas, infraestructura. No toma decisiones financieras. |
+| `super_administrador` | Superadministrador | Juan Felipe | Crea usuarios, asigna roles y empresas, habilita procesos. Puede hacer todo lo que hacen el conciliador y el coordinador. |
+| `coordinacion_financiera` | Coordinador financiero | Supervisor del equipo | Ve el estado de las conciliaciones, los últimos ingresos y las acciones de cada conciliador. Resuelve los casos especiales que le escalan. |
+| `conciliacion` | Conciliador financiero | Operativo | Carga archivos, ejecuta conciliaciones, categoriza movimientos y gestiona hallazgos de las empresas que tiene asignadas. |
+| `analista_tesoreria` | Analista de tesorería | Futuro | Se activa con el bloque de bancos y tesorería. Hoy existe en el modelo, sin permisos. |
+| `ti` | Soporte técnico | Adrian | Arregla problemas de la plataforma: errores, cargas fallidas, infraestructura. No toma decisiones financieras. |
 
 **Los roles son fijos en el código.** El superadmin asigna roles a usuarios; no crea roles nuevos desde la pantalla. Un rol nuevo (como analista de tesorería) se agrega por código, con su fila en la matriz de la sección 3. Crear roles desde la interfaz es un proyecto en sí mismo y no lo necesitamos para operar.
 
 Un usuario tiene un solo rol.
+
+Los códigos de rol siguen la convención de la migración `0009_create_usuarios_roles` (minúsculas, snake_case). Las cinco filas de la columna "Código" son exactamente los valores del CHECK de `usuarios.rol`.
 
 ---
 
@@ -104,7 +106,7 @@ Todo sale de la tabla `auditoria` y de una tabla de ingresos. No se construyen c
 -- rol como texto con CHECK, no tabla de roles
 usuarios
   id, email UNIQUE, nombre, password_hash,       -- Argon2
-  rol TEXT NOT NULL CHECK (rol IN ('SUPERADMIN','COORDINADOR_FINANCIERO','CONCILIADOR_FINANCIERO','ANALISTA_TESORERIA','TI')),
+  rol TEXT NOT NULL CHECK (rol IN ('super_administrador','coordinacion_financiera','conciliacion','analista_tesoreria','ti')),
   activo BOOL NOT NULL DEFAULT true,
   debe_cambiar_password BOOL NOT NULL DEFAULT true,
   ultimo_ingreso_at TIMESTAMPTZ NULL,
@@ -127,9 +129,9 @@ hallazgo_mensajes                                -- el hilo del caso especial
 Los permisos viven en código:
 
 ```python
-# backend/app/core/permisos.py
-PERMISOS: dict[str, dict[Rol, Alcance]] = {
-    "cargas.subir": {Rol.SUPERADMIN: Alcance.TODAS, Rol.CONCILIADOR_FINANCIERO: Alcance.ASIGNADAS},
+# app/core/permisos.py
+PERMISOS: dict[str, dict[str, Alcance]] = {
+    "cargas.subir": {ROL_SUPER_ADMINISTRADOR: Alcance.TODAS, ROL_CONCILIACION: Alcance.ASIGNADAS},
     ...
 }
 ```

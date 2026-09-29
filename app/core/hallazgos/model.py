@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -9,6 +9,12 @@ from app.core.db import Base
 
 class Hallazgo(Base):
     __tablename__ = "hallazgos"
+    __table_args__ = (
+        CheckConstraint(
+            "estado IN ('detectado', 'en_gestion', 'escalado', 'resuelto', 'cerrado')",
+            name="ck_hallazgos_estado",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     periodo_id: Mapped[int] = mapped_column(
@@ -27,6 +33,15 @@ class Hallazgo(Base):
         nullable=False,
         default=False,
         server_default="false",
+    )
+    # Flujo de caso especial (escalamiento.ESTADOS). `resuelto` se mantiene
+    # porque la política de cierre lo usa; resolver actualiza ambos.
+    estado: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="detectado",
+        server_default="detectado",
+        index=True,
     )
     motor_slug: Mapped[str | None] = mapped_column(String(100), nullable=True)
     codigo_regla: Mapped[str | None] = mapped_column(String(120), nullable=True)
