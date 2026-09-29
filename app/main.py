@@ -12,6 +12,7 @@ from app.core.usuarios.api import router as usuarios_router
 from app.motores.cartera_ocs.api import router as cartera_router
 from app.motores.compras_supply_chain.api import router as compras_router
 from app.motores.conciliacion_wallets.wiilog.api import router as wiilog_wallet_router
+from app.integrations.google_sheets.api import router as google_sheets_router
 
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -30,6 +31,7 @@ app.include_router(hallazgos_router, prefix=API_V1)
 app.include_router(cartera_router, prefix=API_V1)
 app.include_router(compras_router, prefix=API_V1)
 app.include_router(wiilog_wallet_router, prefix=API_V1)
+app.include_router(google_sheets_router, prefix=API_V1)
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 
