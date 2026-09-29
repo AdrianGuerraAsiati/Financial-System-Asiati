@@ -20,6 +20,10 @@ def test_shell_exposes_compras_explorer() -> None:
     assert 'id="compras-lineas"' in html.text
     assert 'id="compras-calidad"' in html.text
     assert 'id="compras-catalogos"' in html.text
+    assert 'id="compras-cobertura"' in html.text
+    assert 'id="compras-llegadas"' in html.text
+    assert 'id="compras-timeline"' in html.text
+    assert 'id="compras-snapshots"' in html.text
 
     assert js.status_code == 200
     assert "/api/v1/compras/fuente/estado" in js.text
@@ -33,6 +37,10 @@ def test_shell_exposes_compras_explorer() -> None:
     assert "/api/v1/compras/lineas" in js.text
     assert "/api/v1/compras/calidad" in js.text
     assert "/api/v1/compras/catalogos" in js.text
+    assert "/api/v1/compras/cobertura" in js.text
+    assert "/api/v1/compras/llegadas" in js.text
+    assert "/api/v1/compras/timeline" in js.text
+    assert "/api/v1/compras/snapshots" in js.text
     assert 'sesion.permisos?.["compras.ver"]' in js.text
 
 
