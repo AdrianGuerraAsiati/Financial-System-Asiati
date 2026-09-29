@@ -75,16 +75,18 @@ Estado funcional relevante de `main`:
 - PR #51 fusionado: observabilidad de fuente, calidad, agrupación por OC y explorador web de Compras.
 - PR #52 fusionado: familias monetarias descriptivas de costo de compra y valor comercial DDP.
 - PR #53 fusionado: entorno local de un comando con migraciones, bootstrap de desarrollo y fuente sintética de Compras.
+- PR #55 fusionado: vista ejecutiva de Compras, puntos de atención, validación contra Supply Chain y exportación.
+- PR #56 fusionado: dashboard principal V1 por empresa con resumen transversal y bandeja `Requiere atención`.
 - Las APIs protegidas viven bajo `/api/v1`.
-- El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, logout, Cartera y explorador de Compras.
+- El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, Inicio, Cartera y vista ejecutiva/explorador de Compras.
 
 Head de `main` al actualizar este handoff:
 
-`867e888f18c96bc18d7613509c90af63eaf7f914`
+`74cabd3a867ab78b65fa0ffec6372c166c3797d7`
 
 Último cambio fusionado:
 
-`chore(dev): add one-command local bootstrap and compras demo`
+`feat(dashboard): add principal home dashboard v1`
 
 ### PR #41 — motor de referencia Wiilog + Claude Code kit
 
