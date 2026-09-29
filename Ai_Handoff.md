@@ -1,6 +1,6 @@
 # AI Handoff — Plataforma Financiera ASIATI
 
-**Última actualización:** 28 de septiembre de 2026  
+**Última actualización:** 29 de septiembre de 2026  
 **Repositorio:** `AdrianGuerraAsiati/Financial-System-Asiati`
 
 ---
@@ -71,12 +71,20 @@ Estado funcional relevante de `main`:
 
 - PR #44 fusionado: usuarios, roles, empresas asignadas, permisos, login, auditoría y supervisión.
 - PR #48 fusionado: Cartera y Wiilog integrados al modelo común de autenticación/autorización.
-- Las APIs protegidas de Cartera y Wiilog viven bajo `/api/v1`.
-- El frontend ya cuenta con login, cambio obligatorio de contraseña, selector de empresa por sesión y logout.
+- PR #50 fusionado: primer vertical read-only de Compras / Supply Chain.
+- PR #51 fusionado: observabilidad de fuente, calidad, agrupación por OC y explorador web de Compras.
+- PR #52 fusionado: familias monetarias descriptivas de costo de compra y valor comercial DDP.
+- PR #53 fusionado: entorno local de un comando con migraciones, bootstrap de desarrollo y fuente sintética de Compras.
+- Las APIs protegidas viven bajo `/api/v1`.
+- El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, logout, Cartera y explorador de Compras.
 
-Último cambio funcional fusionado antes de este ajuste documental:
+Head de `main` al actualizar este handoff:
 
-`feat(cartera): integrate auth and protect module routes`
+`867e888f18c96bc18d7613509c90af63eaf7f914`
+
+Último cambio fusionado:
+
+`chore(dev): add one-command local bootstrap and compras demo`
 
 ### PR #41 — motor de referencia Wiilog + Claude Code kit
 
@@ -169,6 +177,44 @@ La excepción temporal de endpoints Wiilog sin autenticación (decisión 0004) q
 ### Responsabilidad actual
 
 La integración técnica de módulos con el núcleo común queda principalmente del lado de Adrian. Juanfe mantiene la validación funcional/financiera y puede continuar con conciliación de wallets de **Tiendas y ASIATI**.
+
+---
+
+## 4.1 Desarrollo local listo para previsualización
+
+Una instalación limpia puede levantarse con:
+
+```bash
+docker compose up --build
+```
+
+El compose de desarrollo ejecuta automáticamente:
+
+1. PostgreSQL;
+2. `alembic upgrade head`;
+3. bootstrap idempotente de empresa + superadmin;
+4. API FastAPI.
+
+Defaults exclusivamente locales:
+
+- URL: `http://localhost:8000`
+- usuario: `admin@asiati.local`
+- contraseña: `AsiatiDev2026!`
+- empresa inicial: `ASIATI Demo`
+
+Los puertos de desarrollo se ligan a `127.0.0.1`.
+
+Compras arranca por defecto con `COMPRAS_DEMO_MODE=true`, usando datos sintéticos claramente marcados como `DEMO LOCAL`. Producción rechaza ese modo.
+
+Para usar Google Sheets real en desarrollo:
+
+```bash
+docker compose -f docker-compose.yml -f compose.google.yml up --build
+```
+
+con `COMPRAS_DEMO_MODE=false`, el spreadsheet ID y el service account configurados.
+
+Guía: `DEV_SETUP.md`.
 
 ---
 
