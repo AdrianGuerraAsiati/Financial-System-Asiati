@@ -137,11 +137,14 @@ Todos requieren `compras.ver`.
 GET /api/v1/compras/fuente/estado
 GET /api/v1/compras/catalogos
 GET /api/v1/compras/calidad
+GET /api/v1/compras/resumen
 GET /api/v1/compras/ocs
 GET /api/v1/compras/lineas
 ```
 
 `/fuente/estado?forzar_lectura=true` relee Google Sheets ignorando el snapshot vigente. Sigue siendo una operación de lectura.
+
+`/resumen` expone únicamente conteos estructurales (líneas, OCs identificadas, OCs mixtas, líneas sin OC y líneas con etapa por definir). No agrega valores monetarios ni decide un KPI financiero.
 
 ## 10. Fuera de este contrato
 
