@@ -534,6 +534,7 @@ Documentación vigente:
 - `docs/compras/KPIS_MONETARIOS.md`
 - `docs/compras/DASHBOARD_EJECUTIVO.md`
 - `docs/compras/REPORTE_DUDAS_JUANFE_KPIS.md`
+- `docs/compras/AUDITORIA_FUENTE_2026-09-29.md`
 - `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`
 
 ### Fuente y seguridad
