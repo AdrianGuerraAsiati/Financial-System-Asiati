@@ -120,3 +120,38 @@ def test_environment_diagnostic_reports_missing_configuration(monkeypatch) -> No
     assert estado["estado"] == "NO_CONFIGURADO"
     assert "CARTERA_SHEETS_SPREADSHEET_ID" in estado["faltantes"]
     assert "CARTERA_SHEETS_RANGE" in estado["faltantes"]
+
+
+def test_environment_diagnostic_allows_partial_cartera_configuration(monkeypatch) -> None:
+    monkeypatch.setenv("CARTERA_SHEETS_EMPRESA_ID", "7")
+    monkeypatch.setenv("CARTERA_SHEETS_SPREADSHEET_ID", "sheet-123")
+    monkeypatch.setenv("CARTERA_SHEETS_RANGE", "FC!A:Z")
+    monkeypatch.delenv("CARTERA_SHEETS_MORA_RANGE", raising=False)
+    monkeypatch.delenv("CARTERA_SHEETS_PROYECCION_RANGE", raising=False)
+
+    cliente = ClienteDiagnosticoFake()
+    estado = diagnosticar_fuente_google_sheets_desde_entorno(
+        empresa_id=7,
+        cliente=cliente,
+    )
+
+    assert estado["estado"] == "DEGRADADO"
+    assert estado["resumen"]["rangos"] == 3
+    assert estado["resumen"]["rangos_configurados"] == 1
+    assert estado["resumen"]["rangos_validos"] == 1
+    assert estado["resumen"]["filas"] == 1
+    assert estado["faltantes"] == [
+        "CARTERA_SHEETS_MORA_RANGE",
+        "CARTERA_SHEETS_PROYECCION_RANGE",
+    ]
+    diagnosticos = {
+        item["tipo"]: item
+        for item in estado["diagnosticos"]
+    }
+    assert diagnosticos["OPERACIONES"]["valido"] is True
+    assert diagnosticos["OPERACIONES"]["configurado"] is True
+    assert diagnosticos["MORA"]["valido"] is False
+    assert diagnosticos["MORA"]["configurado"] is False
+    assert diagnosticos["PROYECCION"]["valido"] is False
+    assert diagnosticos["PROYECCION"]["configurado"] is False
+    assert cliente.llamadas == [("sheet-123", "FC!A:Z")]
