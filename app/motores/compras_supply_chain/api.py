@@ -15,6 +15,7 @@ from app.core.session import obtener_session
 from .agrupacion import agrupar_ocs
 from .atencion import evaluar_puntos_atencion
 from .calidad import evaluar_calidad_lineas
+from .cobertura import resumen_cobertura
 from .dominio import LineaCompra
 from .ejecutivo import resumen_ejecutivo
 from .exportes import crear_zip_exportacion
@@ -32,6 +33,7 @@ from .persistencia import (
     listar_snapshots,
     snapshot_como_dict,
 )
+from .trazabilidad import construir_timeline_oc, proximas_llegadas
 from .validacion import (
     ContextoPivotTablero,
     comparar_con_supply_chain,
@@ -384,6 +386,61 @@ def dashboard_compras(
             "ni el KPI corporativo de valor en tránsito / en el mar."
         ),
     }
+
+
+@router.get("/cobertura")
+def cobertura_compras(
+    empresa_id: int,
+    pais: str | None = None,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> dict[str, object]:
+    pais_normalizado = _normalizar_pais_query(pais)
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    filtradas = tuple(
+        linea
+        for linea in lineas
+        if pais_normalizado is None or linea.pais == pais_normalizado
+    )
+    return {
+        "pais": pais_normalizado,
+        **resumen_cobertura(filtradas),
+    }
+
+
+@router.get("/timeline")
+def timeline_oc_compras(
+    empresa_id: int,
+    pais: str,
+    oc: str,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> dict[str, object]:
+    pais_normalizado = _normalizar_pais_query(pais)
+    assert pais_normalizado is not None
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    return construir_timeline_oc(
+        lineas,
+        pais=pais_normalizado,
+        numero_oc=oc,
+    )
+
+
+@router.get("/llegadas")
+def llegadas_compras(
+    empresa_id: int,
+    pais: str | None = None,
+    dias: int = Query(30, ge=0, le=365),
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> dict[str, object]:
+    pais_normalizado = _normalizar_pais_query(pais)
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    return proximas_llegadas(
+        lineas,
+        dias=dias,
+        pais=pais_normalizado,
+    )
 
 
 @router.get("/atencion")

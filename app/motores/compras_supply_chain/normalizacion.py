@@ -157,4 +157,80 @@ def normalizar_fila_compra(
             "VALOR TOTAL COMPRA USD",
         ),
         valor_oci_ddp_origen=_valor(indice, "VALOR OCI (DDP)"),
+        cantidad=_valor(indice, "QTY"),
+        unidad_comercial=_valor(indice, "UNIDAD COMERCIAL"),
+        unidad_comercial_nombre=_valor(
+            indice,
+            "NOMBRE UNIDAD COMERCIAL (auto)",
+        ),
+        id_cotizacion=_valor(
+            indice,
+            "SOLICITUD COTIZACION ID COTIZACION",
+        ),
+        numero_factura_proveedor=_valor(indice, "NUMERO DE FACTURA"),
+        incoterm=_valor(indice, "INCOTERMS"),
+        costo_unitario_usd_origen=_valor(
+            indice,
+            "COSTO COMPRA CHINA/VENTA A LATAM USD",
+        ),
+        tipo_negociacion=_valor(indice, "TIPO DE NEGOCIACION"),
+        fecha_abono_compra=_valor(
+            indice,
+            "FECHA DE COMPRA EN CHINA (ABONO)",
+        ),
+        fecha_pago_total_compra=_valor(
+            indice,
+            "FECHA PAGO TOTAL EN CHINA",
+        ),
+        production_time_dias_estimado=_valor(
+            indice,
+            "PRODUCTION TIME DAYS (ESTIMADO)",
+        ),
+        ctn=_valor(indice, "CTN"),
+        peso_vol_origen=_valor(indice, "PESO VOL (auto)"),
+        largo_cm_origen=_valor(indice, "LARGO (cm)", " LARGO (cm)"),
+        ancho_cm_origen=_valor(indice, "ANCHO (cm)"),
+        alto_cm_origen=_valor(indice, "ALTO (cm)"),
+        cbm_origen=(
+            _valor(indice, "CBM", "CBM (auto)")
+            if pais_normalizado == "CO"
+            else ""
+        ),
+        peso_total_kg_origen=_valor(indice, "PESO TOTAL (Kg)"),
+        fecha_entrega_proveedor_estimada=_valor(
+            indice,
+            "FECHA ENTREGA PROV. ESTIMADA (auto)",
+        ),
+        fecha_fin_produccion=_valor(
+            indice,
+            "FECHA FINALIZACIÓN DE PRODUCCIÓN",
+        ),
+        fecha_ingreso_bodega_origen=_valor(
+            indice,
+            "FECHA INGRESO A BODEGA EN ORIGEN",
+        ),
+        dias_produccion_real_origen=_valor(
+            indice,
+            "DÍAS DE PRODUCCIÓN REAL (auto)",
+        ),
+        dias_hasta_bodega_origen_origen=_valor(
+            indice,
+            "DÍAS HASTA BODEGA ORIGEN DESDE FINALIZACIÓN DE PROD (auto)",
+        ),
+        certificado_origen=_valor(indice, "CERTIFICADO DE ORIGEN"),
+        fecha_cargue=_valor(indice, "FECHA CARGUE"),
+        telex_bl=_valor(indice, "Telex/BL", "Telex/BL (auto)"),
+        nacionalizacion=_valor(indice, "NACIONALIZACION"),
+        factura_destino=_valor(indice, "FACTURA"),
+        comercial_asignado=_valor(indice, "COMERCIAL ASIGNADO"),
+        fecha_en_valor=_valor(indice, "FECHA EN VALOR"),
+        semana_entrega_proveedor=_valor(indice, "SEMANA ENTREGA PROV"),
+        mes_origen=_valor(indice, "MES"),
+        anio_origen=_valor(indice, "AÑO"),
+        fecha_solicitud_pago_abono=_valor(
+            indice,
+            "FECHA SOLICITUD PAGO (abono)",
+        ),
+        motivo_demora_abono=_valor(indice, "MOTIVO DEMORA ABONO"),
+        elaboro_oc=_valor(indice, "ELABORO OC"),
     )

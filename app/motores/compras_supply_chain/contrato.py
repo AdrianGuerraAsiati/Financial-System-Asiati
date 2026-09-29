@@ -11,6 +11,7 @@ class CampoContrato:
     canonico: str
     aliases: tuple[str, ...]
     critico: bool = False
+    define_fila: bool = True
 
 
 CAMPOS: tuple[CampoContrato, ...] = (
@@ -48,6 +49,117 @@ CAMPOS: tuple[CampoContrato, ...] = (
         critico=False,
     ),
     CampoContrato("valor_oci_ddp", ("VALOR OCI (DDP)",), critico=False),
+    CampoContrato("cantidad", ("QTY",), define_fila=True),
+    CampoContrato("unidad_comercial", ("UNIDAD COMERCIAL",), define_fila=True),
+    CampoContrato(
+        "unidad_comercial_nombre",
+        ("NOMBRE UNIDAD COMERCIAL (auto)",),
+        define_fila=False,
+    ),
+    CampoContrato(
+        "id_cotizacion",
+        ("SOLICITUD COTIZACION ID COTIZACION",),
+        define_fila=True,
+    ),
+    CampoContrato(
+        "numero_factura_proveedor",
+        ("NUMERO DE FACTURA",),
+        define_fila=True,
+    ),
+    CampoContrato("incoterm", ("INCOTERMS",), define_fila=True),
+    CampoContrato(
+        "costo_unitario_usd",
+        ("COSTO COMPRA CHINA/VENTA A LATAM USD",),
+        define_fila=True,
+    ),
+    CampoContrato(
+        "tipo_negociacion",
+        ("TIPO DE NEGOCIACION",),
+        define_fila=True,
+    ),
+    CampoContrato(
+        "fecha_abono_compra",
+        ("FECHA DE COMPRA EN CHINA (ABONO)",),
+        define_fila=True,
+    ),
+    CampoContrato(
+        "fecha_pago_total_compra",
+        ("FECHA PAGO TOTAL EN CHINA",),
+        define_fila=True,
+    ),
+    CampoContrato(
+        "production_time_dias_estimado",
+        ("PRODUCTION TIME DAYS (ESTIMADO)",),
+        define_fila=True,
+    ),
+    CampoContrato("ctn", ("CTN",), define_fila=True),
+    CampoContrato("peso_vol", ("PESO VOL (auto)",), define_fila=False),
+    CampoContrato("largo_cm", ("LARGO (cm)", " LARGO (cm)"), define_fila=True),
+    CampoContrato("ancho_cm", ("ANCHO (cm)",), define_fila=True),
+    CampoContrato("alto_cm", ("ALTO (cm)",), define_fila=True),
+    CampoContrato("peso_total_kg", ("PESO TOTAL (Kg)",), define_fila=True),
+    CampoContrato(
+        "fecha_entrega_proveedor_estimada",
+        ("FECHA ENTREGA PROV. ESTIMADA (auto)",),
+        define_fila=False,
+    ),
+    CampoContrato(
+        "fecha_fin_produccion",
+        ("FECHA FINALIZACIÓN DE PRODUCCIÓN",),
+        define_fila=True,
+    ),
+    CampoContrato(
+        "fecha_ingreso_bodega_origen",
+        ("FECHA INGRESO A BODEGA EN ORIGEN",),
+        define_fila=True,
+    ),
+    CampoContrato(
+        "dias_produccion_real",
+        ("DÍAS DE PRODUCCIÓN REAL (auto)",),
+        define_fila=False,
+    ),
+    CampoContrato(
+        "dias_hasta_bodega_origen",
+        ("DÍAS HASTA BODEGA ORIGEN DESDE FINALIZACIÓN DE PROD (auto)",),
+        define_fila=False,
+    ),
+    CampoContrato(
+        "certificado_origen",
+        ("CERTIFICADO DE ORIGEN",),
+        define_fila=True,
+    ),
+    CampoContrato("fecha_cargue", ("FECHA CARGUE",), define_fila=True),
+    CampoContrato(
+        "telex_bl",
+        ("Telex/BL", "Telex/BL (auto)"),
+        define_fila=False,
+    ),
+    CampoContrato("nacionalizacion", ("NACIONALIZACION",), define_fila=True),
+    CampoContrato("factura_destino", ("FACTURA",), define_fila=True),
+    CampoContrato(
+        "comercial_asignado",
+        ("COMERCIAL ASIGNADO",),
+        define_fila=True,
+    ),
+    CampoContrato("fecha_en_valor", ("FECHA EN VALOR",), define_fila=False),
+    CampoContrato(
+        "semana_entrega_proveedor",
+        ("SEMANA ENTREGA PROV",),
+        define_fila=False,
+    ),
+    CampoContrato("mes", ("MES",), define_fila=False),
+    CampoContrato("anio", ("AÑO",), define_fila=False),
+    CampoContrato(
+        "fecha_solicitud_pago_abono",
+        ("FECHA SOLICITUD PAGO (abono)",),
+        define_fila=True,
+    ),
+    CampoContrato(
+        "motivo_demora_abono",
+        ("MOTIVO DEMORA ABONO",),
+        define_fila=True,
+    ),
+    CampoContrato("elaboro_oc", ("ELABORO OC",), define_fila=True),
 )
 
 
@@ -82,6 +194,18 @@ class DiagnosticoEsquema:
 
 def es_encabezado_consumido(encabezado: Any) -> bool:
     return normalizar_encabezado(encabezado) in _ALIAS_A_CAMPO
+
+
+_ENCABEZADOS_QUE_DEFINEN_FILA = {
+    normalizar_encabezado(alias)
+    for campo in CAMPOS
+    if campo.define_fila
+    for alias in campo.aliases
+}
+
+
+def es_encabezado_sustantivo(encabezado: Any) -> bool:
+    return normalizar_encabezado(encabezado) in _ENCABEZADOS_QUE_DEFINEN_FILA
 
 
 def analizar_encabezados(

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import date, datetime
+from datetime import date
 from typing import Iterable
 
 from .agrupacion import agrupar_ocs
 from .dominio import LineaCompra
+from .fechas import parsear_fecha_fuente
 
 
 @dataclass(frozen=True)
@@ -39,29 +40,6 @@ class PuntoAtencion:
             "cantidad": self.cantidad,
             "muestras": [muestra.como_dict() for muestra in self.muestras],
         }
-
-
-def _fecha_fuente(valor: str) -> date | None:
-    texto = str(valor or "").strip()
-    if not texto:
-        return None
-
-    # Formatos explícitos observables/esperables. Un valor no interpretable
-    # se reporta por separado; nunca se adivina una fecha.
-    candidatos = (
-        "%Y-%m-%d",
-        "%Y/%m/%d",
-        "%d/%m/%Y",
-        "%d-%m-%Y",
-        "%Y-%m-%d %H:%M:%S",
-        "%d/%m/%Y %H:%M:%S",
-    )
-    for formato in candidatos:
-        try:
-            return datetime.strptime(texto, formato).date()
-        except ValueError:
-            continue
-    return None
 
 
 def _muestra(
@@ -164,7 +142,7 @@ def evaluar_puntos_atencion(
             or linea.situacion_operativa == "ANULADA"
         ):
             continue
-        eta = _fecha_fuente(linea.eta)
+        eta = parsear_fecha_fuente(linea.eta)
         if eta is None:
             eta_no_interpretable.append((linea, f"ETA origen: {linea.eta}"))
         elif eta < hoy:

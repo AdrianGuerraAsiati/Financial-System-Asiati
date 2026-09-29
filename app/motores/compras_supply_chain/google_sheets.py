@@ -16,6 +16,7 @@ from .contrato import (
     DiagnosticoEsquema,
     analizar_encabezados,
     es_encabezado_consumido,
+    es_encabezado_sustantivo,
 )
 from .dominio import LineaCompra
 from .normalizacion import HOJAS_POR_PAIS, normalizar_fila_compra
@@ -436,7 +437,7 @@ def _capturar_filas_crudas(
                 else ""
             ).strip()
             for posicion, encabezado in enumerate(encabezados)
-            if encabezado and es_encabezado_consumido(encabezado)
+            if encabezado and es_encabezado_sustantivo(encabezado)
         )
         if not tiene_dato_consumido:
             continue
@@ -475,7 +476,7 @@ def _normalizar_rango(
         if any(
             str(valor or "").strip()
             for encabezado, valor in fila.items()
-            if es_encabezado_consumido(encabezado)
+            if es_encabezado_sustantivo(encabezado)
         ):
             filas_con_datos.append((indice, fila))
 
