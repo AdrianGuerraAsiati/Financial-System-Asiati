@@ -1140,7 +1140,7 @@ async function cargarEstadoFuenteCartera() {
       <article class="proof-card">
         <strong>Estado: ${escapar(estadoFuente.estado)}</strong>
         <p>${escapar(estadoFuente.modo_fuente || "GOOGLE_SHEETS")} · ${estadoFuente.solo_lectura ? "Solo lectura" : "Modo no confirmado"}</p>
-        <p>${escapar(String(resumen.rangos_validos ?? 0))} de ${escapar(String(resumen.rangos ?? 0))} rangos válidos · ${escapar(String(resumen.filas ?? 0))} filas observadas</p>
+        <p>${escapar(String(resumen.rangos_validos ?? 0))} de ${escapar(String(resumen.rangos ?? 0))} rangos válidos · ${escapar(String(resumen.rangos_configurados ?? 0))} configurados · ${escapar(String(resumen.filas ?? 0))} filas observadas</p>
         ${faltantes.length ? `<p>Falta configurar: ${faltantes.map(escapar).join(", ")}</p>` : ""}
       </article>
       ${diagnosticos.map((item) => `
@@ -1218,34 +1218,62 @@ async function cargarCalidadCartera() {
   }
 }
 
-function mostrarFuenteNoDisponible() {
-  carteraCalidadContenido.innerHTML =
-    '<p class="empty">La calidad se valida cuando la fuente está disponible.</p>';
-  operacionesBody.innerHTML =
-    '<tr><td colspan="7" class="empty">La fuente de Operaciones todavía no está disponible.</td></tr>';
-  moraBody.innerHTML =
-    '<tr><td colspan="5" class="empty">La fuente de Mora todavía no está disponible.</td></tr>';
-  proyeccionBody.innerHTML =
-    '<tr><td colspan="7" class="empty">La fuente de Proyección todavía no está disponible.</td></tr>';
+function mostrarFuenteNoDisponible(tipo) {
+  if (tipo === "OPERACIONES") {
+    carteraCalidadContenido.innerHTML =
+      '<p class="empty">La calidad se valida cuando Operaciones está disponible.</p>';
+    operacionesBody.innerHTML =
+      '<tr><td colspan="7" class="empty">La fuente de Operaciones todavía no está disponible.</td></tr>';
+    return;
+  }
+  if (tipo === "MORA") {
+    moraBody.innerHTML =
+      '<tr><td colspan="5" class="empty">La fuente de Mora todavía no está disponible.</td></tr>';
+    return;
+  }
+  if (tipo === "PROYECCION") {
+    proyeccionBody.innerHTML =
+      '<tr><td colspan="7" class="empty">La fuente de Proyección todavía no está disponible.</td></tr>';
+  }
 }
 
 async function cargarCarteraTodo() {
   const estadoFuente = await cargarEstadoFuenteCartera();
-  const pendientes = cargarPendientes();
+  const tareas = [cargarPendientes()];
 
-  if (!estadoFuente || estadoFuente.estado !== "OK") {
-    mostrarFuenteNoDisponible();
-    await pendientes;
+  if (!estadoFuente) {
+    mostrarFuenteNoDisponible("OPERACIONES");
+    mostrarFuenteNoDisponible("MORA");
+    mostrarFuenteNoDisponible("PROYECCION");
+    await Promise.all(tareas);
     return;
   }
 
-  await Promise.all([
-    cargarOperaciones(),
-    cargarMora(),
-    cargarProyeccion(),
-    cargarCalidadCartera(),
-    pendientes,
-  ]);
+  const tiposValidos = new Set(
+    (estadoFuente.diagnosticos || [])
+      .filter((item) => item.valido === true)
+      .map((item) => item.tipo)
+  );
+
+  if (tiposValidos.has("OPERACIONES")) {
+    tareas.push(cargarOperaciones(), cargarCalidadCartera());
+  } else {
+    mostrarFuenteNoDisponible("OPERACIONES");
+  }
+
+  if (tiposValidos.has("MORA")) {
+    tareas.push(cargarMora());
+  } else {
+    mostrarFuenteNoDisponible("MORA");
+  }
+
+  if (tiposValidos.has("PROYECCION")) {
+    tareas.push(cargarProyeccion());
+  } else {
+    mostrarFuenteNoDisponible("PROYECCION");
+  }
+
+  await Promise.all(tareas);
 }
 
 async function cargarOperaciones() {
