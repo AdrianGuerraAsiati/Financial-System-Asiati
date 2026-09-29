@@ -218,6 +218,43 @@ Guía: `DEV_SETUP.md`.
 
 ---
 
+## 4.2 Dashboard principal V1
+
+Inicio es ahora la vista de entrada después del login.
+
+Contrato: `docs/DASHBOARD_PRINCIPAL.md`.
+
+La V1:
+
+- trabaja sobre una empresa seleccionada;
+- no agrega todavía “Todas las empresas”;
+- compone únicamente módulos visibles según permisos existentes;
+- no introduce un permiso nuevo;
+- resume Cartera, Compras y Conciliación cuando el rol puede verlos;
+- agrega una bandeja transversal `Requiere atención`;
+- muestra disponibilidad de fuentes/procesos;
+- permite abrir Cartera y Compras desde Inicio;
+- no calcula health score, ranking, severidad nueva ni KPI financiero transversal.
+
+Backend:
+
+`GET /api/v1/dashboard/principal?empresa_id=<id>`
+
+Seguridad:
+
+- empresa no asignada -> 404 antes de leer fuentes;
+- `cartera.ver` controla Cartera;
+- `compras.ver` controla Compras;
+- `conciliacion.ver` controla Conciliación.
+
+Cartera en Inicio usa conteos estructurales y comprobantes pendientes; no agrega un KPI monetario transversal.
+
+Compras reutiliza las dos familias monetarias y puntos de atención ya validados técnicamente.
+
+Conciliación resume el último período y sus hallazgos abiertos; todavía no tiene vista web dedicada.
+
+---
+
 ## 5. Arquitectura y reglas que siguen vigentes
 
 La plataforma es:

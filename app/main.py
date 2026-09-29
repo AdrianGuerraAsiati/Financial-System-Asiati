@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.auth.api import router as auth_router
+from app.dashboard.api import router as dashboard_router
 from app.core.hallazgos.api import router as hallazgos_router
 from app.core.supervision.api import router as supervision_router
 from app.core.usuarios.api import router as usuarios_router
@@ -22,6 +23,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router, prefix=API_V1)
+app.include_router(dashboard_router, prefix=API_V1)
 app.include_router(usuarios_router, prefix=API_V1)
 app.include_router(supervision_router, prefix=API_V1)
 app.include_router(hallazgos_router, prefix=API_V1)

@@ -73,7 +73,7 @@ admin@asiati.local
 AsiatiDev2026!
 ```
 
-Compras / Supply Chain usa datos sintéticos claramente marcados como **DEMO LOCAL** hasta que conectes Google Sheets.
+Después del login, **Inicio** muestra el dashboard principal por empresa. Compras / Supply Chain usa datos sintéticos claramente marcados como **DEMO LOCAL** hasta que conectes Google Sheets.
 
 Guía completa, conexión al Sheet real y reset local:
 
@@ -87,4 +87,4 @@ GET /health
 
 ## Estado
 
-La plataforma ya incluye núcleo de autenticación/autorización, Cartera, conciliación Wiilog y un vertical read-only de Compras / Supply Chain con explorador, diagnóstico de fuente y familias monetarias de costo y DDP.
+La plataforma ya incluye núcleo de autenticación/autorización, un dashboard principal por empresa, Cartera, conciliación Wiilog y un vertical read-only de Compras / Supply Chain con vista ejecutiva, diagnóstico de fuente, validación y familias monetarias de costo y DDP.
