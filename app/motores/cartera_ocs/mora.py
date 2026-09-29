@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any, Mapping, Protocol
 
 from app.motores.cartera_ocs.importacion import parsear_numero_cartera
@@ -8,7 +9,7 @@ from app.motores.cartera_ocs.importacion import parsear_numero_cartera
 class RegistroCarteraMora:
     cliente: str
     empresa: str
-    monto: float
+    monto: Decimal
     observacion: str
     estado: str
 
