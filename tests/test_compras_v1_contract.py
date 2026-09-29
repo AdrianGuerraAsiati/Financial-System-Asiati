@@ -28,22 +28,23 @@ RUTAS_V1 = {
 def test_compras_v1_exposes_the_closed_contract() -> None:
     rutas = {
         path
-        for ruta in app.routes
-        if (path := getattr(ruta, "path", "")).startswith(
-            "/api/v1/compras"
-        )
+        for path in app.openapi()["paths"]
+        if path.startswith("/api/v1/compras")
     }
 
     assert RUTAS_V1 <= rutas
 
 
 def test_compras_v1_does_not_expose_source_write_back_methods() -> None:
+    metodos_http = {"GET", "POST", "PUT", "PATCH", "DELETE"}
     metodos_por_ruta = {
-        path: set(getattr(ruta, "methods", set()))
-        for ruta in app.routes
-        if (path := getattr(ruta, "path", "")).startswith(
-            "/api/v1/compras"
-        )
+        path: {
+            metodo.upper()
+            for metodo in operacion
+            if metodo.upper() in metodos_http
+        }
+        for path, operacion in app.openapi()["paths"].items()
+        if path.startswith("/api/v1/compras")
     }
 
     metodos_mutables = {"PUT", "PATCH", "DELETE"}
