@@ -24,6 +24,9 @@ const estadoCompras = document.querySelector("#estado-compras");
 const comprasFuenteEstado = document.querySelector("#compras-fuente-estado");
 const comprasFuenteLineas = document.querySelector("#compras-fuente-lineas");
 const comprasFuenteCache = document.querySelector("#compras-fuente-cache");
+const comprasResumenOcs = document.querySelector("#compras-resumen-ocs");
+const comprasResumenMixtas = document.querySelector("#compras-resumen-mixtas");
+const comprasResumenPendientes = document.querySelector("#compras-resumen-pendientes");
 const comprasHojas = document.querySelector("#compras-hojas");
 const comprasOcsBody = document.querySelector("#compras-ocs-body");
 const comprasOcsTotal = document.querySelector("#compras-ocs-total");
@@ -396,6 +399,22 @@ function listaConteos(titulo, valores) {
   `;
 }
 
+
+async function cargarComprasResumen() {
+  try {
+    const data = await api(`/api/v1/compras/resumen?empresa_id=${empresaId()}`);
+    comprasResumenOcs.textContent = Number(data.ocs_identificadas || 0).toLocaleString("es-CO");
+    comprasResumenMixtas.textContent = Number(data.ocs_mixtas || 0).toLocaleString("es-CO");
+    comprasResumenPendientes.textContent = Number(data.lineas_estado_por_definir || 0).toLocaleString("es-CO");
+  } catch (error) {
+    comprasResumenOcs.textContent = "—";
+    comprasResumenMixtas.textContent = "—";
+    comprasResumenPendientes.textContent = "—";
+    setEstadoCompras(error.message, "error");
+    throw error;
+  }
+}
+
 async function cargarComprasCatalogos() {
   comprasCatalogosContenido.innerHTML = '<p class="empty">Consultando…</p>';
   try {
@@ -424,6 +443,7 @@ async function cargarComprasTodo(forzar = false) {
       return;
     }
     await Promise.all([
+      cargarComprasResumen(),
       cargarComprasOCs(),
       cargarComprasCalidad(),
       cargarComprasCatalogos(),
