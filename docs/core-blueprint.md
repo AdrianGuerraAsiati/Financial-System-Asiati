@@ -1,5 +1,7 @@
 # Bosquejo del núcleo · Plataforma Financiera ASIATI
 
+> **Nota de vigencia · 29-sep-2026:** este documento conserva el bosquejo y la frontera arquitectónica, pero varias etiquetas de estado quedaron históricas. Autenticación, permisos por empresa y auditoría ya están integrados en `main`. Para el estado real y los huecos actuales usa `Ai_Handoff.md` y `docs/AUDITORIA_ARQUITECTURA_CORE_WALLETS_2026-09-29.md`. No vuelvas a implementar una capacidad solo porque aquí figure como “pendiente”.
+
 ## Propósito
 
 La plataforma se construye como un **monolito modular**: un solo sistema desplegable, con un núcleo compartido y módulos de negocio independientes.
