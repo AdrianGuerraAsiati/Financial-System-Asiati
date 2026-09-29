@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from decimal import Decimal
 
 from app.core.cargas import calcular_hash_contenido
 from app.motores.cartera_ocs.financiacion import CondicionPago
@@ -13,7 +14,7 @@ class ComprobantePago:
     cliente: str
     pais: str
     comercial: str
-    monto_esperado: float
+    monto_esperado: Decimal
     nombre_archivo: str
     contenido_hash: str
     estado_auditoria: str
