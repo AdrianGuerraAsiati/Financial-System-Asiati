@@ -157,6 +157,34 @@ def listar_ocs_compras(
     }
 
 
+@router.get("/resumen")
+def resumen_estructural(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+) -> dict[str, object]:
+    lineas = _listar_seguro(fuente, empresa_id=empresa_id)
+    ocs = agrupar_ocs(lineas)
+    identificadas = [oc for oc in ocs if oc.oc_identificada]
+
+    return {
+        "lineas": len(lineas),
+        "lineas_por_pais": dict(sorted(Counter(linea.pais for linea in lineas).items())),
+        "ocs_identificadas": len(identificadas),
+        "lineas_sin_oc": sum(1 for linea in lineas if not linea.oc_identificada),
+        "ocs_estado_mixto": sum(1 for oc in identificadas if oc.estado_mixto),
+        "ocs_proveedor_mixto": sum(1 for oc in identificadas if oc.proveedor_mixto),
+        "ocs_transporte_mixto": sum(1 for oc in identificadas if oc.transporte_mixto),
+        "lineas_estado_por_definir": sum(
+            1 for linea in lineas if linea.etapa_logistica == "POR_DEFINIR"
+        ),
+        "nota": (
+            "Resumen estructural sin agregaciones monetarias ni interpretación "
+            "financiera de la OC."
+        ),
+    }
+
+
 @router.get("/catalogos")
 def catalogos_observados(
     empresa_id: int,
