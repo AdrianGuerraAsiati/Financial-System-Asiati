@@ -391,126 +391,137 @@ Cada KPI debe declarar:
 
 ---
 
-## 11. Compras / Supply Chain — vertical técnico iniciado
+## 11. Compras / Supply Chain — vertical read-only + observabilidad
 
-Con el núcleo de autenticación ya integrado, Compras / Supply Chain avanza como módulo independiente.
+Compras / Supply Chain ya existe como módulo independiente en `app/motores/compras_supply_chain/`.
 
 Documentación vigente:
 
 - `docs/compras/SPEC_COMPRAS_SUPPLY_CHAIN.md`
 - `docs/compras/ESTADOS_LOGISTICOS.md`
 - `docs/compras/PREGUNTAS_NEGOCIO.md`
+- `docs/compras/CONTRATO_FUENTE.md`
 - `docs/decisiones/0005-compras-google-sheets-solo-lectura.md`
 
-Primer vertical técnico:
+### Fuente y seguridad
 
-- módulo `app/motores/compras_supply_chain/`;
-- lectura de las hojas CO/EC/CL vía Google Sheets API con scope `spreadsheets.readonly`;
-- conservación de país, hoja y fila de origen;
-- conservación de `estado_origen` y `modo_transporte_origen`;
-- normalización de variantes ortográficas;
-- clasificación únicamente de estados de baja ambigüedad;
-- estados abiertos como `EN OTM`, `PENDIENTE DEPÓSITO` y `PENDIENTE INVIMA` permanecen `POR_DEFINIR`;
-- endpoints protegidos `GET /api/v1/compras/lineas` y `GET /api/v1/compras/catalogos`;
-- permiso `compras.ver`;
-- sin write-back, sin base propia de Compras y sin KPIs financieros todavía.
+La fuente oficial continúa siendo `INFORME COMPRAS 2024-2026` en Google Sheets.
 
-Baseline levantado del snapshot `INFORME COMPRAS 2024-2026.xlsx`:
+Reglas implementadas:
+
+- scope de Google Sheets: `spreadsheets.readonly`;
+- no existen métodos de write-back en el adaptador;
+- lectura de `INFORME CLIENTES (CO)`, `(EC)` y `(CL)`;
+- permiso backend `compras.ver`;
+- país, hoja y número de fila quedan en cada línea para trazabilidad.
+
+### Contrato y drift
+
+Existe un contrato técnico de encabezados.
+
+Si falta un campo crítico o aparecen encabezados duplicados:
+
+- `/compras/fuente/estado` sigue disponible para diagnóstico;
+- los endpoints operativos se bloquean con 503;
+- no se calculan resultados silenciosamente sobre un esquema degradado.
+
+Campos críticos iniciales:
+
+- OC;
+- cliente;
+- proveedor;
+- estado;
+- modo de transporte.
+
+Los demás campos consumidos se reportan como esperados/no críticos.
+
+### Snapshot/cache
+
+La fuente usa un snapshot en memoria con TTL configurable:
+
+`COMPRAS_SHEETS_CACHE_SECONDS=60`
+
+El cache evita releer CO/EC/CL en cada request. No es una base de datos ni una nueva fuente de verdad.
+
+`GET /api/v1/compras/fuente/estado?forzar_lectura=true` fuerza una nueva lectura y sigue siendo read-only.
+
+### API actual
+
+Todos requieren `compras.ver`:
+
+- `GET /api/v1/compras/fuente/estado`
+- `GET /api/v1/compras/catalogos`
+- `GET /api/v1/compras/calidad`
+- `GET /api/v1/compras/resumen`
+- `GET /api/v1/compras/ocs`
+- `GET /api/v1/compras/lineas`
+
+`/resumen` solo expone conteos estructurales; no suma dinero.
+
+### Calidad y agrupación
+
+Reglas observacionales implementadas:
+
+- línea sin OC;
+- cliente vacío;
+- proveedor vacío;
+- estado vacío;
+- estado con etapa `POR_DEFINIR`;
+- transporte vacío;
+- transporte fuera del catálogo conocido;
+- fecha de entrega a bodega con etapa todavía no recibida.
+
+Estas señales **no corrigen la fuente** y no afirman por sí solas un error financiero.
+
+La agrupación por OC expone proveedores, estados, etapas y transportes observados, además de banderas de composición mixta.
+
+No se asigna todavía un único estado agregado a una OC.
+
+Las filas `N/A` o sin OC no se agrupan entre sí.
+
+### Explorador web
+
+Existe una vista protegida de **Compras** en el shell web con:
+
+- estado técnico de la fuente;
+- líneas leídas;
+- estado del snapshot/cache;
+- conteos estructurales de OCs;
+- diagnóstico por hoja;
+- filtros de OC/proveedor/país;
+- OCs mixtas;
+- paginación;
+- drill-down a líneas originales de una OC;
+- observaciones de calidad;
+- catálogos observados.
+
+Los valores de compra y OCI DDP pueden verse a nivel de línea como evidencia cruda, pero no se agregan ni se presentan como KPI.
+
+### Baseline del snapshot analizado
 
 - 2.259 líneas sustantivas entre CO, EC y CL;
 - 705 OCs válidas por país;
 - 214 OCs con más de un proveedor;
 - 32 OCs con más de un estado;
-- 46 OCs con más de un modo de transporte;
-- estados y modos de transporte reales inventariados.
+- 46 OCs con más de un modo de transporte.
 
-Principio funcional confirmado por el levantamiento:
+Modelo confirmado:
 
 `OC -> múltiples líneas/SKU -> proveedor/estado/transporte por línea`
 
-No modelar la OC como una sola fila.
+### Decisiones que siguen bloqueadas
 
-### Próximo paso
+No inventar ni cerrar por código:
 
-Resolver con Juanfe las preguntas priorizadas en `docs/compras/PREGUNTAS_NEGOCIO.md`, empezando por:
+1. significado logístico definitivo de `EN OTM`;
+2. significado de `PENDIENTE DEPÓSITO`;
+3. tratamiento de `PENDIENTE INVIMA`;
+4. definición corporativa de “valor en tránsito / en el mar”;
+5. columna monetaria oficial de cada KPI;
+6. estado agregado/cierre de una OC parcial;
+7. tolerancias de ETA y producción.
 
-1. `EN OTM`;
-2. `PENDIENTE DEPÓSITO`;
-3. `PENDIENTE INVIMA`;
-4. definición corporativa de valor en tránsito;
-5. columna monetaria oficial del KPI.
-
-Después de esas respuestas se puede cerrar el mapa de estados y definir el primer KPI implementable.
-
-
-### Paso 1 — contrato funcional de fuente
-
-Mapear las columnas exactas para:
-
-- OC;
-- país;
-- cliente;
-- comercial;
-- proveedor;
-- SKU;
-- producto;
-- cantidad/unidad;
-- valor de compra;
-- valor DDP;
-- moneda;
-- estado;
-- transporte;
-- documento;
-- ETD;
-- ETA;
-- nacionalización;
-- llegada a bodega;
-- pagos/abonos al proveedor.
-
-### Paso 2 — clasificación logística
-
-Extraer **todos los estados reales** de las hojas principales y mapearlos a una etapa superior.
-
-Categorías candidatas:
-
-- `PRODUCCION`
-- `TRANSITO`
-- `DESTINO`
-- `NACIONALIZACION`
-- `RECIBIDO`
-- `CERRADO`
-- `EXCLUIDO`
-
-Ejemplo inicial, no definitivo:
-
-| Estado origen | Etapa candidata |
-|---|---|
-| EN PRODUCCIÓN | PRODUCCION |
-| PENDIENTE DESPACHO | PRODUCCION |
-| ENVIADO A DESTINO | TRANSITO |
-| EN OTM | DESTINO |
-| PENDIENTE DEPÓSITO | DESTINO |
-| EN NACIONALIZACIÓN | NACIONALIZACION |
-| EN BODEGA ASIATI | RECIBIDO |
-| EN BODEGA WIILOG | RECIBIDO |
-
-Validar todos los estados antes de codificar.
-
-### Paso 3 — puntos de atención
-
-Candidatos:
-
-- ETA vencida y no recibida;
-- enviada sin ETA;
-- enviada sin documento;
-- producción atrasada;
-- OC parcialmente recibida;
-- llegada registrada con estado incompatible;
-- saldo pendiente a proveedor con mercancía avanzada.
-
-Formato de regla:
-
-`codigo -> condición -> severidad -> mensaje -> evidencia`
+Hasta que se validen, esos estados permanecen `POR_DEFINIR` y los KPIs financieros no se implementan.
 
 ---
 
