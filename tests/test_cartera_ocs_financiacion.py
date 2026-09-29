@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from app.motores.cartera_ocs.financiacion import (
     OperacionFinanciada,
@@ -12,7 +13,7 @@ def test_parsea_dos_porcentajes_y_toma_el_segundo_como_saldo() -> None:
         "50% anticipo / 50% pago a 30 días"
     )
 
-    assert condicion.porcentaje_saldo == 0.5
+    assert condicion.porcentaje_saldo == Decimal("0.5")
     assert condicion.dias_plazo == 30
 
 
@@ -21,7 +22,7 @@ def test_con_un_porcentaje_menor_a_100_calcula_el_saldo_restante() -> None:
         "30% anticipo, pago a 45 dias"
     )
 
-    assert condicion.porcentaje_saldo == 0.7
+    assert condicion.porcentaje_saldo == Decimal("0.7")
     assert condicion.dias_plazo == 45
 
 
@@ -30,7 +31,7 @@ def test_pago_a_la_entrega_tiene_cero_dias_de_plazo() -> None:
         "50% anticipo / 50% a la entrega"
     )
 
-    assert condicion.porcentaje_saldo == 0.5
+    assert condicion.porcentaje_saldo == Decimal("0.5")
     assert condicion.dias_plazo == 0
 
 
@@ -49,10 +50,10 @@ def test_genera_condicion_de_pago_desde_una_operacion_financiada() -> None:
 
     assert condicion.oc == "OC-123"
     assert condicion.cliente == "Cliente A"
-    assert condicion.porcentaje_saldo == 0.5
+    assert condicion.porcentaje_saldo == Decimal("0.5")
     assert condicion.dias_plazo == 30
     assert condicion.fecha_pago_esperada == date(2026, 10, 10)
-    assert condicion.monto_original == 5000
+    assert condicion.monto_original == Decimal("5000.0")
 
 
 def test_el_calculo_no_aplica_abonos_ni_comprobantes_en_esta_etapa() -> None:
@@ -68,5 +69,5 @@ def test_el_calculo_no_aplica_abonos_ni_comprobantes_en_esta_etapa() -> None:
 
     condicion = generar_condicion_pago(operacion)
 
-    assert condicion.monto_original == 1500
+    assert condicion.monto_original == Decimal("1500.0")
     assert condicion.fecha_pago_esperada == date(2026, 9, 20)

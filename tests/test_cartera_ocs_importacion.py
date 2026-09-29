@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from app.motores.cartera_ocs.importacion import (
     normalizar_fila_cartera,
     parsear_numero_cartera,
@@ -5,11 +7,11 @@ from app.motores.cartera_ocs.importacion import (
 
 
 def test_parsea_formatos_numericos_usados_por_el_tablero_actual() -> None:
-    assert parsear_numero_cartera("USD 4.300,00") == 4300.0
-    assert parsear_numero_cartera("106,752") == 106.752
-    assert parsear_numero_cartera("0,3") == 0.3
-    assert parsear_numero_cartera("4,300.00") == 4300.0
-    assert parsear_numero_cartera("4.300") == 4300.0
+    assert parsear_numero_cartera("USD 4.300,00") == Decimal("4300.00")
+    assert parsear_numero_cartera("106,752") == Decimal("106.752")
+    assert parsear_numero_cartera("0,3") == Decimal("0.3")
+    assert parsear_numero_cartera("4,300.00") == Decimal("4300.00")
+    assert parsear_numero_cartera("4.300") == Decimal("4300")
 
 
 def test_normaliza_una_fila_de_cartera_en_camino_con_los_encabezados_actuales() -> None:
@@ -39,10 +41,10 @@ def test_normaliza_una_fila_de_cartera_en_camino_con_los_encabezados_actuales() 
     assert registro.contacto == "Contacto comercial"
     assert registro.oc == "OC-123"
     assert registro.etapa == "EN CAMINO"
-    assert registro.valor == 4300.0
-    assert registro.valor_anticipo == 2150.0
-    assert registro.valor_financiado == 2150.0
-    assert registro.porcentaje_anticipo == 0.5
+    assert registro.valor == Decimal("4300.00")
+    assert registro.valor_anticipo == Decimal("2150.00")
+    assert registro.valor_financiado == Decimal("2150.00")
+    assert registro.porcentaje_anticipo == Decimal("0.5")
 
 
 def test_usa_cliente_como_respaldo_cuando_nombre_no_viene_informado() -> None:
@@ -70,3 +72,11 @@ def test_excluye_filas_de_total_sin_sku() -> None:
             "NUMERO OC": "",
         }
     ) is None
+
+
+def test_decimal_preserva_precision_financiera() -> None:
+    assert (
+        parsear_numero_cartera("0,1")
+        + parsear_numero_cartera("0,2")
+        == Decimal("0.3")
+    )

@@ -1,4 +1,6 @@
 
+from decimal import Decimal
+
 from app.main import app
 from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.api import obtener_fuente_operaciones
@@ -22,10 +24,10 @@ class FuenteFake:
                 anio_oc=2026,
                 eta="2026-10-01",
                 etapa="EN CAMINO",
-                valor=5000,
-                valor_anticipo=2000,
-                valor_financiado=3000,
-                porcentaje_anticipo=0.4,
+                valor=Decimal("5000.00"),
+                valor_anticipo=Decimal("2000.00"),
+                valor_financiado=Decimal("3000.00"),
+                porcentaje_anticipo=Decimal("0.4"),
             ),
         )
 
@@ -52,9 +54,9 @@ def test_web_lists_operations_for_empresa() -> None:
             "anio_oc": 2026,
             "eta": "2026-10-01",
             "etapa": "EN CAMINO",
-            "valor": 5000.0,
-            "valor_anticipo": 2000.0,
-            "valor_financiado": 3000.0,
-            "porcentaje_anticipo": 0.4,
+            "valor": "5000.00",
+            "valor_anticipo": "2000.00",
+            "valor_financiado": "3000.00",
+            "porcentaje_anticipo": "0.4",
         }
     ]

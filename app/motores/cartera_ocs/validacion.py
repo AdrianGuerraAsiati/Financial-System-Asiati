@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from decimal import Decimal
 
 from app.motores.cartera_ocs.importacion import RegistroCarteraEnCamino
 
@@ -7,7 +8,7 @@ from app.motores.cartera_ocs.importacion import RegistroCarteraEnCamino
 class CasoValidacionCartera:
     codigo: str
     cantidad: int
-    valor: float
+    valor: Decimal
     registros: tuple[RegistroCarteraEnCamino, ...]
 
 
@@ -72,7 +73,7 @@ def validar_cartera_en_camino(
             - registro.valor_anticipo
             - registro.valor_financiado
         )
-        > 0.01
+        > Decimal("0.01")
     )
     if descuadres:
         casos.append(

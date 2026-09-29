@@ -1,4 +1,6 @@
 
+from decimal import Decimal
+
 from app.main import app
 from tests.apoyo_auth import cliente_superadmin
 from app.motores.cartera_ocs.api import obtener_fuente_mora
@@ -12,7 +14,7 @@ class FuenteFake:
             RegistroCarteraMora(
                 cliente="Cliente API Mora",
                 empresa="ASIATI Comercial",
-                monto=1250.5,
+                monto=Decimal("1250.50"),
                 observacion="Seguimiento activo",
                 estado="MORA",
             ),
@@ -31,7 +33,7 @@ def test_web_lists_mora_for_empresa() -> None:
         {
             "cliente": "Cliente API Mora",
             "empresa": "ASIATI Comercial",
-            "monto": 1250.5,
+            "monto": "1250.50",
             "observacion": "Seguimiento activo",
             "estado": "MORA",
         }

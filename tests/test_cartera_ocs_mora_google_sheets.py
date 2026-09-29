@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from app.motores.cartera_ocs.google_sheets import FuenteMoraGoogleSheets
 
 
@@ -28,5 +30,5 @@ def test_google_sheets_adapter_normalizes_mora_rows() -> None:
     assert len(registros) == 1
     assert registros[0].cliente == "Cliente Mora"
     assert registros[0].empresa == "ASIATI Comercial"
-    assert registros[0].monto == 4300.0
+    assert registros[0].monto == Decimal("4300.00")
     assert registros[0].estado == "MORA"

@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from app.motores.cartera_ocs.mora import normalizar_fila_mora
 from app.motores.cartera_ocs.proyeccion import (
@@ -21,7 +22,7 @@ def test_normaliza_fila_de_mora_con_los_encabezados_actuales() -> None:
     assert registro is not None
     assert registro.cliente == "Cliente A"
     assert registro.empresa == "Empresa A"
-    assert registro.monto == 4300.0
+    assert registro.monto == Decimal("4300.00")
     assert registro.observacion == "Pendiente compromiso de pago"
     assert registro.estado == "MORA"
 
@@ -68,7 +69,7 @@ def test_normaliza_proyeccion_con_fallbacks_del_tablero_actual() -> None:
     assert registro.pais == "Sin país"
     assert registro.comercial == "SIN ASIGNAR"
     assert registro.fecha == date(2026, 10, 15)
-    assert registro.monto == 4300.0
+    assert registro.monto == Decimal("4300.00")
     assert registro.mes == "2026-10"
 
 

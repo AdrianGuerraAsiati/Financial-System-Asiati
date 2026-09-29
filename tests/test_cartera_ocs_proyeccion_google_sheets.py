@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from app.motores.cartera_ocs.google_sheets import FuenteProyeccionGoogleSheets
 
@@ -39,6 +40,6 @@ def test_google_sheets_adapter_normalizes_projection_rows() -> None:
     assert registros[0].oc == "OC-PROY"
     assert registros[0].cliente == "Cliente Proyección"
     assert registros[0].fecha == date(2026, 10, 15)
-    assert registros[0].monto == 4300.0
+    assert registros[0].monto == Decimal("4300.00")
     assert registros[0].mes == "2026-10"
     assert registros[0].comercial == "COMERCIAL A"

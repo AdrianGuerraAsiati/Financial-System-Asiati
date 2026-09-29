@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping
 
 
@@ -35,23 +36,23 @@ class RegistroCarteraEnCamino:
     anio_oc: Any
     eta: Any
     etapa: str
-    valor: float
-    valor_anticipo: float
-    valor_financiado: float
-    porcentaje_anticipo: float
+    valor: Decimal
+    valor_anticipo: Decimal
+    valor_financiado: Decimal
+    porcentaje_anticipo: Decimal
 
 
-def parsear_numero_cartera(valor: Any) -> float:
+def parsear_numero_cartera(valor: Any) -> Decimal:
     """Replica la interpretación numérica usada por el tablero actual de cartera."""
     if isinstance(valor, bool):
-        return float(valor)
+        return Decimal(int(valor))
 
-    if isinstance(valor, (int, float)):
-        return float(valor)
+    if isinstance(valor, (int, float, Decimal)):
+        return Decimal(str(valor))
 
     texto = re.sub(r"[^\d,.\-]", "", str(valor or "")).strip()
     if not texto:
-        return 0.0
+        return Decimal("0")
 
     tiene_coma = "," in texto
     tiene_punto = "." in texto
@@ -67,9 +68,9 @@ def parsear_numero_cartera(valor: Any) -> float:
         texto = texto.replace(".", "")
 
     try:
-        return float(texto)
-    except ValueError:
-        return 0.0
+        return Decimal(texto)
+    except InvalidOperation:
+        return Decimal("0")
 
 
 def _texto(valor: Any) -> str:
