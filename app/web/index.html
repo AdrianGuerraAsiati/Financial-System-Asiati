@@ -304,14 +304,45 @@
                   <th>Etapas</th>
                   <th>Transportes</th>
                   <th>Composición</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody id="compras-ocs-body">
-                <tr><td colspan="8" class="empty">Carga las órdenes para comenzar.</td></tr>
+                <tr><td colspan="9" class="empty">Carga las órdenes para comenzar.</td></tr>
               </tbody>
             </table>
           </div>
           <p id="compras-ocs-total" class="table-footnote"></p>
+        </section>
+
+        <section class="panel" id="compras-lineas">
+          <div class="panel-heading">
+            <div>
+              <h3>Líneas de la OC</h3>
+              <p id="compras-lineas-titulo">Selecciona una OC identificada para revisar sus líneas originales y normalizadas.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fila</th>
+                  <th>SKU</th>
+                  <th>Proveedor</th>
+                  <th>Estado origen</th>
+                  <th>Etapa</th>
+                  <th>Transporte</th>
+                  <th>ETA</th>
+                  <th>Compra USD</th>
+                  <th>OCI DDP</th>
+                </tr>
+              </thead>
+              <tbody id="compras-lineas-body">
+                <tr><td colspan="9" class="empty">No hay una OC seleccionada.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="table-footnote">Los valores monetarios se muestran como vienen de la fuente; esta vista no los suma ni define un KPI.</p>
         </section>
 
         <section class="grid-two">
