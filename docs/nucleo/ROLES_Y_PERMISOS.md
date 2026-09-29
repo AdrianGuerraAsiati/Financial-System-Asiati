@@ -53,6 +53,7 @@ Los códigos de rol siguen la convención de la migración `0009_create_usuarios
 | `conciliacion.ejecutar` | Correr la conciliación de un período y fuente | Sí | — | Asig. | — | — |
 | `conciliacion.ver` | Ver resultados, hallazgos y resumen | Sí | Asig. | Asig. | Leer | — |
 | `cartera.ver` | Ver operaciones, mora, proyección y comprobantes | Sí | Asig. | Asig. | Leer | — |
+| `compras.ver` | Ver líneas, estados y catálogos de Compras/Supply Chain | Sí | Asig. | Asig. | Leer | — |
 | `cartera.comprobantes.subir` | Radicar comprobantes de pago | Sí | — | Asig. | — | — |
 | `movimientos.categorizar` | Cambiar categoría y escribir observación | Sí | Asig. | Asig. | — | — |
 | `reglas.crear` | Guardar una regla de categorización nueva | Sí | Asig. | Asig. | — | — |
@@ -72,6 +73,7 @@ Notas:
 - **TI no modifica datos financieros.** Puede ver resultados para diagnosticar un error y reprocesar lo que falló, siempre dejando rastro en auditoría. Si un arreglo exige cambiar un dato, lo hace un superadmin.
 - **Analista de tesorería** queda sin permisos hasta el bloque de tesorería.
 - **Cartera:** el mapeo inicial replica el alcance de consulta de conciliación y el patrón operativo de carga. Puede ajustarse cuando negocio defina un rol específico de cartera.
+- **Compras:** `compras.ver` es estrictamente de lectura. El alcance inicial replica otros permisos de consulta y puede ajustarse cuando negocio defina perfiles específicos de Supply Chain.
 
 ---
 
