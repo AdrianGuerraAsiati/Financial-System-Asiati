@@ -437,3 +437,31 @@ def test_pivot_metadata_maps_each_block_to_its_source_country() -> None:
         ("CL", 1, 7),
         ("EC", 1, 13),
     ]
+
+
+def test_snapshot_retains_raw_substantive_rows_with_source_coordinates() -> None:
+    cliente = ClienteFake()
+    fuente = FuenteComprasGoogleSheets(
+        cliente=cliente,
+        configuracion=ConfiguracionComprasGoogleSheets(
+            empresa_id=7,
+            spreadsheet_id="sheet-id",
+            rangos_por_pais={
+                "CO": "CO!A:Z",
+                "EC": "EC!A:Z",
+                "CL": "CL!A:Z",
+            },
+        ),
+    )
+
+    snapshot = fuente.obtener_snapshot(empresa_id=7)
+
+    assert len(snapshot.filas_crudas) == 3
+    assert [
+        (fila.pais, fila.fila_fuente, fila.valores[0])
+        for fila in snapshot.filas_crudas
+    ] == [
+        ("CO", 2, "OC-1"),
+        ("EC", 2, "OC-2"),
+        ("CL", 2, "OC-3"),
+    ]

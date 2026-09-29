@@ -216,10 +216,19 @@ class ConfiguracionComprasGoogleSheets:
 
 
 @dataclass(frozen=True)
+class FilaCrudaCompra:
+    pais: str
+    hoja_fuente: str
+    fila_fuente: int
+    valores: tuple[Any, ...]
+
+
+@dataclass(frozen=True)
 class SnapshotCompras:
     cargado_en: datetime
     lineas: tuple[LineaCompra, ...]
     diagnosticos: tuple[DiagnosticoEsquema, ...]
+    filas_crudas: tuple[FilaCrudaCompra, ...] = ()
 
     @property
     def esquema_valido(self) -> bool:
@@ -266,6 +275,7 @@ class FuenteComprasGoogleSheets:
 
         lineas: list[LineaCompra] = []
         diagnosticos: list[DiagnosticoEsquema] = []
+        filas_crudas: list[FilaCrudaCompra] = []
 
         for pais in ("CO", "EC", "CL"):
             rango = self.configuracion.rangos_por_pais[pais]
@@ -285,11 +295,18 @@ class FuenteComprasGoogleSheets:
             )
             lineas.extend(normalizadas)
             diagnosticos.append(diagnostico)
+            filas_crudas.extend(
+                _capturar_filas_crudas(
+                    valores,
+                    pais=pais,
+                )
+            )
 
         snapshot = SnapshotCompras(
             cargado_en=datetime.now(timezone.utc),
             lineas=tuple(lineas),
             diagnosticos=tuple(diagnosticos),
+            filas_crudas=tuple(filas_crudas),
         )
         self._snapshot = snapshot
         self._snapshot_monotonic = time.monotonic()
@@ -401,6 +418,39 @@ class FuenteComprasGoogleSheets:
             "edad_segundos": round(edad, 3),
             "vence_en_segundos": round(restante, 3),
         }
+
+
+def _capturar_filas_crudas(
+    valores: list[list[Any]],
+    *,
+    pais: str,
+) -> tuple[FilaCrudaCompra, ...]:
+    encabezados = [str(valor).strip() for valor in valores[0]] if valores else []
+    resultado: list[FilaCrudaCompra] = []
+
+    for indice, valores_fila in enumerate(valores[1:], start=2):
+        tiene_dato_consumido = any(
+            str(
+                valores_fila[posicion]
+                if posicion < len(valores_fila)
+                else ""
+            ).strip()
+            for posicion, encabezado in enumerate(encabezados)
+            if encabezado and es_encabezado_consumido(encabezado)
+        )
+        if not tiene_dato_consumido:
+            continue
+
+        resultado.append(
+            FilaCrudaCompra(
+                pais=pais,
+                hoja_fuente=HOJAS_POR_PAIS[pais],
+                fila_fuente=indice,
+                valores=tuple(valores_fila),
+            )
+        )
+
+    return tuple(resultado)
 
 
 def _normalizar_rango(

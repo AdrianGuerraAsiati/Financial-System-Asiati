@@ -6,8 +6,11 @@ from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
+from app.core.auditoria.service import registrar_auditoria
 from app.core.auth.dependencias import Acceso, requiere
+from app.core.session import obtener_session
 
 from .agrupacion import agrupar_ocs
 from .atencion import evaluar_puntos_atencion
@@ -24,6 +27,11 @@ from .google_sheets import (
     construir_fuente_compras_desde_entorno,
 )
 from .normalizacion import HOJAS_POR_PAIS, normalizar_etiqueta
+from .persistencia import (
+    guardar_snapshot,
+    listar_snapshots,
+    snapshot_como_dict,
+)
 from .validacion import (
     ContextoPivotTablero,
     comparar_con_supply_chain,
@@ -105,6 +113,83 @@ def _filtrar(
         ]
 
     return resultado
+
+
+@router.post("/snapshots", status_code=201)
+def capturar_snapshot_compras(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_compras),
+    fuente: FuenteComprasGoogleSheets = Depends(obtener_fuente_compras),
+    session: Session = Depends(obtener_session),
+) -> dict[str, object]:
+    """Captura una lectura fresca y la persiste sin modificar Google Sheets."""
+    try:
+        snapshot = fuente.obtener_snapshot(
+            empresa_id=empresa_id,
+            forzar_lectura=True,
+        )
+    except (
+        ConfiguracionComprasGoogleSheetsError,
+        LecturaComprasGoogleSheetsError,
+    ) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    persistido, creado = guardar_snapshot(
+        session,
+        empresa_id=empresa_id,
+        spreadsheet_id=fuente.configuracion.spreadsheet_id,
+        modo_fuente=fuente.configuracion.modo_fuente,
+        rangos_por_pais=fuente.configuracion.rangos_por_pais,
+        snapshot=snapshot,
+    )
+    if creado:
+        registrar_auditoria(
+            session,
+            usuario_id=_acceso.usuario.id,
+            empresa_id=empresa_id,
+            accion="compras.snapshot_guardado",
+            entidad="compras_snapshot",
+            entidad_id=persistido.id,
+            despues={
+                "contenido_hash": persistido.contenido_hash,
+                "lineas": persistido.lineas,
+                "esquema_valido": persistido.esquema_valido,
+            },
+            ip=_acceso.ip,
+        )
+    session.commit()
+    session.refresh(persistido)
+
+    return {
+        "creado": creado,
+        "snapshot": snapshot_como_dict(persistido),
+        "nota": (
+            "La captura se guarda en la base de datos de la plataforma. "
+            "Google Sheets permanece estrictamente en modo solo lectura."
+        ),
+    }
+
+
+@router.get("/snapshots")
+def listar_snapshots_compras(
+    empresa_id: int,
+    limit: int = Query(50, ge=1, le=200),
+    _acceso: Acceso = Depends(ver_compras),
+    session: Session = Depends(obtener_session),
+) -> dict[str, object]:
+    snapshots = listar_snapshots(
+        session,
+        empresa_id=empresa_id,
+        limite=limit,
+    )
+    return {
+        "total": len(snapshots),
+        "items": [snapshot_como_dict(item) for item in snapshots],
+        "nota": (
+            "Histórico inmutable de capturas de la fuente. "
+            "No sustituye Google Sheets como fuente operativa."
+        ),
+    }
 
 
 @router.get("/lineas")
