@@ -1,6 +1,8 @@
 import pytest
 
 from app.motores.compras_supply_chain.google_sheets import (
+    CLOUD_PLATFORM_SCOPE,
+    ClienteGoogleSheetsReadonly,
     ConfiguracionComprasGoogleSheets,
     FuenteComprasGoogleSheets,
     SHEETS_READONLY_SCOPE,
@@ -113,6 +115,53 @@ class ClienteFake:
             ["NUMERO OC", "CLIENTE", "PROVEEDOR", "ESTADO", "MODO TRANSPORTE"],
             [f"OC-{len(self.llamadas)}", "Cliente", "Proveedor", "ENTREGADO", "MARITIMO"],
         ]
+
+
+def test_google_client_uses_explicit_keyless_impersonation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import app.motores.compras_supply_chain.google_sheets as modulo
+
+    source_credentials = object()
+    target_credentials = object()
+    capturado: dict[str, object] = {}
+
+    def fake_default(*, scopes):
+        capturado["source_scopes"] = scopes
+        return source_credentials, None
+
+    def fake_impersonated_credentials(**kwargs):
+        capturado.update(kwargs)
+        return target_credentials
+
+    class SessionFake:
+        def __init__(self, credentials):
+            capturado["session_credentials"] = credentials
+
+    monkeypatch.setattr(modulo.google.auth, "default", fake_default)
+    monkeypatch.setattr(
+        modulo.impersonated_credentials,
+        "Credentials",
+        fake_impersonated_credentials,
+    )
+    monkeypatch.setattr(modulo, "AuthorizedSession", SessionFake)
+
+    ClienteGoogleSheetsReadonly(
+        target_principal=(
+            " financial-system-sheets@asiati-financial-system."
+            "iam.gserviceaccount.com "
+        )
+    )
+
+    assert capturado["source_scopes"] == [CLOUD_PLATFORM_SCOPE]
+    assert capturado["source_credentials"] is source_credentials
+    assert capturado["target_principal"] == (
+        "financial-system-sheets@asiati-financial-system."
+        "iam.gserviceaccount.com"
+    )
+    assert capturado["target_scopes"] == [SHEETS_READONLY_SCOPE]
+    assert capturado["lifetime"] == 3600
+    assert capturado["session_credentials"] is target_credentials
 
 
 def test_source_reads_the_three_country_ranges_and_never_requires_write_api() -> None:
