@@ -127,6 +127,10 @@ def test_compras_api_exposes_safe_oc_grouping_and_quality() -> None:
             "/api/v1/compras/calidad",
             params={"empresa_id": empresa_id},
         )
+        resumen = client.get(
+            "/api/v1/compras/resumen",
+            params={"empresa_id": empresa_id},
+        )
     finally:
         app.dependency_overrides.clear()
 
@@ -136,6 +140,11 @@ def test_compras_api_exposes_safe_oc_grouping_and_quality() -> None:
         "OC-100",
         "OC-200",
     }
+
+    assert resumen.status_code == 200
+    assert resumen.json()["ocs_identificadas"] == 2
+    assert resumen.json()["ocs_mixtas"] == 0
+    assert resumen.json()["lineas_estado_por_definir"] == 1
 
     assert calidad.status_code == 200
     body = calidad.json()
