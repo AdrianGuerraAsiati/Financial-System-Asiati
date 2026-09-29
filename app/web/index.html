@@ -56,11 +56,13 @@
   <div class="layout">
     <nav class="sidebar" aria-label="Módulos">
       <button class="nav-item active" data-view="cartera">Cartera</button>
+      <button class="nav-item" data-view="compras" id="nav-compras" hidden>Compras</button>
       <button class="nav-item" disabled>Wallets <span>Pendiente</span></button>
       <button class="nav-item" disabled>Chin Chin <span>Pendiente</span></button>
     </nav>
 
     <main class="content">
+      <div id="vista-cartera" class="module-view">
       <section class="intro">
         <div>
           <p class="eyebrow">ASIATI Comercial</p>
@@ -218,6 +220,128 @@
           </form>
         </section>
       </section>
+
+      </div>
+
+      <div id="vista-compras" class="module-view" hidden>
+        <section class="intro">
+          <div>
+            <p class="eyebrow">Supply Chain · Solo lectura</p>
+            <h2>Compras</h2>
+            <p>Explora la fuente corporativa, su calidad y la estructura real de las órdenes sin modificar el Google Sheet.</p>
+          </div>
+          <div id="estado-compras" class="status" role="status">Listo</div>
+        </section>
+
+        <section class="metric-grid" aria-label="Estado de fuente">
+          <article class="metric-card">
+            <span>Fuente</span>
+            <strong id="compras-fuente-estado">Sin consultar</strong>
+            <small>Contrato de esquema CO / EC / CL</small>
+          </article>
+          <article class="metric-card">
+            <span>Líneas leídas</span>
+            <strong id="compras-fuente-lineas">—</strong>
+            <small>Granularidad línea/SKU</small>
+          </article>
+          <article class="metric-card">
+            <span>Snapshot</span>
+            <strong id="compras-fuente-cache">—</strong>
+            <small>Cache de lectura, nunca write-back</small>
+          </article>
+        </section>
+
+        <section class="panel" id="compras-diagnostico">
+          <div class="panel-heading">
+            <div>
+              <h3>Diagnóstico de fuente</h3>
+              <p>Detecta cambios de encabezados antes de permitir cálculos sobre datos incompletos.</p>
+            </div>
+            <button id="compras-refrescar-fuente" type="button">Releer fuente</button>
+          </div>
+          <div id="compras-hojas" class="diagnostic-grid">
+            <p class="empty">Consulta la fuente para ver el contrato de cada hoja.</p>
+          </div>
+        </section>
+
+        <section class="panel" id="compras-ocs">
+          <div class="panel-heading">
+            <div>
+              <h3>Órdenes de compra</h3>
+              <p>Agrupación segura por país + OC. No se inventa un estado agregado.</p>
+            </div>
+            <button id="compras-cargar-ocs" type="button">Actualizar</button>
+          </div>
+          <div class="filters-inline">
+            <label>País
+              <select id="compras-filtro-pais">
+                <option value="">Todos</option>
+                <option value="CO">CO</option>
+                <option value="EC">EC</option>
+                <option value="CL">CL</option>
+              </select>
+            </label>
+            <label>Buscar OC / proveedor
+              <input id="compras-filtro-q" placeholder="OC o proveedor">
+            </label>
+            <label>Composición
+              <select id="compras-filtro-mixtas">
+                <option value="">Todas</option>
+                <option value="true">Solo mixtas</option>
+                <option value="false">No mixtas</option>
+              </select>
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>País</th>
+                  <th>OC</th>
+                  <th>Líneas</th>
+                  <th>Proveedores</th>
+                  <th>Estados</th>
+                  <th>Etapas</th>
+                  <th>Transportes</th>
+                  <th>Composición</th>
+                </tr>
+              </thead>
+              <tbody id="compras-ocs-body">
+                <tr><td colspan="8" class="empty">Carga las órdenes para comenzar.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p id="compras-ocs-total" class="table-footnote"></p>
+        </section>
+
+        <section class="grid-two">
+          <section class="panel" id="compras-calidad">
+            <div class="panel-heading">
+              <div>
+                <h3>Observaciones de calidad</h3>
+                <p>Son señales de revisión; no cambian ni corrigen la fuente.</p>
+              </div>
+              <button id="compras-cargar-calidad" type="button">Actualizar</button>
+            </div>
+            <div id="compras-calidad-lista" class="stack">
+              <p class="empty">Carga la calidad para comenzar.</p>
+            </div>
+          </section>
+
+          <section class="panel" id="compras-catalogos">
+            <div class="panel-heading">
+              <div>
+                <h3>Catálogos observados</h3>
+                <p>Estados y modos encontrados realmente en las hojas.</p>
+              </div>
+              <button id="compras-cargar-catalogos" type="button">Actualizar</button>
+            </div>
+            <div id="compras-catalogos-contenido" class="stack">
+              <p class="empty">Carga los catálogos para comenzar.</p>
+            </div>
+          </section>
+        </section>
+      </div>
     </main>
   </div>
 
