@@ -15,6 +15,7 @@ const detalleTitulo = document.querySelector("#detalle-titulo");
 const detalleContenido = document.querySelector("#detalle-contenido");
 const pendientesLista = document.querySelector("#pendientes-lista");
 const formComprobante = document.querySelector("#form-comprobante");
+const carteraFuenteContenido = document.querySelector("#cartera-fuente-contenido");
 
 const navInicio = document.querySelector("#nav-inicio");
 const navCartera = document.querySelector("#nav-cartera");
@@ -78,6 +79,8 @@ empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
   if (moduloActivo === "inicio") {
     cargarDashboardPrincipal();
+  } else if (moduloActivo === "cartera") {
+    cargarCarteraTodo();
   } else if (moduloActivo === "compras") {
     cargarComprasTodo();
   }
@@ -113,9 +116,34 @@ function mostrarModulo(modulo) {
 
   if (inicio) {
     cargarDashboardPrincipal();
+  } else if (cartera) {
+    cargarCarteraTodo();
   } else if (compras) {
     cargarComprasTodo();
   }
+}
+
+function formatearDecimal(valor, decimales = 2) {
+  if (valor === null || valor === undefined || valor === "") {
+    return "—";
+  }
+
+  let texto = String(valor).trim();
+  let signo = "";
+  if (texto.startsWith("-")) {
+    signo = "-";
+    texto = texto.slice(1);
+  }
+
+  const partes = texto.split(".");
+  let entero = (partes[0] || "0").replace(/^0+(?=\d)/, "");
+  let fraccion = partes[1] || "";
+  entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (decimales <= 0) {
+    return signo + entero;
+  }
+  fraccion = fraccion.padEnd(decimales, "0").slice(0, decimales);
+  return `${signo}${entero},${fraccion}`;
 }
 
 function escapar(valor) {
@@ -1096,6 +1124,81 @@ async function cargarComprasTodo(forzar = false) {
 }
 
 
+async function cargarEstadoFuenteCartera() {
+  carteraFuenteContenido.innerHTML = '<p class="empty">Validando fuente…</p>';
+  try {
+    const estadoFuente = await api(
+      `/api/v1/cartera/fuente/estado?empresa_id=${empresaId()}`
+    );
+    const diagnosticos = estadoFuente.diagnosticos || [];
+    const faltantes = estadoFuente.faltantes || [];
+    const resumen = estadoFuente.resumen || {};
+    const estadoClase = estadoFuente.estado === "OK" ? "ok" : "muted";
+
+    carteraFuenteContenido.innerHTML = `
+      <article class="proof-card">
+        <strong>Estado: ${escapar(estadoFuente.estado)}</strong>
+        <p>${escapar(estadoFuente.modo_fuente || "GOOGLE_SHEETS")} · ${estadoFuente.solo_lectura ? "Solo lectura" : "Modo no confirmado"}</p>
+        <p>${escapar(String(resumen.rangos_validos ?? 0))} de ${escapar(String(resumen.rangos ?? 0))} rangos válidos · ${escapar(String(resumen.filas ?? 0))} filas observadas</p>
+        ${faltantes.length ? `<p>Falta configurar: ${faltantes.map(escapar).join(", ")}</p>` : ""}
+      </article>
+      ${diagnosticos.map((item) => `
+        <article class="proof-card">
+          <strong>${escapar(item.tipo)} · ${item.valido ? "Válido" : "Revisar"}</strong>
+          <p>${escapar(item.rango)} · ${escapar(String(item.filas_datos ?? 0))} filas</p>
+          ${(item.campos_criticos_faltantes || []).length
+            ? `<p>Campos faltantes: ${item.campos_criticos_faltantes.map(escapar).join(", ")}</p>`
+            : ""}
+          ${(item.encabezados_duplicados || []).length
+            ? `<p>Encabezados duplicados: ${item.encabezados_duplicados.map(escapar).join(", ")}</p>`
+            : ""}
+          ${item.error_lectura ? `<p>Error de lectura: ${escapar(item.error_lectura)}</p>` : ""}
+        </article>
+      `).join("")}
+    `;
+
+    setEstado(
+      estadoFuente.estado === "OK"
+        ? "Fuente de Cartera disponible"
+        : `Fuente de Cartera: ${estadoFuente.estado}`,
+      estadoClase
+    );
+    return estadoFuente;
+  } catch (error) {
+    carteraFuenteContenido.innerHTML =
+      `<p class="empty">${escapar(error.message)}</p>`;
+    setEstado(error.message, "error");
+    return null;
+  }
+}
+
+function mostrarFuenteNoDisponible() {
+  operacionesBody.innerHTML =
+    '<tr><td colspan="7" class="empty">La fuente de Operaciones todavía no está disponible.</td></tr>';
+  moraBody.innerHTML =
+    '<tr><td colspan="5" class="empty">La fuente de Mora todavía no está disponible.</td></tr>';
+  proyeccionBody.innerHTML =
+    '<tr><td colspan="7" class="empty">La fuente de Proyección todavía no está disponible.</td></tr>';
+}
+
+async function cargarCarteraTodo() {
+  const estadoFuente = await cargarEstadoFuenteCartera();
+  const pendientes = cargarPendientes();
+
+  if (!estadoFuente || estadoFuente.estado !== "OK") {
+    mostrarFuenteNoDisponible();
+    await pendientes;
+    return;
+  }
+
+  await Promise.all([
+    cargarOperaciones(),
+    cargarMora(),
+    cargarProyeccion(),
+    pendientes,
+  ]);
+}
+
 async function cargarOperaciones() {
   setEstado("Consultando operaciones…");
   operacionesBody.innerHTML = '<tr><td colspan="7" class="empty">Consultando…</td></tr>';
@@ -1111,7 +1214,7 @@ async function cargarOperaciones() {
           <td>${escapar(row.sku)}</td>
           <td>${escapar(row.estado)}</td>
           <td>${escapar(row.etapa)}</td>
-          <td>${Number(row.valor || 0).toLocaleString("es-CO")}</td>
+          <td>${formatearDecimal(row.valor)}</td>
           <td><button type="button" data-oc="${escapar(row.oc)}">Ver</button></td>
         </tr>
       `).join("");
@@ -1136,7 +1239,7 @@ async function cargarMora() {
           <tr>
             <td>${escapar(row.cliente)}</td>
             <td>${escapar(row.empresa)}</td>
-            <td>${Number(row.monto || 0).toLocaleString("es-CO")}</td>
+            <td>${formatearDecimal(row.monto)}</td>
             <td>${escapar(row.estado)}</td>
             <td>${escapar(row.observacion)}</td>
           </tr>
@@ -1161,7 +1264,7 @@ async function cargarProyeccion() {
             <td>${escapar(row.oc)}</td>
             <td>${escapar(row.cliente)}</td>
             <td>${escapar(row.pais)}</td>
-            <td>${Number(row.monto || 0).toLocaleString("es-CO")}</td>
+            <td>${formatearDecimal(row.monto)}</td>
             <td>${escapar(row.comercial)}</td>
             <td>${escapar(row.estado)}</td>
           </tr>
@@ -1187,7 +1290,7 @@ async function cargarDetalle(oc) {
         <strong>${escapar(linea.sku || "Sin SKU")}</strong>
         <div>${escapar(linea.producto)}</div>
         <div>Cliente: ${escapar(linea.cliente)}</div>
-        <div>Valor: ${Number(linea.valor || 0).toLocaleString("es-CO")}</div>
+        <div>Valor: ${formatearDecimal(linea.valor)}</div>
         <div>Estado: ${escapar(linea.estado)}</div>
       </article>
     `).join("");
@@ -1218,7 +1321,7 @@ async function cargarPendientes() {
           <article class="proof-card">
             <strong>${escapar(item.oc)} · ${escapar(item.cliente)}</strong>
             <p>${escapar(item.nombre_archivo)}</p>
-            <p>USD ${Number(item.monto_esperado || 0).toLocaleString("es-CO")} · ${escapar(item.estado_auditoria)}</p>
+            <p>USD ${formatearDecimal(item.monto_esperado)} · ${escapar(item.estado_auditoria)}</p>
             <p><a href="/api/v1/cartera/comprobantes/${item.id}/archivo?empresa_id=${empresaId()}" target="_blank" rel="noopener">Ver soporte</a></p>
           </article>
         `).join("")
@@ -1253,6 +1356,7 @@ document.querySelector("#cargar-operaciones").addEventListener("click", cargarOp
 document.querySelector("#cargar-mora").addEventListener("click", cargarMora);
 document.querySelector("#cargar-proyeccion").addEventListener("click", cargarProyeccion);
 document.querySelector("#cargar-pendientes").addEventListener("click", cargarPendientes);
+document.querySelector("#cartera-refrescar-fuente").addEventListener("click", cargarCarteraTodo);
 
 navInicio.addEventListener("click", () => mostrarModulo("inicio"));
 navCartera.addEventListener("click", () => mostrarModulo("cartera"));
