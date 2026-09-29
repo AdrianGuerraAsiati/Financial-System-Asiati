@@ -18,3 +18,6 @@ Thumbs.db
 
 # Datos reales de la operacion: nunca en git
 fixtures/
+
+# Credenciales locales / service accounts
+secrets/
