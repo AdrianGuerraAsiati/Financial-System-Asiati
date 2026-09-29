@@ -30,6 +30,9 @@ const comprasResumenPendientes = document.querySelector("#compras-resumen-pendie
 const comprasHojas = document.querySelector("#compras-hojas");
 const comprasOcsBody = document.querySelector("#compras-ocs-body");
 const comprasOcsTotal = document.querySelector("#compras-ocs-total");
+const comprasOcsPagina = document.querySelector("#compras-ocs-pagina");
+const comprasOcsAnterior = document.querySelector("#compras-ocs-anterior");
+const comprasOcsSiguiente = document.querySelector("#compras-ocs-siguiente");
 const comprasLineasBody = document.querySelector("#compras-lineas-body");
 const comprasLineasTitulo = document.querySelector("#compras-lineas-titulo");
 const comprasCalidadLista = document.querySelector("#compras-calidad-lista");
@@ -39,6 +42,8 @@ const comprasFiltroQ = document.querySelector("#compras-filtro-q");
 const comprasFiltroMixtas = document.querySelector("#compras-filtro-mixtas");
 
 let moduloActivo = "cartera";
+let comprasOcsOffset = 0;
+const COMPRAS_OCS_LIMIT = 100;
 
 empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
@@ -271,7 +276,11 @@ async function cargarComprasDiagnostico(forzar = false) {
 }
 
 function parametrosOcs() {
-  const params = new URLSearchParams({empresa_id: String(empresaId()), limit: "200"});
+  const params = new URLSearchParams({
+    empresa_id: String(empresaId()),
+    limit: String(COMPRAS_OCS_LIMIT),
+    offset: String(comprasOcsOffset),
+  });
   if (comprasFiltroPais.value) params.set("pais", comprasFiltroPais.value);
   if (comprasFiltroQ.value.trim()) params.set("q", comprasFiltroQ.value.trim());
   if (comprasFiltroMixtas.value) params.set("mixtas", comprasFiltroMixtas.value);
@@ -282,7 +291,13 @@ async function cargarComprasOCs() {
   comprasOcsBody.innerHTML = '<tr><td colspan="9" class="empty">Consultando…</td></tr>';
   try {
     const data = await api(`/api/v1/compras/ocs?${parametrosOcs()}`);
-    comprasOcsTotal.textContent = `${Number(data.total || 0).toLocaleString("es-CO")} agrupaciones encontradas`;
+    const total = Number(data.total || 0);
+    const pagina = Math.floor(comprasOcsOffset / COMPRAS_OCS_LIMIT) + 1;
+    const paginas = Math.max(1, Math.ceil(total / COMPRAS_OCS_LIMIT));
+    comprasOcsTotal.textContent = `${total.toLocaleString("es-CO")} agrupaciones encontradas`;
+    comprasOcsPagina.textContent = `Página ${pagina} de ${paginas}`;
+    comprasOcsAnterior.disabled = comprasOcsOffset <= 0;
+    comprasOcsSiguiente.disabled = comprasOcsOffset + COMPRAS_OCS_LIMIT >= total;
     comprasOcsBody.innerHTML = data.items.length
       ? data.items.map((oc) => {
           const mixta = oc.estado_mixto || oc.proveedor_mixto || oc.transporte_mixto;
@@ -619,11 +634,26 @@ document.querySelector("#compras-refrescar-fuente").addEventListener("click", ()
 document.querySelector("#compras-cargar-ocs").addEventListener("click", cargarComprasOCs);
 document.querySelector("#compras-cargar-calidad").addEventListener("click", cargarComprasCalidad);
 document.querySelector("#compras-cargar-catalogos").addEventListener("click", cargarComprasCatalogos);
-comprasFiltroPais.addEventListener("change", cargarComprasOCs);
-comprasFiltroMixtas.addEventListener("change", cargarComprasOCs);
+comprasFiltroPais.addEventListener("change", () => {
+  comprasOcsOffset = 0;
+  cargarComprasOCs();
+});
+comprasFiltroMixtas.addEventListener("change", () => {
+  comprasOcsOffset = 0;
+  cargarComprasOCs();
+});
+comprasOcsAnterior.addEventListener("click", () => {
+  comprasOcsOffset = Math.max(0, comprasOcsOffset - COMPRAS_OCS_LIMIT);
+  cargarComprasOCs();
+});
+comprasOcsSiguiente.addEventListener("click", () => {
+  comprasOcsOffset += COMPRAS_OCS_LIMIT;
+  cargarComprasOCs();
+});
 comprasFiltroQ.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
+    comprasOcsOffset = 0;
     cargarComprasOCs();
   }
 });
