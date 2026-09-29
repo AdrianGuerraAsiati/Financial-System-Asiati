@@ -19,6 +19,7 @@ def test_shell_exposes_compras_explorer() -> None:
     assert js.status_code == 200
     assert "/api/v1/compras/fuente/estado" in js.text
     assert "/api/v1/compras/ocs" in js.text
+    assert "/api/v1/compras/resumen" in js.text
     assert "/api/v1/compras/lineas" in js.text
     assert "/api/v1/compras/calidad" in js.text
     assert "/api/v1/compras/catalogos" in js.text
