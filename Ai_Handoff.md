@@ -87,6 +87,8 @@ Estado funcional relevante de `main`:
 - PR #68 fusionado: controles de trazabilidad/auditoría visibles en la UI de Compras.
 - PR #69 fusionado: auditoría de la fuente viva y registro formal de huecos/limitaciones.
 - PR #70 fusionado: **cierre formal de Compras / Supply Chain V1**, con contrato de aceptación y non-goals.
+- PR #71 fusionado: observabilidad de fuente para Cartera + Google Sheets keyless mediante ADC e impersonación; nuevo `/api/v1/cartera/fuente/estado`.
+- PR #72 fusionado: valores financieros de Cartera migrados de `float` a `Decimal`, con montos JSON como cadenas decimales exactas.
 - Las APIs protegidas viven bajo `/api/v1`.
 - El frontend cuenta con login, cambio obligatorio de contraseña, selector de empresa, Inicio, Cartera y una Compras V1 cerrada con vista ejecutiva, explorador, trazabilidad y controles auditables.
 
@@ -705,6 +707,70 @@ No inventar ni cerrar por código:
 10. columna canónica de CBM en EC/CL.
 
 Estas decisiones **no bloquean la V1 cerrada**; pertenecen a V2 o a una definición funcional posterior. Las dos familias monetarias descriptivas sí están implementadas. Los estados ambiguos permanecen `POR_DEFINIR` y los KPIs corporativos que dependen de su significado siguen pendientes.
+
+---
+
+## 11.1 Cartera — estado técnico actual
+
+Cartera retoma prioridad después del cierre de Compras V1.
+
+Ya existen en `app/motores/cartera_ocs/`:
+
+- contrato de operaciones / Cartera en Camino;
+- detalle por OC conservando múltiples líneas;
+- contratos de Mora y Proyección;
+- validaciones heredadas del tablero anterior;
+- interpretación de condiciones de financiación heredada de MAJO;
+- radicación y almacenamiento de comprobantes;
+- deduplicación por hash;
+- bandeja de comprobantes pendientes;
+- visualización protegida del soporte;
+- autenticación y permisos `cartera.ver` / `cartera.comprobantes.subir`.
+
+PR #71 agregó diagnóstico explícito de la fuente Google Sheets:
+
+`GET /api/v1/cartera/fuente/estado?empresa_id=<id>`
+
+y soporte de ADC + impersonación con scope final `spreadsheets.readonly`.
+
+Estados de diagnóstico:
+
+- `NO_CONFIGURADO`;
+- `ERROR`;
+- `DEGRADADO`;
+- `OK`.
+
+Los tres rangos esperados siguen siendo configurables e independientes:
+
+- operaciones: `CARTERA_SHEETS_RANGE`;
+- mora: `CARTERA_SHEETS_MORA_RANGE`;
+- proyección: `CARTERA_SHEETS_PROYECCION_RANGE`.
+
+PR #72 alineó el dominio con el contrato financiero del repositorio:
+
+- dinero en Python usa `Decimal`;
+- cálculos de financiación conservan precisión decimal;
+- tolerancias monetarias usan `Decimal`;
+- montos expuestos por JSON salen como cadenas decimales;
+- PostgreSQL continúa usando `NUMERIC(18,2)` para comprobantes.
+
+### Fuente real de Cartera — pendiente inmediato
+
+Con el acceso actual de `sistemas@asiati.com.co` no se identificó una hoja dedicada que cumpla el contrato histórico de Cartera. Los spreadsheets visibles durante la revisión no incluyen simultáneamente campos como `VALOR ANTICIPO`, `VALOR FINANCIADO`, `CARTERA`, Mora y Proyección.
+
+**No asumir que `INFORME COMPRAS 2024-2026` es la fuente de Cartera.**
+
+Para validar la fuente viva faltan únicamente:
+
+1. spreadsheet ID real;
+2. rango/pestaña de Operaciones;
+3. rango/pestaña de Mora;
+4. rango/pestaña de Proyección;
+5. acceso de lectura para la identidad Google usada por la plataforma.
+
+Una vez configurados, ejecutar `/api/v1/cartera/fuente/estado` antes de modificar reglas de negocio.
+
+Documento técnico: `docs/cartera/FUENTE_Y_VALIDACION.md`.
 
 ---
 
