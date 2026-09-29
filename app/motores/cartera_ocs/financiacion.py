@@ -1,12 +1,13 @@
 import re
 import unicodedata
 from dataclasses import dataclass
+from decimal import Decimal
 from datetime import date, timedelta
 
 
 @dataclass(frozen=True)
 class TerminosNegociacion:
-    porcentaje_saldo: float
+    porcentaje_saldo: Decimal
     dias_plazo: int
 
 
@@ -15,7 +16,7 @@ class OperacionFinanciada:
     oc: str
     cliente: str
     pais: str
-    valor_ddp: float
+    valor_ddp: Decimal
     tipo_negociacion: str
     fecha_entrega: date
     comercial: str
@@ -30,7 +31,7 @@ class CondicionPago:
     porcentaje_saldo: float
     dias_plazo: int
     fecha_pago_esperada: date
-    monto_original: float
+    monto_original: Decimal
 
 
 def _sin_acentos(texto: str) -> str:
@@ -46,21 +47,21 @@ def parsear_tipo_negociacion(tipo_negociacion: str | None) -> TerminosNegociacio
     """Porta parseNegotiation() de MAJO sin redefinir sus reglas."""
     if not tipo_negociacion:
         return TerminosNegociacion(
-            porcentaje_saldo=0.5,
+            porcentaje_saldo=Decimal("0.5"),
             dias_plazo=0,
         )
 
     texto = _sin_acentos(str(tipo_negociacion).lower())
 
     porcentajes = re.findall(r"(\d+)%", texto)
-    porcentaje_saldo = 0.5
+    porcentaje_saldo = Decimal("0.5")
 
     if len(porcentajes) >= 2:
-        porcentaje_saldo = int(porcentajes[1]) / 100
+        porcentaje_saldo = Decimal(porcentajes[1]) / Decimal("100")
     elif len(porcentajes) == 1:
         valor = int(porcentajes[0])
         if valor < 100:
-            porcentaje_saldo = (100 - valor) / 100
+            porcentaje_saldo = Decimal(100 - valor) / Decimal("100")
 
     dias_plazo = 0
     dias_match = re.search(r"pago a (\d+)\s*dia", texto)
