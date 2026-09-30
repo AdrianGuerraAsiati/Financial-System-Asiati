@@ -297,15 +297,15 @@ jobs:
           cd /opt/financial-system
           DC=(docker compose --env-file .env.production -f compose.production.yml)
 
-          "${DC[@]}" run --rm \
+          "${DC[@]}" run --rm -T \
             -e DEV_ADMIN_EMAIL=juan.parra@asiati.com.co \
             -e DEV_ADMIN_NAME="Juan Felipe Parra" \
-            api python -m app.core.usuarios.asegurar_superadmin_dev
+            api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
 
-          "${DC[@]}" run --rm \
+          "${DC[@]}" run --rm -T \
             -e DEV_ADMIN_EMAIL=sistemas@asiati.com.co \
             -e DEV_ADMIN_NAME="Adrian" \
-            api python -m app.core.usuarios.asegurar_superadmin_dev
+            api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
 
           "${DC[@]}" exec -T db psql \
             -U asiati \
