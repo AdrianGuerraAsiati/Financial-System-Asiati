@@ -1,0 +1,94 @@
+name: Deploy production
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ROLE_ARN: arn:aws:iam::890876258895:role/financial-system-asiati-github-deploy
+  INSTANCE_ID: i-0aa49867c85421e59
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy main through SSM
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PARAMETERS='{"commands":["set -euo pipefail","cd /opt/financial-system","git fetch origin main","git reset --hard origin/main","bash ops/deploy_production.sh"]}'
+
+          COMMAND_ID="$(
+            aws ssm send-command \
+              --region "$AWS_REGION" \
+              --instance-ids "$INSTANCE_ID" \
+              --document-name AWS-RunShellScript \
+              --comment "Deploy Financial System ASIATI from main" \
+              --parameters "$PARAMETERS" \
+              --query 'Command.CommandId' \
+              --output text
+          )"
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+
+          STATUS="Pending"
+          for _ in $(seq 1 180); do
+            STATUS="$(
+              aws ssm get-command-invocation \
+                --region "$AWS_REGION" \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query 'Status' \
+                --output text 2>/dev/null || echo Pending
+            )"
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut|Cancelling)
+                break
+                ;;
+            esac
+            sleep 5
+          done
+
+          aws ssm get-command-invocation \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query '{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}' \
+            --output json
+
+          test "$STATUS" = "Success"
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "### Production deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Instance: `$INSTANCE_ID`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Region: `$AWS_REGION`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- SSM command: `${{ steps.deploy.outputs.command_id }}`" >> "$GITHUB_STEP_SUMMARY"

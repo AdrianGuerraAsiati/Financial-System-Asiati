@@ -21,9 +21,9 @@ Esta configuración prepara una instalación de un solo servidor para la primera
    `python -c "import secrets; print(secrets.token_urlsafe(48))"`).
 3. Colocar el service account de Google en la ruta indicada por `GOOGLE_SERVICE_ACCOUNT_FILE`.
 4. Apuntar el DNS del dominio al servidor.
-5. Ejecutar `docker compose -f compose.production.yml up -d --build`.
+5. Para un arranque manual, ejecutar `bash ops/deploy_production.sh`. El script usa explícitamente `--env-file .env.production`, ejecuta Alembic y valida `/ready` y `/health`.
 6. Crear el primer superadministrador desde la terminal (no hay endpoint público):
-   `docker compose -f compose.production.yml exec api python -m app.core.usuarios.crear_superadmin --email <correo> --nombre "<nombre>"`.
+   `docker compose --env-file .env.production -f compose.production.yml exec api python -m app.core.usuarios.crear_superadmin --email <correo> --nombre "<nombre>"`.
 
 La excepción temporal de la decisión 0004 ya fue cerrada: Cartera y Wiilog están detrás del modelo común de autenticación/autorización. Antes de publicar, mantener HTTPS, `SESSION_COOKIE_SECURE=true` y completar los controles operativos de producción descritos en este documento.
 
@@ -54,3 +54,17 @@ El procedimiento de instalación del trigger está en
 Antes de activar el trigger debe existir al menos un snapshot inicial de cada módulo que
 se quiera mostrar en Inicio. El webhook no recalcula en cada edición: registra el cambio,
 aplica debounce y conserva el último snapshot válido durante la actualización.
+
+
+## Despliegue automático desde main
+
+Producción se despliega mediante `.github/workflows/deploy-production.yml` después de
+que `CI` termina correctamente sobre `main`. GitHub obtiene credenciales AWS efímeras
+por OIDC y ejecuta el despliegue en la instancia mediante SSM; no se usa SSH ni access
+keys persistentes.
+
+El comando de producción es `bash ops/deploy_production.sh`. El script exige
+`.env.production`, ejecuta `alembic upgrade head`, reconstruye los contenedores y
+falla si `/ready` o `/health` no responden.
+
+Detalles de la infraestructura: `docs/PRODUCTION_INFRA.md`.
