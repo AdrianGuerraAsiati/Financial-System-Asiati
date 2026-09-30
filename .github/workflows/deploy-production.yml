@@ -43,45 +43,38 @@ jobs:
         run: |
           set -euo pipefail
 
+          PARAMETERS='{"commands":["set -euo pipefail","cd /opt/financial-system","git fetch origin main","git reset --hard origin/main","bash ops/deploy_production.sh"]}'
+
           COMMAND_ID="$(
             aws ssm send-command \
               --region "$AWS_REGION" \
               --instance-ids "$INSTANCE_ID" \
               --document-name AWS-RunShellScript \
               --comment "Deploy Financial System ASIATI from main" \
-              --parameters 'commands=[
-                "set -euo pipefail",
-                "cd /opt/financial-system",
-                "git fetch origin main",
-                "git reset --hard origin/main",
-                "bash ops/deploy_production.sh"
-              ]' \
+              --parameters "$PARAMETERS" \
               --query 'Command.CommandId' \
               --output text
           )"
 
           echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
 
-          if ! aws ssm wait command-executed \
-            --region "$AWS_REGION" \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID"; then
-            aws ssm get-command-invocation \
-              --region "$AWS_REGION" \
-              --command-id "$COMMAND_ID" \
-              --instance-id "$INSTANCE_ID" \
-              --output json || true
-            exit 1
-          fi
-
-          STATUS="$(
-            aws ssm get-command-invocation \
-              --region "$AWS_REGION" \
-              --command-id "$COMMAND_ID" \
-              --instance-id "$INSTANCE_ID" \
-              --query 'Status' \
-              --output text
-          )"
+          STATUS="Pending"
+          for _ in $(seq 1 180); do
+            STATUS="$(
+              aws ssm get-command-invocation \
+                --region "$AWS_REGION" \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query 'Status' \
+                --output text 2>/dev/null || echo Pending
+            )"
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut|Cancelling)
+                break
+                ;;
+            esac
+            sleep 5
+          done
 
           aws ssm get-command-invocation \
             --region "$AWS_REGION" \
