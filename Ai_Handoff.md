@@ -1,5 +1,18 @@
 # AI Handoff — Plataforma Financiera ASIATI
 
+> ## Actualización operativa · 30-sep-2026
+>
+> Para el estado vigente de PRs, AWS, Google, Compras, Cartera y Wallets, leer primero
+> `docs/ESTADO_DESARROLLO_2026-09-30.md`.
+>
+> Esta actualización **supera las secciones históricas de este archivo** que todavía
+> describen Google Sheets/ADC como fuente viva disponible en el entorno desplegado.
+> Actualmente Compras en desarrollo opera con S3 privado + copia operacional local en
+> Lightsail + snapshots PostgreSQL mientras se resuelve el acceso administrativo de
+> Google Cloud. Cartera continúa sin fuente real identificada. El único PR funcional
+> abierto es #91 y permanece en draft por una decisión de contrato de categorización.
+>
+
 **Última actualización:** 29 de septiembre de 2026  
 **Repositorio:** `AdrianGuerraAsiati/Financial-System-Asiati`
 

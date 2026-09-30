@@ -68,8 +68,20 @@ No elijas en silencio.
 - `/release <versión>` — prepara una versión: changelog, número, tag y release.
 - `/revisar-spec` — compara el código contra la SPEC y lista diferencias, sin tocar código.
 
-## Estado actual (se actualiza en cada release)
-- Versión: 0.1.0 — núcleo mínimo: empresas, fuentes, períodos con cierre auditado,
-  cargas con hash, hallazgos explicables.
-- Motor wallets: esqueleto. Reglas C0–C6 sin implementar.
-- Bloqueantes de negocio: `docs/motores/conciliacion_wallets/PROMPT_MAESTRO.md` §0.
+## Estado actual · 30-sep-2026
+
+Antes de iniciar trabajo, leer `docs/ESTADO_DESARROLLO_2026-09-30.md`.
+
+Resumen vigente:
+
+- desarrollo desplegado en AWS Lightsail;
+- Compras funciona temporalmente con **S3 privado -> copia operacional local -> snapshot PostgreSQL**, no con Google Sheets directo;
+- snapshot de Compras de desarrollo válido: 2.260 líneas;
+- Google Sheets queda pendiente de acceso administrativo de Google Cloud;
+- #89 de wallets tienda/pagos está fusionado;
+- #86 de sanitización de Wallets está fusionado y los identificadores reales se inyectan por runtime;
+- #91 de movimientos/categorización es el único PR funcional abierto y sigue en draft por una decisión de contrato;
+- Cartera sigue sin fuente real identificada; no usar el Excel de Compras como sustituto.
+
+No asumir que las secciones históricas de `Ai_Handoff.md` sobre autenticación Google o fuente viva describen el entorno desplegado actual; la actualización del 30-sep al inicio de ese archivo y el reporte anterior mandan para estado operativo.
+
