@@ -23,7 +23,7 @@ El host se administra mediante AWS Systems Manager. No se abre SSH público.
 - Security group: `sg-00d7300aaf155ea70`
 - CloudFront distribution: `E2SSSNPF1QQN2S`
 - CloudFront domain: `d16dsqj8dxmbnw.cloudfront.net`
-- Bucket de backup externo: `financial-system-asiati-prod-backups-890876258895-us-east-2`
+- Bucket privado de backup/artefactos: `financial-system-asiati-prod-backups-890876258895-us-east-2`
 - Rol de runtime EC2: `financial-system-asiati-prod-ec2`
 - Rol GitHub OIDC: `arn:aws:iam::890876258895:role/financial-system-asiati-github-deploy`
 
@@ -37,14 +37,23 @@ El workflow `.github/workflows/deploy-production.yml` se dispara únicamente cua
 
 GitHub usa OIDC; no existen access keys AWS de larga duración en el repositorio.
 
-El workflow envía un comando SSM a la instancia. En el host:
+El repositorio es privado. La instancia **no tiene credenciales de GitHub** y no hace
+`git fetch` ni `git pull`.
 
-1. se actualiza el checkout a `origin/main`;
-2. se ejecuta `ops/deploy_production.sh`;
-3. PostgreSQL se levanta primero;
-4. Alembic corre hasta `head`;
-5. Docker Compose reconstruye y actualiza los servicios;
-6. el despliegue solo termina bien si `/ready` y `/health` responden.
+El workflow:
+
+1. toma exactamente el commit de `main` que terminó CI en verde;
+2. lo empaqueta excluyendo `.git`, `.env*`, `secrets/` y `fixtures/`;
+3. calcula SHA-256;
+4. sube el artefacto cifrado a `s3://.../deploy/<commit>/source.tar.gz`;
+5. SSM ordena a la EC2 descargarlo con su instance role;
+6. la EC2 verifica SHA-256, conserva `.env.production` y `secrets/` y reemplaza
+   solamente el árbol de aplicación;
+7. `ops/deploy_production.sh` ejecuta PostgreSQL → Alembic → build/up;
+8. el despliegue solo termina bien si `/ready` y `/health` responden.
+
+Si se intenta desplegar otra vez el mismo commit y producción está saludable, el
+instalador termina sin reconstruir innecesariamente.
 
 ## Backups
 
