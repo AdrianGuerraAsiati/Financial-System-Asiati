@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date, datetime, time
+from decimal import Decimal
 from pathlib import Path
 import re
 from typing import Any
@@ -15,6 +17,15 @@ _RANGO_CON_HOJA = re.compile(
 
 class LecturaExcelLocalError(RuntimeError):
     pass
+
+
+def _valor_compatible_google(valor: Any) -> Any:
+    """Devuelve únicamente tipos JSON equivalentes a Sheets values API."""
+    if isinstance(valor, (datetime, date, time)):
+        return valor.isoformat()
+    if isinstance(valor, Decimal):
+        return float(valor)
+    return valor
 
 
 def _separar_rango(rango: str) -> tuple[str, str]:
@@ -98,7 +109,7 @@ class ClienteExcelLocal:
                 max_col=max_col,
                 values_only=True,
             ):
-                valores = list(fila)
+                valores = [_valor_compatible_google(valor) for valor in fila]
                 while valores and valores[-1] is None:
                     valores.pop()
                 resultado.append(valores)
