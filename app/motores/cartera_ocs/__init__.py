@@ -44,6 +44,11 @@ from app.motores.cartera_ocs.validacion import (
     validar_cartera_en_camino,
 )
 
+from app.motores.cartera_ocs.transporte import (
+    DocumentoTransporteCartera,
+    agrupar_documentos_transporte,
+)
+
 __all__ = [
     "OperacionAgrupadaCartera",
     "PatronNegociacionCartera",
@@ -77,8 +82,3 @@ __all__ = [
     "agrupar_operaciones_por_oc",
     "validar_cartera_en_camino",
 ]
-
-from app.motores.cartera_ocs.transporte import (
-    DocumentoTransporteCartera,
-    agrupar_documentos_transporte,
-)
