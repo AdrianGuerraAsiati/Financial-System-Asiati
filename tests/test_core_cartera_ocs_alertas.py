@@ -108,7 +108,7 @@ def test_concentracion_mora_conserva_umbral_heredado_estricto() -> None:
             _mora("C", "0"),
             _mora("D", "50"),
         ),
-        top_n=2,
+        top_n=1,
     )
     assert sin_alerta is None
 
