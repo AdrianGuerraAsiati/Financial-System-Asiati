@@ -11,6 +11,10 @@ from sqlalchemy.orm import Session
 from app.core.auditoria.service import registrar_auditoria
 from app.core.auth.dependencias import Acceso, requiere
 from app.core.session import obtener_session
+from app.motores.cartera_ocs.agrupacion import (
+    OperacionAgrupadaCartera,
+    agrupar_operaciones_por_oc,
+)
 from app.motores.cartera_ocs.almacenamiento import (
     AlmacenComprobantes,
     AlmacenLocalComprobantes,
@@ -99,6 +103,31 @@ def _operacion_como_dict(operacion: object) -> dict[str, object]:
         operacion.porcentaje_anticipo
     )
     return data
+
+
+def _operacion_agrupada_como_dict(
+    operacion: OperacionAgrupadaCartera,
+) -> dict[str, object]:
+    return {
+        "oc": operacion.oc,
+        "lineas": len(operacion.lineas),
+        "clientes": list(operacion.clientes),
+        "negociaciones": list(operacion.negociaciones),
+        "estados": list(operacion.estados),
+        "etapas": list(operacion.etapas),
+        "modos_transporte": list(operacion.modos_transporte),
+        "documentos_transporte": list(operacion.documentos_transporte),
+        "skus": list(operacion.skus),
+        "valor_ddp": _dinero_texto(operacion.valor_ddp),
+        "valor_anticipo": _dinero_texto(operacion.valor_anticipo),
+        "valor_financiado": _dinero_texto(operacion.valor_financiado),
+        "tiene_multiples_clientes": operacion.tiene_multiples_clientes,
+        "tiene_multiples_negociaciones": (
+            operacion.tiene_multiples_negociaciones
+        ),
+        "tiene_multiples_estados": operacion.tiene_multiples_estados,
+        "tiene_multiples_etapas": operacion.tiene_multiples_etapas,
+    }
 
 
 def _mora_como_dict(registro: object) -> dict[str, object]:
@@ -356,6 +385,35 @@ def consultar_operaciones(
             empresa_id=empresa_id,
         )
     ]
+
+
+@router.get("/ocs")
+def consultar_ocs_agrupadas(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
+) -> dict[str, object]:
+    registros = listar_operaciones(
+        fuente,
+        empresa_id=empresa_id,
+    )
+    agrupadas = agrupar_operaciones_por_oc(registros)
+    return {
+        "total": len(agrupadas),
+        "lineas_sin_oc": sum(
+            1
+            for registro in registros
+            if not str(registro.oc or "").strip()
+        ),
+        "items": [
+            _operacion_agrupada_como_dict(item)
+            for item in agrupadas
+        ],
+        "nota": (
+            "Cada OC conserva su composición observada. "
+            "No se asigna un único estado o negociación cuando hay múltiples."
+        ),
+    }
 
 
 @router.get("/mora")
