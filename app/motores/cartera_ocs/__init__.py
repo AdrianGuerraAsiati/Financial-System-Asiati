@@ -9,8 +9,10 @@ from app.motores.cartera_ocs.comprobantes import (
 )
 from app.motores.cartera_ocs.financiacion import (
     CondicionPago,
+    DiagnosticoNegociacion,
     OperacionFinanciada,
     TerminosNegociacion,
+    diagnosticar_tipo_negociacion,
     generar_condicion_pago,
     parsear_tipo_negociacion,
 )
@@ -18,6 +20,10 @@ from app.motores.cartera_ocs.importacion import (
     RegistroCarteraEnCamino,
     normalizar_fila_cartera,
     parsear_numero_cartera,
+)
+from app.motores.cartera_ocs.negociaciones import (
+    PatronNegociacionCartera,
+    diagnosticar_negociaciones,
 )
 from app.motores.cartera_ocs.resumen import (
     AgrupacionMontoCartera,
@@ -35,10 +41,12 @@ from app.motores.cartera_ocs.validacion import (
 
 __all__ = [
     "OperacionAgrupadaCartera",
+    "PatronNegociacionCartera",
     "AgrupacionMontoCartera",
     "CasoValidacionCartera",
     "ComprobantePago",
     "CondicionPago",
+    "DiagnosticoNegociacion",
     "ESTADO_AUDITORIA_PENDIENTE",
     "OperacionFinanciada",
     "RegistroCarteraEnCamino",
@@ -46,6 +54,8 @@ __all__ = [
     "ResumenOperacionesCartera",
     "ResumenProyeccionCartera",
     "TerminosNegociacion",
+    "diagnosticar_negociaciones",
+    "diagnosticar_tipo_negociacion",
     "generar_condicion_pago",
     "normalizar_fila_cartera",
     "parsear_numero_cartera",
