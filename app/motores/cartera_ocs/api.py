@@ -48,6 +48,12 @@ from app.motores.cartera_ocs.proyeccion import (
     FuenteProyeccionCartera,
     listar_proyeccion,
 )
+from app.motores.cartera_ocs.resumen import (
+    AgrupacionMontoCartera,
+    resumir_mora,
+    resumir_operaciones,
+    resumir_proyeccion,
+)
 from app.motores.cartera_ocs.validacion import validar_cartera_en_camino
 from app.motores.cartera_ocs.snapshots import (
     LecturaSnapshotCarteraError,
@@ -107,6 +113,16 @@ def _proyeccion_como_dict(registro: object) -> dict[str, object]:
     data["valor_oc"] = _dinero_texto(registro.valor_oc)
     data["monto"] = _dinero_texto(registro.monto)
     return data
+
+
+def _agrupacion_como_dict(
+    agrupacion: AgrupacionMontoCartera,
+) -> dict[str, object]:
+    return {
+        "clave": agrupacion.clave,
+        "registros": agrupacion.registros,
+        "monto": _dinero_texto(agrupacion.monto),
+    }
 
 
 def _empresa_de_query(empresa_id: int) -> int:
@@ -370,6 +386,100 @@ def consultar_proyeccion(
             empresa_id=empresa_id,
         )
     ]
+
+
+@router.get("/operaciones/resumen")
+def consultar_resumen_operaciones(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
+) -> dict[str, object]:
+    resumen = resumir_operaciones(
+        listar_operaciones(
+            fuente,
+            empresa_id=empresa_id,
+        )
+    )
+    return {
+        "lineas": resumen.lineas,
+        "ocs": resumen.ocs,
+        "clientes": resumen.clientes,
+        "valor_ddp": _dinero_texto(resumen.valor_ddp),
+        "valor_anticipo": _dinero_texto(resumen.valor_anticipo),
+        "valor_financiado": _dinero_texto(resumen.valor_financiado),
+        "por_etapa": [
+            _agrupacion_como_dict(item)
+            for item in resumen.por_etapa
+        ],
+        "nota": (
+            "Resumen descriptivo de las líneas observadas; "
+            "no define saldo de cartera."
+        ),
+    }
+
+
+@router.get("/mora/resumen")
+def consultar_resumen_mora(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    fuente: FuenteMoraCartera = Depends(obtener_fuente_mora),
+) -> dict[str, object]:
+    resumen = resumir_mora(
+        listar_mora(
+            fuente,
+            empresa_id=empresa_id,
+        )
+    )
+    return {
+        "registros": resumen.registros,
+        "clientes": resumen.clientes,
+        "monto": _dinero_texto(resumen.monto),
+        "por_estado": [
+            _agrupacion_como_dict(item)
+            for item in resumen.por_estado
+        ],
+        "por_empresa": [
+            _agrupacion_como_dict(item)
+            for item in resumen.por_empresa
+        ],
+        "nota": (
+            "Resumen descriptivo de la fuente de Mora; "
+            "los estados se conservan sin reinterpretación."
+        ),
+    }
+
+
+@router.get("/proyeccion/resumen")
+def consultar_resumen_proyeccion(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    fuente: FuenteProyeccionCartera = Depends(obtener_fuente_proyeccion),
+) -> dict[str, object]:
+    resumen = resumir_proyeccion(
+        listar_proyeccion(
+            fuente,
+            empresa_id=empresa_id,
+        )
+    )
+    return {
+        "registros": resumen.registros,
+        "ocs": resumen.ocs,
+        "clientes": resumen.clientes,
+        "monto_esperado": _dinero_texto(resumen.monto_esperado),
+        "valor_oc": _dinero_texto(resumen.valor_oc),
+        "por_mes": [
+            _agrupacion_como_dict(item)
+            for item in resumen.por_mes
+        ],
+        "por_comercial": [
+            _agrupacion_como_dict(item)
+            for item in resumen.por_comercial
+        ],
+        "nota": (
+            "Monto esperado y valor de OC se reportan por separado; "
+            "no se suman entre sí."
+        ),
+    }
 
 
 @router.get("/operaciones/{oc}")
