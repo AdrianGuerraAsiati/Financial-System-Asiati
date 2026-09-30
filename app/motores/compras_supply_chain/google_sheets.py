@@ -531,6 +531,67 @@ def construir_fuente_compras_desde_entorno(
     *,
     cliente: ClienteValoresGoogleSheets | None = None,
 ) -> FuenteComprasGoogleSheets:
+    excel_local = os.getenv("COMPRAS_EXCEL_LOCAL_FILE", "").strip()
+    if excel_local:
+        from pathlib import Path
+        from .excel_local import ClienteExcelLocal
+
+        empresa_id = os.getenv("COMPRAS_SHEETS_EMPRESA_ID", "").strip()
+        if not empresa_id:
+            raise ConfiguracionComprasGoogleSheetsError(
+                "Falta configurar: COMPRAS_SHEETS_EMPRESA_ID"
+            )
+        try:
+            empresa = int(empresa_id)
+        except ValueError as exc:
+            raise ConfiguracionComprasGoogleSheetsError(
+                "COMPRAS_SHEETS_EMPRESA_ID debe ser entero."
+            ) from exc
+
+        archivo = Path(excel_local)
+        if not archivo.is_file():
+            raise ConfiguracionComprasGoogleSheetsError(
+                f"No existe COMPRAS_EXCEL_LOCAL_FILE: {excel_local}"
+            )
+
+        rangos = {
+            pais: os.getenv(
+                f"COMPRAS_SHEETS_{pais}_RANGE",
+                rango_default,
+            ).strip()
+            for pais, rango_default in RANGOS_DEFAULT.items()
+        }
+        vacios = [
+            f"COMPRAS_SHEETS_{pais}_RANGE"
+            for pais, rango in rangos.items()
+            if not rango
+        ]
+        if vacios:
+            raise ConfiguracionComprasGoogleSheetsError(
+                "Falta configurar: " + ", ".join(vacios)
+            )
+
+        return FuenteComprasGoogleSheets(
+            cliente=cliente or ClienteExcelLocal(archivo),
+            configuracion=ConfiguracionComprasGoogleSheets(
+                empresa_id=empresa,
+                spreadsheet_id=f"excel-local:{archivo.name}",
+                rangos_por_pais=rangos,
+                cache_ttl_seconds=_entero_positivo(
+                    "COMPRAS_SHEETS_CACHE_SECONDS",
+                    60,
+                ),
+                modo_fuente="EXCEL_LOCAL",
+                rango_supply_chain=(
+                    os.getenv(
+                        "COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE",
+                        "'Supply Chain '!A:Z",
+                    ).strip()
+                    or None
+                ),
+            ),
+        )
+
     if _booleano("COMPRAS_DEMO_MODE", False):
         if os.getenv("APP_ENV", "development").strip().lower() == "production":
             raise ConfiguracionComprasGoogleSheetsError(
