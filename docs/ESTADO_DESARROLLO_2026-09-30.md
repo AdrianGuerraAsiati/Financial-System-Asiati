@@ -64,6 +64,22 @@ No usar `INFORME COMPRAS 2024-2026` como fuente de Cartera.
 
 La fuente real de Cartera/Mora/Proyección sigue pendiente de identificación/configuración. El código de Cartera debe mantenerse separado del workaround de Compras.
 
+Mientras la fuente está bloqueada, sí avanzó el **core desacoplado de la fuente**:
+
+- PR #97 fusionado: resúmenes descriptivos independientes para Operaciones, Mora y Proyección, con `Decimal` y sin mezclar universos financieros;
+- PR #98 fusionado: agrupación de líneas por OC preservando clientes, negociaciones, estados, etapas, transportes, documentos y SKUs; no se inventa un estado agregado;
+- PR #99 fusionado: diagnóstico de `TIPO DE NEGOCIACION` que conserva el parser heredado de MAJO pero hace explícito cuándo cae en defaults y requiere revisión.
+
+Endpoints nuevos:
+
+- `GET /api/v1/cartera/operaciones/resumen`;
+- `GET /api/v1/cartera/mora/resumen`;
+- `GET /api/v1/cartera/proyeccion/resumen`;
+- `GET /api/v1/cartera/ocs`;
+- `GET /api/v1/cartera/negociaciones/diagnostico`.
+
+Guardrail vigente: no calcular todavía un “saldo total de cartera” combinando DDP, mora y proyección; no elegir un estado único para una OC mixta; no convertir los defaults de negociación de MAJO en reglas aprobadas por negocio.
+
 ## Wallets
 
 #89 ya dejó integradas las reglas/catálogos de wallets de tienda y pagos.
