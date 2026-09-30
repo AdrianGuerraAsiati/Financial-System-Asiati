@@ -188,12 +188,10 @@ jobs:
             chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
           fi
 
-          if ! docker buildx version >/dev/null 2>&1; then
-            curl -fsSL \
-              "https://github.com/docker/buildx/releases/download/v0.29.1/buildx-v0.29.1.linux-${buildx_arch}" \
-              -o /usr/local/lib/docker/cli-plugins/docker-buildx
-            chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
-          fi
+          curl -fsSL \
+            "https://github.com/docker/buildx/releases/download/v0.29.1/buildx-v0.29.1.linux-${buildx_arch}" \
+            -o /usr/local/lib/docker/cli-plugins/docker-buildx
+          chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 
           if [[ ! -f "$APP_DIR/.env.production" ]]; then
             POSTGRES_PASSWORD="$(openssl rand -hex 24)"
