@@ -1,3 +1,7 @@
+from app.motores.cartera_ocs.agrupacion import (
+    OperacionAgrupadaCartera,
+    agrupar_operaciones_por_oc,
+)
 from app.motores.cartera_ocs.comprobantes import (
     ComprobantePago,
     ESTADO_AUDITORIA_PENDIENTE,
@@ -30,6 +34,7 @@ from app.motores.cartera_ocs.validacion import (
 )
 
 __all__ = [
+    "OperacionAgrupadaCartera",
     "AgrupacionMontoCartera",
     "CasoValidacionCartera",
     "ComprobantePago",
@@ -49,5 +54,6 @@ __all__ = [
     "resumir_mora",
     "resumir_operaciones",
     "resumir_proyeccion",
+    "agrupar_operaciones_por_oc",
     "validar_cartera_en_camino",
 ]
