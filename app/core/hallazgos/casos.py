@@ -3,8 +3,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar_auditoria
-from app.core.hallazgos.escalamiento import transicion_escalar, transicion_responder
-from app.core.hallazgos.mensajes import TIPO_PREGUNTA, TIPO_RESPUESTA, HallazgoMensaje
+from app.core.hallazgos.escalamiento import (
+    transicion_escalar,
+    transicion_observar,
+    transicion_responder,
+)
+from app.core.hallazgos.mensajes import (
+    TIPO_NOTA,
+    TIPO_PREGUNTA,
+    TIPO_RESPUESTA,
+    HallazgoMensaje,
+)
 from app.core.hallazgos.model import Hallazgo
 from app.core.periodos import Periodo
 from app.core.periodos.errors import PeriodoCerradoError
@@ -133,6 +142,49 @@ def responder_escalado(
             "estado": nuevo_estado,
             "resuelto": hallazgo.resuelto,
             "respuesta": texto,
+        },
+        ip=ip,
+    )
+    return hallazgo
+
+
+def observar_hallazgo(
+    session: Session,
+    hallazgo: Hallazgo,
+    *,
+    usuario_id: int,
+    observacion: str | None,
+    resolver: bool,
+    ip: str | None,
+) -> Hallazgo:
+    nuevo_estado = transicion_observar(hallazgo.estado, observacion, resolver=resolver)
+    periodo = _exigir_periodo_abierto(session, hallazgo)
+    texto = observacion.strip()
+    antes = {"estado": hallazgo.estado, "resuelto": hallazgo.resuelto}
+
+    hallazgo.estado = nuevo_estado
+    if resolver:
+        hallazgo.resuelto = True
+    session.add(
+        HallazgoMensaje(
+            hallazgo_id=hallazgo.id,
+            usuario_id=usuario_id,
+            tipo=TIPO_NOTA,
+            texto=texto,
+        )
+    )
+    registrar_auditoria(
+        session,
+        usuario_id=usuario_id,
+        empresa_id=periodo.empresa_id,
+        accion="hallazgo.observar",
+        entidad="hallazgo",
+        entidad_id=hallazgo.id,
+        antes=antes,
+        despues={
+            "estado": nuevo_estado,
+            "resuelto": hallazgo.resuelto,
+            "observacion": texto,
         },
         ip=ip,
     )

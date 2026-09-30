@@ -9,6 +9,7 @@ from app.core.hallazgos.escalamiento import (
     EscalamientoInvalidoError,
     TextoObligatorioError,
     transicion_escalar,
+    transicion_observar,
     transicion_responder,
 )
 
@@ -56,3 +57,31 @@ def test_answer_requires_text() -> None:
 def test_only_escalated_findings_can_be_answered() -> None:
     with pytest.raises(EscalamientoInvalidoError):
         transicion_responder(ESTADO_DETECTADO, "respuesta", resolver=False)
+
+
+@pytest.mark.parametrize("estado", [ESTADO_DETECTADO, ESTADO_EN_GESTION])
+def test_observation_moves_open_finding_to_in_progress(estado: str) -> None:
+    assert (
+        transicion_observar(estado, "Transferencia a proveedor", resolver=False)
+        == ESTADO_EN_GESTION
+    )
+
+
+@pytest.mark.parametrize("estado", [ESTADO_DETECTADO, ESTADO_EN_GESTION])
+def test_observation_can_resolve_open_finding(estado: str) -> None:
+    assert (
+        transicion_observar(estado, "Pago de tiquetes", resolver=True)
+        == ESTADO_RESUELTO
+    )
+
+
+@pytest.mark.parametrize("observacion", ["", "   ", None])
+def test_observation_requires_text(observacion: str | None) -> None:
+    with pytest.raises(TextoObligatorioError, match="observación"):
+        transicion_observar(ESTADO_DETECTADO, observacion, resolver=False)
+
+
+@pytest.mark.parametrize("estado", [ESTADO_ESCALADO, ESTADO_RESUELTO, "cerrado"])
+def test_only_open_findings_can_be_observed(estado: str) -> None:
+    with pytest.raises(EscalamientoInvalidoError):
+        transicion_observar(estado, "observación", resolver=True)

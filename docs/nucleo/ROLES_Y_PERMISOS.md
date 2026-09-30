@@ -88,6 +88,7 @@ detectado → en_gestion → escalado → en_gestion → resuelto → cerrado
 ```
 
 - `escalar` exige una pregunta escrita. Queda el autor, la fecha y la pregunta.
+- `observar` (permiso `hallazgos.gestionar`) deja una observación escrita (mensaje `NOTA`) y pasa el hallazgo a `en_gestion`, o a `resuelto` si se marca resolver. No aplica a hallazgos escalados: esos los decide el coordinador.
 - El coordinador ve una bandeja "Casos escalados" con los de sus empresas.
 - La respuesta del coordinador queda en el hilo del hallazgo y el caso vuelve al conciliador, o el coordinador lo resuelve directamente.
 - Todo el hilo queda en auditoría.
@@ -180,6 +181,7 @@ GET    /api/v1/supervision/conciliaciones     supervision.ver
 GET    /api/v1/supervision/ingresos           supervision.ver
 GET    /api/v1/supervision/acciones           supervision.ver
 POST   /api/v1/hallazgos/{id}/escalar         hallazgos.escalar     {pregunta}
+POST   /api/v1/hallazgos/{id}/observar        hallazgos.gestionar   {observacion, resolver: bool}
 POST   /api/v1/hallazgos/{id}/responder       hallazgos.responder_escalado {respuesta, resolver: bool}
 GET    /api/v1/hallazgos?estado=escalado      conciliacion.ver
 GET    /api/v1/sistema/salud | /sistema/errores | POST /sistema/cargas/{id}/reprocesar   sistema.*
