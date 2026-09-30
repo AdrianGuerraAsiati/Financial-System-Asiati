@@ -48,6 +48,9 @@ from app.motores.cartera_ocs.mora import (
     FuenteMoraCartera,
     listar_mora,
 )
+from app.motores.cartera_ocs.negociaciones import (
+    diagnosticar_negociaciones,
+)
 from app.motores.cartera_ocs.proyeccion import (
     FuenteProyeccionCartera,
     listar_proyeccion,
@@ -412,6 +415,58 @@ def consultar_ocs_agrupadas(
         "nota": (
             "Cada OC conserva su composición observada. "
             "No se asigna un único estado o negociación cuando hay múltiples."
+        ),
+    }
+
+
+@router.get("/negociaciones/diagnostico")
+def consultar_diagnostico_negociaciones(
+    empresa_id: int,
+    _acceso: Acceso = Depends(ver_cartera),
+    fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
+) -> dict[str, object]:
+    patrones = diagnosticar_negociaciones(
+        listar_operaciones(
+            fuente,
+            empresa_id=empresa_id,
+        )
+    )
+    return {
+        "patrones": len(patrones),
+        "requieren_revision": sum(
+            1
+            for patron in patrones
+            if patron.diagnostico.requiere_revision
+        ),
+        "items": [
+            {
+                "texto": patron.texto,
+                "lineas": patron.lineas,
+                "valor_ddp": _dinero_texto(patron.valor_ddp),
+                "porcentaje_saldo": _decimal_texto(
+                    patron.diagnostico.terminos.porcentaje_saldo
+                ),
+                "dias_plazo": patron.diagnostico.terminos.dias_plazo,
+                "porcentajes_detectados": list(
+                    patron.diagnostico.porcentajes_detectados
+                ),
+                "dias_detectados": patron.diagnostico.dias_detectados,
+                "porcentaje_interpretable": (
+                    patron.diagnostico.porcentaje_interpretable
+                ),
+                "plazo_interpretable": (
+                    patron.diagnostico.plazo_interpretable
+                ),
+                "requiere_revision": patron.diagnostico.requiere_revision,
+                "motivos_revision": list(
+                    patron.diagnostico.motivos_revision
+                ),
+            }
+            for patron in patrones
+        ],
+        "nota": (
+            "El diagnóstico conserva las reglas heredadas de MAJO. "
+            "Solo hace visibles los fallbacks del parser."
         ),
     }
 
