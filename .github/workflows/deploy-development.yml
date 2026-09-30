@@ -429,6 +429,21 @@ jobs:
             -c "SELECT email || '|' || rol || '|' || activo || '|' || debe_cambiar_password FROM usuarios WHERE email IN ('juan.parra@asiati.com.co','sistemas@asiati.com.co') ORDER BY email;" </dev/null
           REMOTE
 
+      - name: Refresh Compras snapshot from local Excel
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+
+          ssh             -o BatchMode=yes             -o StrictHostKeyChecking=accept-new             -i /tmp/lightsail.pem             "$SSH_TARGET"             "sudo bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/financial-system
+          DC=(docker compose --env-file .env.production -f compose.production.yml)
+
+          "${DC[@]}" run --rm -T api             python -m app.motores.compras_supply_chain.capturar_snapshot_dev
+          REMOTE
+
       - name: Verify HTTPS
         shell: bash
         run: |
