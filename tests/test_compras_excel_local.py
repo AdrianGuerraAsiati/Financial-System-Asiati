@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,8 @@ def _crear_excel(ruta: Path) -> None:
     ]
     co.append(encabezados)
     co.append(["Cliente CO", "Proveedor", "OC-1", "EN PRODUCCION", "MARITIMO", 100, 120])
+    co["H1"] = "FECHA"
+    co["H2"] = datetime(2026, 9, 30, 12, 30)
 
     for nombre, oc in (
         ("INFORME CLIENTES (EC)", "OC-2"),
@@ -46,7 +49,7 @@ def test_cliente_excel_local_lee_hoja_con_espacios_y_rango_de_columnas(tmp_path:
 
     valores = cliente.obtener_valores(
         spreadsheet_id="ignorado",
-        rango="'INFORME CLIENTES (CO)'!A:G",
+        rango="'INFORME CLIENTES (CO)'!A:H",
     )
 
     assert valores[0][:5] == [
@@ -57,6 +60,7 @@ def test_cliente_excel_local_lee_hoja_con_espacios_y_rango_de_columnas(tmp_path:
         "MODO TRANSPORTE",
     ]
     assert valores[1][2] == "OC-1"
+    assert valores[1][7] == "2026-09-30T12:30:00"
 
 
 def test_fuente_local_tiene_prioridad_sobre_demo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
