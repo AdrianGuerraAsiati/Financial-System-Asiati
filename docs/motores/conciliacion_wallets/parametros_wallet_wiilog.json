@@ -2,7 +2,7 @@
   "version": 2,
   "fuente_tipo": "WALLET_WIILOG",
   "empresa": "WIILOG",
-  "descripcion": "Wallet recaudadora de Wiilog en Dropi (usuario marcablanca@wiilog.com.co). Recibe fulfillment por orden, comisión de flete de marca blanca y transferencias de usuarios.",
+  "descripcion": "Wallet recaudadora de Wiilog en Dropi. Recibe fulfillment por orden, comisión de flete de marca blanca y transferencias de usuarios. El identificador operativo de la wallet principal se inyecta por entorno.",
   "columnas_wallet": {
     "id": "ID",
     "fecha": "FECHA",
@@ -59,7 +59,7 @@
       "RECHAZADO"
     ],
     "ventana_gracia_dias": 1,
-    "nota_ventana": "En septiembre el 100 % de los cobros entró el mismo día de la guía. Una orden con guía de hoy o de ayer sin cobro todavía no es hallazgo.",
+    "nota_ventana": "La ventana de gracia operativa vigente es de un día. Una orden con guía de hoy o de ayer sin cobro todavía no es hallazgo.",
     "bodegas_sin_fulfillment": [
       "WIILOG BUCARAMANGA"
     ],
@@ -142,7 +142,7 @@
     {
       "codigo": "TRASLADO_WALLET_WIILOG",
       "tipo": "SALIDA",
-      "empieza_con": "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO WIILOGWALLET@WIILOG.COM.CO"
+      "empieza_con": "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO {{WIILOG_WALLET_PRINCIPAL_EMAIL}}"
     },
     {
       "codigo": "TRANSFERENCIA_ENVIADA",

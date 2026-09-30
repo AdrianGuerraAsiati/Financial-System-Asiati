@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -37,8 +38,58 @@ class EjecucionWiilog:
     resumen: dict[str, Any]
 
 
-def cargar_parametros_wiilog() -> dict[str, Any]:
-    return json.loads(PARAMS_PATH.read_text(encoding="utf-8"))
+WIILOG_WALLET_EMAIL_PLACEHOLDER = "{{WIILOG_WALLET_PRINCIPAL_EMAIL}}"
+
+
+def _resolver_identificador_wallet(
+    valor: object,
+    *,
+    wallet_principal_email: str,
+) -> object:
+    if isinstance(valor, str):
+        return valor.replace(
+            WIILOG_WALLET_EMAIL_PLACEHOLDER,
+            wallet_principal_email,
+        )
+    if isinstance(valor, list):
+        return [
+            _resolver_identificador_wallet(
+                item,
+                wallet_principal_email=wallet_principal_email,
+            )
+            for item in valor
+        ]
+    if isinstance(valor, dict):
+        return {
+            clave: _resolver_identificador_wallet(
+                item,
+                wallet_principal_email=wallet_principal_email,
+            )
+            for clave, item in valor.items()
+        }
+    return valor
+
+
+def cargar_parametros_wiilog(
+    *,
+    wallet_principal_email: str | None = None,
+) -> dict[str, Any]:
+    identificador = (
+        wallet_principal_email
+        if wallet_principal_email is not None
+        else os.getenv("WIILOG_WALLET_PRINCIPAL_EMAIL", "")
+    ).strip()
+    if not identificador:
+        raise RuntimeError(
+            "Falta WIILOG_WALLET_PRINCIPAL_EMAIL. "
+            "Configura el identificador de la wallet principal fuera de Git."
+        )
+
+    parametros = json.loads(PARAMS_PATH.read_text(encoding="utf-8"))
+    return _resolver_identificador_wallet(
+        parametros,
+        wallet_principal_email=identificador,
+    )
 
 
 def _leer_excel(contenido: bytes, nombre: str) -> pd.DataFrame:

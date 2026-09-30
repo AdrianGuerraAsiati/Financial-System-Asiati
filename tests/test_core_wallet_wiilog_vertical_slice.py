@@ -3,6 +3,7 @@ import os
 from datetime import date
 
 import pandas as pd
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,14 @@ from app.core.fuentes import Fuente
 from app.core.periodos import Periodo
 from app.main import app
 from tests.apoyo_auth import cliente_superadmin
+
+
+@pytest.fixture(autouse=True)
+def _wiilog_runtime_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "WIILOG_WALLET_PRINCIPAL_EMAIL",
+        "wallet-principal@wiilog.test",
+    )
 
 
 def _engine():

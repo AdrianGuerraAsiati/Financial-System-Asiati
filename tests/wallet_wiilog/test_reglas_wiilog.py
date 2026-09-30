@@ -8,8 +8,15 @@ import pytest
 from app.motores.conciliacion_wallets.wiilog import conciliar_wallet_wiilog
 from app.motores.conciliacion_wallets.wiilog import normalizar as n
 
+PARAMS_TEXT = (
+    Path(__file__).resolve().parents[2]
+    / "docs/motores/conciliacion_wallets/parametros_wallet_wiilog.json"
+).read_text(encoding="utf-8")
 PARAMS = json.loads(
-    (Path(__file__).resolve().parents[2] / "docs/motores/conciliacion_wallets/parametros_wallet_wiilog.json").read_text(encoding="utf-8")
+    PARAMS_TEXT.replace(
+        "{{WIILOG_WALLET_PRINCIPAL_EMAIL}}",
+        "wallet-principal@wiilog.test",
+    )
 )
 
 COLS_O = [
@@ -196,7 +203,7 @@ def test_transferencia_por_super_admin_queda_para_revisar_con_observacion():
 
 
 def test_traslado_a_wallet_wiilog_es_automatico():
-    w = Wallet(5_000_000).mov("SALIDA", 1_000_000, "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO wiilogwallet@wiilog.com.co, POR SUPER ADMIN")
+    w = Wallet(5_000_000).mov("SALIDA", 1_000_000, "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO wallet-principal@wiilog.test, POR SUPER ADMIN")
     res = correr([orden(1)], w.mov("ENTRADA", 2500, ff_gg(1), 1))
     m = res.movimientos.set_index("mov_id").loc[1001]
     assert m.concepto == "TRASLADO_WALLET_WIILOG"
