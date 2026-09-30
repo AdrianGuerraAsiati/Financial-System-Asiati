@@ -4,13 +4,10 @@
 """
 import json
 import sys
-from pathlib import Path
-
 import pandas as pd
 
+from .integracion import cargar_parametros_wiilog
 from .motor import conciliar_wallet_wiilog
-
-PARAMS = Path(__file__).resolve().parents[4] / "docs/motores/conciliacion_wallets/parametros_wallet_wiilog.json"
 
 
 def main(argv: list[str]) -> int:
@@ -18,7 +15,7 @@ def main(argv: list[str]) -> int:
         print(__doc__)
         return 2
     ordenes, wallet, desde, hasta = argv
-    params = json.loads(PARAMS.read_text(encoding="utf-8"))
+    params = cargar_parametros_wiilog()
     r = conciliar_wallet_wiilog(pd.read_excel(ordenes), pd.read_excel(wallet), params, desde, hasta)
     for c in r.chequeos:
         print(f"{c.codigo}: {c.estado} · {c.mensaje}")
