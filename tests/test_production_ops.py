@@ -47,8 +47,9 @@ def test_private_repo_deploy_uses_temporary_lightsail_ssh() -> None:
 
     assert "actions/checkout@v4" in workflow
     assert "get-instance-access-details" in workflow
-    assert ".accessDetails.certKey" in workflow
-    assert "lightsail.pem-cert.pub" in workflow
+    assert ".accessDetails.certKey // empty" in workflow
+    assert "ssh-keygen -y -f /tmp/lightsail.pem" in workflow
+    assert "LIGHTSAIL_HOST: 3.141.226.208" in workflow
     assert "scp" in workflow
     assert "install_release_artifact.sh" in workflow
     assert "sha256sum -c -" in workflow
