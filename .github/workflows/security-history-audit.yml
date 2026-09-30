@@ -32,16 +32,17 @@ jobs:
           VERSION="8.30.1"
           BASE="https://github.com/gitleaks/gitleaks/releases/download/v$VERSION"
 
-          curl -fsSLo /tmp/gitleaks.tar.gz "$BASE/gitleaks_${VERSION}_linux_x64.tar.gz"
+          ARCHIVE="gitleaks_${VERSION}_linux_x64.tar.gz"
+          curl -fsSLo "/tmp/$ARCHIVE" "$BASE/$ARCHIVE"
           curl -fsSLo /tmp/gitleaks_checksums.txt "$BASE/gitleaks_${VERSION}_checksums.txt"
 
           (
             cd /tmp
-            grep "gitleaks_${VERSION}_linux_x64.tar.gz" gitleaks_checksums.txt | sha256sum -c -
+            grep " $ARCHIVE$" gitleaks_checksums.txt | sha256sum -c -
           )
 
           mkdir -p /tmp/gitleaks
-          tar -xzf /tmp/gitleaks.tar.gz -C /tmp/gitleaks gitleaks
+          tar -xzf "/tmp/$ARCHIVE" -C /tmp/gitleaks gitleaks
           chmod +x /tmp/gitleaks/gitleaks
           /tmp/gitleaks/gitleaks version
 
