@@ -55,6 +55,22 @@ def _empresa_de_periodo(
     return periodo.empresa_id if periodo is not None else None
 
 
+def _asegurar_periodo_visible(
+    session: Session,
+    acceso: Acceso,
+    periodo_id: int,
+) -> Periodo:
+    periodo = session.get(Periodo, periodo_id)
+    if periodo is None:
+        raise HTTPException(status_code=404, detail="No encontramos ese período.")
+    if (
+        acceso.empresas_visibles is not None
+        and periodo.empresa_id not in acceso.empresas_visibles
+    ):
+        raise HTTPException(status_code=404, detail="No encontramos ese período.")
+    return periodo
+
+
 def _asegurar_fuente_visible(
     session: Session,
     acceso: Acceso,
@@ -288,14 +304,12 @@ def categorizar_movimientos_lote(
 @router.post("/movimientos/recategorizar")
 def recategorizar(
     datos: RecategorizarEntrada,
-    acceso: Acceso = Depends(
-        requiere("movimientos.categorizar", empresa_de=_empresa_de_periodo)
-    ),
+    acceso: Acceso = Depends(requiere("movimientos.categorizar")),
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
+    periodo = _asegurar_periodo_visible(session, acceso, datos.periodo_id)
     if datos.fuente_id is not None:
         empresa_fuente = _asegurar_fuente_visible(session, acceso, datos.fuente_id)
-        periodo = session.get(Periodo, datos.periodo_id)
         if periodo is None or empresa_fuente != periodo.empresa_id:
             raise HTTPException(
                 status_code=422,
@@ -311,7 +325,7 @@ def recategorizar(
         registrar_auditoria(
             session,
             usuario_id=acceso.usuario.id,
-            empresa_id=_empresa_de_periodo(datos.periodo_id, session),
+            empresa_id=periodo.empresa_id,
             accion="movimientos.recategorizar",
             entidad="periodo",
             entidad_id=datos.periodo_id,
@@ -522,14 +536,12 @@ def importar_catalogo_wallets(
 def reaplicar(
     regla_id: int,
     datos: ReaplicarReglaEntrada,
-    acceso: Acceso = Depends(
-        requiere("reglas.crear", empresa_de=_empresa_de_periodo)
-    ),
+    acceso: Acceso = Depends(requiere("reglas.crear")),
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
     regla = session.get(ReglaCategorizacion, regla_id)
     _asegurar_regla_visible(session, acceso, regla)
-    periodo = session.get(Periodo, datos.periodo_id)
+    periodo = _asegurar_periodo_visible(session, acceso, datos.periodo_id)
 
     if regla.fuente_id is not None:
         empresa_fuente = empresa_de_fuente(session, regla.fuente_id)
