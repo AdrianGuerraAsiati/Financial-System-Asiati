@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "fecha": "2026-09-29",
+  "fuente_tipo": "SOLO_PAGOS",
+  "descripcion": "Wallets que solo reciben o mueven pagos. No se cruzan contra órdenes: se valida el saldo (C0) y se categoriza cada movimiento con el catálogo, como un extracto bancario.",
+  "columnas_wallet": {
+    "id": "ID",
+    "fecha": "FECHA",
+    "fecha_formato": "%d-%m-%Y %H:%M",
+    "tipo": "TIPO",
+    "monto": "MONTO",
+    "monto_previo": "MONTO PREVIO",
+    "orden_id": "ORDEN ID",
+    "guia": "NUMERO DE GUIA",
+    "descripcion": "DESCRIPCIÓN",
+    "actor": "USUARIO QUE REALIZA EL MOVIMIENTO",
+    "cuenta_retiro": "CUENTA",
+    "concepto_retiro": "CONCEPTO DE RETIRO"
+  },
+  "wallets_propias": [
+    "menpros.original@gmail.com",
+    "proveedor@asiati.com.co",
+    "pagos@asiati.com.co",
+    "coordinacionmiijo@gmail.com",
+    "wiilogwallet@wiilog.com.co"
+  ],
+  "nota_wallets_propias": "Wallets del grupo que se concilian: una transferencia entre ellas es TRASLADO y se empareja. cuentas_destino_grupo (29-sep, Juan Felipe): son del grupo pero son cuentas destino; su movimiento no es traslado automático, el conciliador lo categoriza.",
+  "wallets": [
+    {
+      "usuario_email": "pagos@asiati.com.co",
+      "nombre": "Pagos Dropi (ASIATI CORP)",
+      "pais": "CO",
+      "empresa": "ASIATI",
+      "unidad_negocio_pagos": null,
+      "nota": "Confirmado 29-sep: es Pagos Dropi. Recibe transferencias de clientes (proveedores que despachan desde bodegas Wiilog) y las retira al banco. Correos de las demás wallets de pagos: Juan Felipe los confirma la semana del 5-oct."
+    }
+  ],
+  "reglas": {
+    "entrada_de_tercero_externo": "Se propone 'PAGO DE CLIENTE POR WALLET' con el correo como tercero. El cruce contra facturas es del motor de cartera (fuera de alcance hoy).",
+    "retiro_a_banco": "RETIRO_SALDO. Cuando exista el motor de bancos se cruza contra el extracto (misma cifra, 1–3 días).",
+    "transferencia_a_persona": "Transferencias a correos de personas (p. ej. empleados) quedan requiere_revision con observación obligatoria."
+  },
+  "decisiones_pendientes": [
+    "Unidad de negocio de los pagos de clientes.",
+    "Destino de las transferencias a hugo.rojas@asiati.com.co.",
+    "Lista de wallets de pagos con sus correos (semana del 5-oct)."
+  ],
+  "cuentas_destino_grupo": [
+    "teampekop@gmail.com",
+    "mixmarketc@gmail.com",
+    "kuaimai903@gmail.com"
+  ]
+}

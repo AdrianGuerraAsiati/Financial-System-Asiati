@@ -1,0 +1,178 @@
+{
+  "version": 2,
+  "fecha": "2026-09-29",
+  "fuente_tipo": "TIENDA",
+  "descripcion": "Parámetros del motor de wallets de tienda (auditoría). Una tienda tiene rol DROPSHIPPER (vende y recibe la ganancia) o PROVEEDOR (despacha y recibe el precio proveedor). Las tiendas son del grupo: la plata que Dropi le debe a la tienda es hallazgo crítico.",
+  "columnas_wallet": {
+    "id": "ID",
+    "fecha": "FECHA",
+    "fecha_formato": "%d-%m-%Y %H:%M",
+    "tipo": "TIPO",
+    "monto": "MONTO",
+    "monto_previo": "MONTO PREVIO",
+    "orden_id": "ORDEN ID",
+    "guia": "NUMERO DE GUIA",
+    "descripcion": "DESCRIPCIÓN",
+    "actor": "USUARIO QUE REALIZA EL MOVIMIENTO",
+    "cuenta_retiro": "CUENTA",
+    "concepto_retiro": "CONCEPTO DE RETIRO"
+  },
+  "columnas_ordenes": {
+    "orden_id": "ID",
+    "estatus": "ESTATUS",
+    "tipo_envio": "TIPO DE ENVIO",
+    "transportadora": "TRANSPORTADORA",
+    "bodega": "BODEGA",
+    "fecha_guia": "FECHA GENERACION DE GUIA",
+    "fecha_entregado": "FECHA ENTREGADO",
+    "fecha_devolucion": "FECHA DEVOLUCION",
+    "fechas_estado_formato": "%d/%m/%Y",
+    "fecha_reporte": "FECHA DE REPORTE",
+    "fecha_reporte_formato": "%d-%m-%Y",
+    "email_dropshipper": "EMAIL",
+    "email_proveedor": "PROVEEDOR EMAIL",
+    "ganancia_dropshipper": "GANANCIA TOTAL DE DROPSHIPPER",
+    "ganancia_proveedor": "GANANCIA TOTAL DE PROVEEDORES",
+    "precio_proveedor_x_cantidad": "PRECIO PROVEEDOR X CANTIDAD",
+    "precio_flete": "PRECIO FLETE",
+    "valor_compra": "VALOR DE COMPRA EN PRODUCTOS"
+  },
+  "nota_ordenes": "El reporte trae una fila por línea de producto: se filtran las líneas de la tienda según su rol y se agrupa por ID. Un pago con fecha posterior al día del reporte no se puede validar con ese reporte (PAGO_POSTERIOR_AL_REPORTE).",
+  "wallets_propias": [
+    "menpros.original@gmail.com",
+    "proveedor@asiati.com.co",
+    "pagos@asiati.com.co",
+    "coordinacionmiijo@gmail.com",
+    "wiilogwallet@wiilog.com.co"
+  ],
+  "nota_wallets_propias": "Wallets del grupo que se concilian: una transferencia entre ellas es TRASLADO y se empareja. cuentas_destino_grupo (29-sep, Juan Felipe): son del grupo pero son cuentas destino; su movimiento no es traslado automático, el conciliador lo categoriza.",
+  "tiendas": [
+    {
+      "usuario_email": "menpros.original@gmail.com",
+      "nombre": "Menpros",
+      "rol": "DROPSHIPPER",
+      "pais": "CO",
+      "empresa": "ORIGEN VITAL",
+      "nota": "Empresa confirmada 29-sep."
+    },
+    {
+      "usuario_email": "proveedor@asiati.com.co",
+      "nombre": "Proveeduría ASIATI",
+      "rol": "PROVEEDOR",
+      "pais": "CO",
+      "empresa": "TIENDAS ASIATI",
+      "nota": "Empresa confirmada 29-sep. Despacha desde WIILOG BOGOTÁ: paga fulfillment a Wiilog."
+    },
+    {
+      "usuario_email": "coordinacionmiijo@gmail.com",
+      "nombre": "Recompra Menpros (Comercial Contact Center)",
+      "rol": "DROPSHIPPER",
+      "pais": "CO",
+      "empresa": "ORIGEN VITAL",
+      "nota": "Confirmado 29-sep: es la wallet de recompra Menpros. En septiembre no tiene órdenes; solo cubrió saldos negativos de otros usuarios."
+    }
+  ],
+  "ganancia": {
+    "paga_en": {
+      "DROPSHIPPER": {
+        "estatus": [
+          "ENTREGADO"
+        ],
+        "tipos_envio": [
+          "CON RECAUDO"
+        ]
+      },
+      "PROVEEDOR": {
+        "estatus": [
+          "ENTREGADO"
+        ],
+        "tipos_envio": [
+          "CON RECAUDO",
+          "SIN RECAUDO"
+        ]
+      }
+    },
+    "un_pago_por": {
+      "DROPSHIPPER": "ORDEN",
+      "PROVEEDOR": "LINEA"
+    },
+    "ventana_dias": 2,
+    "tolerancia_centavos": 100,
+    "nota": "Septiembre: Dropi paga la ganancia 1 día después de ENTREGADO, por el valor exacto del reporte. Dropshipper: un pago por orden, solo con recaudo (sin recaudo no hay ganancia: la tienda paga la orden por adelantado). Proveedor: un pago por línea de producto, con y sin recaudo. Si el reporte trae ganancia 0 el pago queda PAGADA_SIN_VALIDAR."
+  },
+  "orden_sin_recaudo": {
+    "cobro_esperado": "PRECIO PROVEEDOR X CANTIDAD + PRECIO FLETE",
+    "reembolso_por_estatus": {
+      "CANCELADO": "TOTAL",
+      "RECHAZADO": "TOTAL",
+      "DEVOLUCION": "PRODUCTO"
+    },
+    "nota": "Al crear una orden sin recaudo, Dropi cobra producto + flete. Si se cancela o rechaza devuelve todo; si hay devolución devuelve solo el producto (el flete se pierde). Septiembre: 100 % de los cobros cuadra."
+  },
+  "devolucion_con_recaudo": {
+    "estatus_devolucion": [
+      "DEVOLUCION",
+      "DEVOLUCION EN BODEGA"
+    ],
+    "ventana_dias": 2,
+    "cobro_por_transportadora": {
+      "INTERRAPIDISIMO": {
+        "concepto": "COBRO_FLETE_INICIAL",
+        "comision_pct": 0,
+        "comision_fija": 0
+      },
+      "WIILOG": {
+        "concepto": "COBRO_FLETE_INICIAL",
+        "comision_pct": 0.03,
+        "comision_fija": 0
+      },
+      "ENVIA": {
+        "concepto": "COBRO_DEVOLUCION",
+        "comision_pct": 0.045,
+        "comision_fija": 1000
+      },
+      "COORDINADORA": {
+        "concepto": "COBRO_DEVOLUCION",
+        "comision_pct": null,
+        "comision_fija": null
+      },
+      "TCC": {
+        "concepto": "COBRO_DEVOLUCION",
+        "comision_pct": null,
+        "comision_fija": null
+      }
+    },
+    "nota": "Una devolución con recaudo se cobra una sola vez y es el mismo flete, pero SIN la comisión de recaudo (en una devolución no se recauda). El PRECIO FLETE del reporte trae la comisión incluida: esperado = PRECIO FLETE − (comision_pct × VALOR DE COMPRA + comision_fija). Comisiones deducidas de septiembre (no inventadas): Interrapidísimo 0 (151/151 cobran el flete completo); Wiilog 3 % (76/76); Envía 4,5 % + 1.000 (314/322). Coordinadora y TCC: por confirmar (pocos casos y no siguen un patrón). Regla que aplica siempre: el cobro nunca puede ser mayor que el PRECIO FLETE (COBRO_MAYOR_AL_FLETE). La columna COSTO DEVOLUCION FLETE del reporte no coincide con lo cobrado: no se usa."
+  },
+  "fulfillment_proveedor": {
+    "tarifas": "Se toman de parametros_wallet_wiilog.json → fulfillment.tarifas_por_bodega (una sola fuente de verdad).",
+    "tipos_envio_que_cobran": [
+      "CON RECAUDO"
+    ],
+    "estatus_no_cobra": [
+      "CANCELADO"
+    ],
+    "estatus_sin_guia": [
+      "PENDIENTE",
+      "PENDIENTE CONFIRMACION",
+      "EN PROCESAMIENTO",
+      "TELEMERCADEO",
+      "ASIGNADO",
+      "ASIGNADO A ZONA"
+    ],
+    "ventana_dias": 1,
+    "nota": "Al proveedor se le cobra el FF de la bodega por orden (Dropi lo reparte entre las líneas: 2 líneas = 2 cobros de 1.250). Solo con recaudo; sin recaudo la Proveeduría no paga FF en septiembre (quién lo paga está por confirmar). Cancelada o sin guía no se cobra. Cobro de 2 × tarifa = DUPLICADO. Un cobro con fecha posterior al reporte de órdenes (la guía se generó después) queda COBRO_POSTERIOR_AL_REPORTE: se valida con el reporte siguiente."
+  },
+  "decisiones_pendientes": [
+    "Comisión de recaudo de Coordinadora y TCC (o confirmar que se validan solo con el tope del flete).",
+    "Quién paga el FF de las órdenes sin recaudo de la Proveeduría (Wiilog recibió 'FF de cierre' de otro pagador).",
+    "Duplicados de FF: reclamar a Dropi o ajustar entre empresas (misma decisión que Wiilog).",
+    "Correcciones [BACKFILL DROP-20331]: Dropi retiró ganancias ya pagadas de órdenes viejas. ¿Se reclaman?",
+    "Categoría de los RET. ADMIN de tiquetes y préstamo (Proveeduría → Wiilog)."
+  ],
+  "cuentas_destino_grupo": [
+    "teampekop@gmail.com",
+    "mixmarketc@gmail.com",
+    "kuaimai903@gmail.com"
+  ]
+}

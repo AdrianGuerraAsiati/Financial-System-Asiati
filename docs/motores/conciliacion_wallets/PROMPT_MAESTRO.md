@@ -134,6 +134,8 @@ frontend/src/motores/conciliacion-wallets/
 
 ## §4 · LAS TRES WALLETS
 
+> **Reemplazada por `WALLETS_TIENDAS_Y_PAGOS.md` (§9, decisión 0006):** con los datos de septiembre, la Proveeduría ASIATI resultó ser una tienda con rol PROVEEDOR, pagos@ es la wallet que solo recibe pagos, y la conciliación entre wallets ya se construye.
+
 Una sola es la que cruza contra órdenes. Las otras dos son distintas y hay que respetarlo.
 
 | Wallet | Naturaleza | Soporte del cruce | Qué hace el motor |
@@ -172,6 +174,8 @@ Seis cosas estaban mal en el diseño original. **No las implementes como estaban
 **1. El wallet paga ganancia, no valor de venta.** La versión anterior comparaba el pago contra `VALOR DE COMPRA EN PRODUCTOS`. Lo que entra al wallet es `GANANCIA TOTAL DE DROPSHIPPER` sumada por orden. Con la comparación anterior, C1 marcaría el 100 % de las órdenes como diferencia.
 
 **2. Sin recaudo es una exclusión, no un hallazgo.** 628 de las 1.555 faltantes eran envíos sin recaudo. Van fuera del universo conciliable, declaradas en parámetros y contabilizadas aparte. Nunca aparecen en la bandeja.
+
+> **§5.3 reemplazada por `WALLETS_TIENDAS_Y_PAGOS.md` (§9, decisión 0006):** en septiembre el 100 % de las ganancias se pagó 1 día después de la entrega, así que la ventana es de 2 días; con 15 quedarían escondidas dos semanas de pagos faltantes.
 
 **3. El pago llega con rezago.** Una orden entregada hace cinco días sin pago es normal, no un hallazgo. Parámetro `ventana_gracia_dias`, arranca en 15. Dentro de la ventana el estado es `EN_VENTANA`; pasada, `SIN_PAGO`.
 
@@ -277,6 +281,8 @@ Redondeado a un decimal, por fuente. El núcleo lo guarda en `cierres_motor.scor
 ---
 
 ## §7 · PARÁMETROS — UN JUEGO POR WALLET
+
+> **Reemplazada por `WALLETS_TIENDAS_Y_PAGOS.md` (§9, decisión 0006):** "SALIDA POR NUEVA ORDEN" es el cobro de una orden sin recaudo, no el fulfillment; el FF es "SALIDA POR FULFILLMENT" y lo paga el proveedor. Los parámetros vigentes están en `parametros_wallet_tienda.json` y `parametros_wallet_pagos.json`.
 
 Los parámetros los versiona y los guarda el núcleo. Tu motor solo declara el esquema y los consume.
 
