@@ -1,0 +1,10 @@
+title = "Financial System ASIATI gitleaks policy"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Synthetic JWT secret used only by auth tests"
+condition = "AND"
+paths = ['''^tests/apoyo_auth\.py$''']
+regexes = ['''secreto-de-prueba-''']
