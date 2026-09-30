@@ -43,3 +43,14 @@ DATABASE_URL=... sh ops/restore_postgres.sh /ruta/backup.sql.gz
 ## Sesión en producción
 
 En producción, `SESSION_COOKIE_SECURE=true` es obligatorio y el acceso debe hacerse exclusivamente por HTTPS. En desarrollo local puede usarse `false` para `http://127.0.0.1`, pero ese valor no debe desplegarse en producción.
+
+## Sincronización por cambios de Google Sheets
+
+Generar un secreto independiente para `GOOGLE_SHEETS_CHANGE_SECRET` y configurarlo
+también como `ASIATI_WEBHOOK_SECRET` en las Script Properties de cada spreadsheet.
+El procedimiento de instalación del trigger está en
+`docs/GOOGLE_SHEETS_EVENT_REFRESH.md`.
+
+Antes de activar el trigger debe existir al menos un snapshot inicial de cada módulo que
+se quiera mostrar en Inicio. El webhook no recalcula en cada edición: registra el cambio,
+aplica debounce y conserva el último snapshot válido durante la actualización.

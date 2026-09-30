@@ -1,11 +1,17 @@
-"""Ningún endpoint de /api/v1 responde sin sesión, salvo login y logout."""
+"""Los endpoints V1 exigen sesión salvo públicos o integraciones autenticadas por máquina."""
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 
-PUBLICOS = {("POST", "/api/v1/auth/login"), ("POST", "/api/v1/auth/logout")}
+PUBLICOS = {
+    ("POST", "/api/v1/auth/login"),
+    ("POST", "/api/v1/auth/logout"),
+}
+AUTENTICADOS_POR_MAQUINA = {
+    ("POST", "/api/v1/integrations/google-sheets/changed"),
+}
 
 
 def _endpoints_v1() -> list[tuple[str, str]]:
@@ -22,9 +28,18 @@ def test_session_endpoints_are_registered() -> None:
     assert ("POST", "/api/v1/hallazgos/{hallazgo_id}/escalar") in _endpoints_v1()
 
 
+def test_machine_authenticated_endpoints_are_explicit() -> None:
+    assert AUTENTICADOS_POR_MAQUINA <= set(_endpoints_v1())
+
+
 @pytest.mark.parametrize(
     ("metodo", "ruta"),
-    [endpoint for endpoint in _endpoints_v1() if endpoint not in PUBLICOS],
+    [
+        endpoint
+        for endpoint in _endpoints_v1()
+        if endpoint not in PUBLICOS
+        and endpoint not in AUTENTICADOS_POR_MAQUINA
+    ],
 )
 def test_endpoint_rejects_requests_without_session(
     metodo: str, ruta: str, monkeypatch: pytest.MonkeyPatch
@@ -34,7 +49,11 @@ def test_endpoint_rejects_requests_without_session(
     monkeypatch.setenv("JWT_SECRET", "s" * 40)
     client = TestClient(app, base_url="https://testserver")
 
-    respuesta = client.request(metodo, ruta.replace("{usuario_id}", "1").replace("{hallazgo_id}", "1"), json={})
+    respuesta = client.request(
+        metodo,
+        ruta.replace("{usuario_id}", "1").replace("{hallazgo_id}", "1"),
+        json={},
+    )
 
     assert respuesta.status_code == 401
     assert "Inicia sesión" in respuesta.json()["detail"]

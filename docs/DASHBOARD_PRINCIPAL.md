@@ -18,6 +18,20 @@ No reemplaza los dashboards de Cartera, Compras o Conciliación.
 
 La V1 trabaja sobre **una empresa seleccionada**.
 
+### Lectura snapshot-first
+
+Inicio no consulta Google Sheets al abrirse o al recargar el navegador. Para Cartera y
+Compras consume el último snapshot persistido en PostgreSQL. Los cambios de los Sheets
+se notifican mediante el webhook documentado en
+`docs/GOOGLE_SHEETS_EVENT_REFRESH.md`, se agrupan con debounce y producen una nueva
+captura solo cuando cambia el hash.
+
+La web consulta un endpoint de versión ligero y vuelve a renderizar Inicio únicamente
+cuando cambia el `snapshot_id`. Mientras una fuente se actualiza, conserva visibles
+los datos anteriores.
+
+
+
 No existe todavía consolidación multiempresa en una sola cifra. El selector global de empresa determina el contexto del dashboard.
 
 ## Permisos

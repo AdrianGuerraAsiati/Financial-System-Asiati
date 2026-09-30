@@ -588,7 +588,14 @@ input, select {
 .home-module-footer {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .6rem;
   min-height: 2.2rem;
+}
+
+.home-module-footer small {
+  font-size: .66rem;
 }
 .home-no-action {
   font-size: .75rem;
