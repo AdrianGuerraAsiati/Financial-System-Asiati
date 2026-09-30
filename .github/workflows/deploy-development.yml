@@ -163,34 +163,37 @@ jobs:
           fi
           systemctl enable --now docker
 
-          install_docker_plugin() {
-            local name="$1"
-            local version="$2"
-            local url_name="$3"
-            if docker "$name" version >/dev/null 2>&1; then
-              return 0
-            fi
+          local_arch="$(uname -m)"
+          case "$local_arch" in
+            x86_64)
+              compose_arch=x86_64
+              buildx_arch=amd64
+              ;;
+            aarch64|arm64)
+              compose_arch=aarch64
+              buildx_arch=arm64
+              ;;
+            *)
+              echo "Arquitectura no soportada para plugins Docker: $local_arch" >&2
+              exit 2
+              ;;
+          esac
 
-            local arch
-            case "$(uname -m)" in
-              x86_64) arch=x86_64 ;;
-              aarch64|arm64) arch=aarch64 ;;
-              *)
-                echo "Arquitectura no soportada para plugin Docker: $(uname -m)" >&2
-                exit 2
-                ;;
-            esac
+          mkdir -p /usr/local/lib/docker/cli-plugins
 
-            mkdir -p /usr/local/lib/docker/cli-plugins
+          if ! docker compose version >/dev/null 2>&1; then
             curl -fsSL \
-              "https://github.com/docker/${url_name}/releases/download/${version}/${url_name}-linux-${arch}" \
-              -o "/usr/local/lib/docker/cli-plugins/docker-${name}"
-            chmod +x "/usr/local/lib/docker/cli-plugins/docker-${name}"
-            docker "$name" version >/dev/null
-          }
+              "https://github.com/docker/compose/releases/download/v2.40.1/docker-compose-linux-${compose_arch}" \
+              -o /usr/local/lib/docker/cli-plugins/docker-compose
+            chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+          fi
 
-          install_docker_plugin compose v2.40.1 compose
-          install_docker_plugin buildx v0.29.1 buildx
+          if ! docker buildx version >/dev/null 2>&1; then
+            curl -fsSL \
+              "https://github.com/docker/buildx/releases/download/v0.29.1/buildx-v0.29.1.linux-${buildx_arch}" \
+              -o /usr/local/lib/docker/cli-plugins/docker-buildx
+            chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+          fi
 
           if [[ ! -f "$APP_DIR/.env.production" ]]; then
             POSTGRES_PASSWORD="$(openssl rand -hex 24)"
