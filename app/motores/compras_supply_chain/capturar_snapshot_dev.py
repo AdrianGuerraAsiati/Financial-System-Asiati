@@ -3,6 +3,10 @@ from __future__ import annotations
 import json
 import os
 
+# Registrar explícitamente los modelos con FK que este proceso usa fuera de
+# FastAPI. Al ejecutarse como módulo aislado, app.main no importa el metadata.
+from app.core import empresas as _empresas  # noqa: F401
+from app.core import usuarios as _usuarios  # noqa: F401
 from app.core.auditoria.service import registrar_auditoria
 from app.core.session import crear_session
 
