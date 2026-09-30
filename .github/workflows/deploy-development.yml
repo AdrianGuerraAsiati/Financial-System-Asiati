@@ -280,6 +280,67 @@ jobs:
             "$SSH_TARGET" \
             "rm -rf /tmp/financial-system-release-inspect && mkdir -p /tmp/financial-system-release-inspect && tar -xzf /tmp/financial-system-release.tar.gz -C /tmp/financial-system-release-inspect && sudo bash /tmp/financial-system-release-inspect/ops/install_release_artifact.sh /tmp/financial-system-release.tar.gz '$RELEASE_SHA'"
 
+      - name: Ensure development users
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            "$SSH_TARGET" \
+            "sudo bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/financial-system
+          DC=(docker compose --env-file .env.production -f compose.production.yml)
+
+          "${DC[@]}" run --rm \
+            -e DEV_ADMIN_EMAIL=juan.parra@asiati.com.co \
+            -e DEV_ADMIN_NAME="Juan Felipe Parra" \
+            api python -m app.core.usuarios.asegurar_superadmin_dev
+
+          "${DC[@]}" run --rm \
+            -e DEV_ADMIN_EMAIL=sistemas@asiati.com.co \
+            -e DEV_ADMIN_NAME="Adrian" \
+            api python -m app.core.usuarios.asegurar_superadmin_dev
+
+          "${DC[@]}" run --rm api python - <<'PY'
+          from sqlalchemy import select
+
+          from app.core.session import obtener_session
+          from app.core.usuarios.model import Usuario
+          from app.core.usuarios.roles import ROL_SUPER_ADMINISTRADOR, ROL_TI
+
+          sesiones = obtener_session()
+          session = next(sesiones)
+          try:
+              juan = session.scalar(
+                  select(Usuario).where(Usuario.email == "juan.parra@asiati.com.co")
+              )
+              sistemas = session.scalar(
+                  select(Usuario).where(Usuario.email == "sistemas@asiati.com.co")
+              )
+              if juan is None or sistemas is None:
+                  raise RuntimeError("No se pudieron asegurar los usuarios iniciales.")
+              if juan.rol != ROL_SUPER_ADMINISTRADOR:
+                  raise RuntimeError(f"Rol inesperado para Juan Felipe: {juan.rol}")
+              sistemas.rol = ROL_TI
+              juan.debe_cambiar_password = True
+              sistemas.debe_cambiar_password = True
+              session.commit()
+              print(f"USER {juan.email} {juan.rol} change_password={juan.debe_cambiar_password}")
+              print(f"USER {sistemas.email} {sistemas.rol} change_password={sistemas.debe_cambiar_password}")
+          except Exception:
+              session.rollback()
+              raise
+          finally:
+              sesiones.close()
+          PY
+          REMOTE
+
       - name: Verify HTTPS
         shell: bash
         run: |
