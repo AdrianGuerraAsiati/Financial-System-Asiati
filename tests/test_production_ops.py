@@ -42,15 +42,19 @@ def test_database_backup_and_restore_scripts_exist() -> None:
     assert "psql" in restore
 
 
-def test_private_repo_deploy_uses_s3_artifact_instead_of_server_git_pull() -> None:
-    workflow = (ROOT / ".github" / "workflows" / "deploy-production.yml").read_text()
+def test_private_repo_deploy_uses_temporary_lightsail_ssh() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "deploy-development.yml").read_text()
 
     assert "actions/checkout@v4" in workflow
-    assert "aws s3 cp" in workflow
+    assert "get-instance-access-details" in workflow
+    assert "scp" in workflow
     assert "install_release_artifact.sh" in workflow
     assert "sha256sum -c -" in workflow
+    assert "StrictHostKeyChecking=accept-new" in workflow
     assert "git fetch origin main" not in workflow
     assert "git reset --hard origin/main" not in workflow
+    assert "ssm send-command" not in workflow
+    assert "INSTANCE_ID" not in workflow
 
 
 def test_production_deploy_scripts_have_valid_bash_syntax() -> None:
