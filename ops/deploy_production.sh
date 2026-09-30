@@ -15,6 +15,17 @@ if ! docker buildx version >/dev/null 2>&1; then
 fi
 
 DC=(docker compose --env-file .env.production -f compose.production.yml)
+TARGET_COMMIT="${TARGET_COMMIT:-}"
+DEPLOYED_COMMIT_FILE="$APP_DIR/.last_deployed_commit"
+
+if [[ -n "$TARGET_COMMIT" ]] \
+  && [[ -f "$DEPLOYED_COMMIT_FILE" ]] \
+  && [[ "$(cat "$DEPLOYED_COMMIT_FILE")" == "$TARGET_COMMIT" ]] \
+  && curl -fsS http://127.0.0.1/ready >/dev/null 2>&1 \
+  && curl -fsS http://127.0.0.1/health >/dev/null 2>&1; then
+  echo "Commit $TARGET_COMMIT ya está desplegado y saludable."
+  exit 0
+fi
 
 "${DC[@]}" config --services >/dev/null
 "${DC[@]}" up -d db
@@ -57,4 +68,9 @@ cat /tmp/financial-system-ready.json
 echo
 curl -fsS http://127.0.0.1/health
 echo
+
+if [[ -n "$TARGET_COMMIT" ]]; then
+  printf '%s\n' "$TARGET_COMMIT" > "$DEPLOYED_COMMIT_FILE"
+fi
+
 "${DC[@]}" ps

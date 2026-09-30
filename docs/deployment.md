@@ -31,7 +31,8 @@ La excepción temporal de la decisión 0004 ya fue cerrada: Cartera y Wiilog est
 
 El servicio `backup` genera un `.sql.gz` por intervalo en el volumen `backup_data` y aplica retención local.
 
-**Esto no satisface por sí solo el requisito de backup fuera del servidor.** Antes de producción debe definirse un destino externo y copiar/sincronizar los backups allí. No se fija proveedor hasta que ASIATI confirme esa decisión.
+Producción sincroniza además el volumen de backups a un bucket S3 privado y cifrado,
+con versionado y retención. El backup externo no depende del disco de la EC2.
 
 Para restaurar:
 
@@ -60,8 +61,9 @@ aplica debounce y conserva el último snapshot válido durante la actualización
 
 Producción se despliega mediante `.github/workflows/deploy-production.yml` después de
 que `CI` termina correctamente sobre `main`. GitHub obtiene credenciales AWS efímeras
-por OIDC y ejecuta el despliegue en la instancia mediante SSM; no se usa SSH ni access
-keys persistentes.
+por OIDC, empaqueta el commit verde en un artefacto privado S3 y ordena su instalación
+mediante SSM. La EC2 no accede al repositorio privado y no se usa SSH ni access keys
+persistentes.
 
 El comando de producción es `bash ops/deploy_production.sh`. El script exige
 `.env.production`, ejecuta `alembic upgrade head`, reconstruye los contenedores y
