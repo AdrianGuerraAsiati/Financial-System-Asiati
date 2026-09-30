@@ -1,11 +1,6 @@
 from dataclasses import dataclass, field
 
 
-BASELINE_NO_PAGADAS = 1555
-BASELINE_DUPLICADAS = 28
-BASELINE_HUERFANAS = 80
-
-
 @dataclass(frozen=True)
 class ResultadoAceptacion:
     no_pagadas: int
@@ -19,12 +14,20 @@ class ValidacionAceptacion:
     diferencias: dict[str, dict[str, int]] = field(default_factory=dict)
 
 
-def validar_equivalencia(resultado: ResultadoAceptacion) -> ValidacionAceptacion:
-    """Compara la ejecución contra el caso real validado de Wallets."""
+def validar_equivalencia(
+    resultado: ResultadoAceptacion,
+    esperado: ResultadoAceptacion,
+) -> ValidacionAceptacion:
+    """Compara una ejecución contra un baseline suministrado explícitamente.
+
+    Los valores de aceptación provenientes de cierres reales no se versionan en
+    el código. Deben cargarse desde fixtures privados o desde otra fuente de
+    configuración fuera de Git.
+    """
     esperados = {
-        "no_pagadas": BASELINE_NO_PAGADAS,
-        "duplicadas": BASELINE_DUPLICADAS,
-        "huerfanas": BASELINE_HUERFANAS,
+        "no_pagadas": esperado.no_pagadas,
+        "duplicadas": esperado.duplicadas,
+        "huerfanas": esperado.huerfanas,
     }
     obtenidos = {
         "no_pagadas": resultado.no_pagadas,
@@ -34,11 +37,11 @@ def validar_equivalencia(resultado: ResultadoAceptacion) -> ValidacionAceptacion
 
     diferencias = {
         categoria: {
-            "esperado": esperado,
+            "esperado": valor_esperado,
             "obtenido": obtenidos[categoria],
         }
-        for categoria, esperado in esperados.items()
-        if obtenidos[categoria] != esperado
+        for categoria, valor_esperado in esperados.items()
+        if obtenidos[categoria] != valor_esperado
     }
 
     return ValidacionAceptacion(
