@@ -15,6 +15,10 @@ from app.motores.cartera_ocs.agrupacion import (
     OperacionAgrupadaCartera,
     agrupar_operaciones_por_oc,
 )
+from app.motores.cartera_ocs.alertas import (
+    AlertaCartera,
+    detectar_alertas_cartera,
+)
 from app.motores.cartera_ocs.almacenamiento import (
     AlmacenComprobantes,
     AlmacenLocalComprobantes,
@@ -60,6 +64,10 @@ from app.motores.cartera_ocs.resumen import (
     resumir_mora,
     resumir_operaciones,
     resumir_proyeccion,
+)
+from app.motores.cartera_ocs.transporte import (
+    DocumentoTransporteCartera,
+    agrupar_documentos_transporte,
 )
 from app.motores.cartera_ocs.validacion import validar_cartera_en_camino
 from app.motores.cartera_ocs.snapshots import (
@@ -155,6 +163,66 @@ def _agrupacion_como_dict(
         "registros": agrupacion.registros,
         "monto": _dinero_texto(agrupacion.monto),
     }
+
+
+def _documento_transporte_como_dict(
+    documento: DocumentoTransporteCartera,
+) -> dict[str, object]:
+    return {
+        "documento": documento.documento,
+        "lineas": documento.lineas,
+        "ocs": list(documento.ocs),
+        "clientes": list(documento.clientes),
+        "modos_transporte": list(documento.modos_transporte),
+        "valor_ddp": _dinero_texto(documento.valor_ddp),
+        "valor_anticipo": _dinero_texto(documento.valor_anticipo),
+        "valor_financiado": _dinero_texto(documento.valor_financiado),
+        "eta_min": documento.eta_min.isoformat() if documento.eta_min else None,
+        "eta_max": documento.eta_max.isoformat() if documento.eta_max else None,
+        "estado": documento.estado,
+    }
+
+
+def _json_alerta(valor: object) -> object:
+    if isinstance(valor, Decimal):
+        return _decimal_texto(valor)
+    if isinstance(valor, date):
+        return valor.isoformat()
+    if isinstance(valor, dict):
+        return {
+            str(clave): _json_alerta(contenido)
+            for clave, contenido in valor.items()
+        }
+    if isinstance(valor, (list, tuple)):
+        return [_json_alerta(item) for item in valor]
+    return valor
+
+
+def _alerta_como_dict(alerta: AlertaCartera) -> dict[str, object]:
+    return {
+        "codigo": alerta.codigo,
+        "tono_heredado": alerta.tono_heredado,
+        "titulo": alerta.titulo,
+        "evidencia": _json_alerta(alerta.evidencia),
+    }
+
+
+def _resolver_mes_alertas(mes: str | None) -> str:
+    if mes is None:
+        return date.today().strftime("%Y-%m")
+    try:
+        fecha = date.fromisoformat(f"{mes}-01")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="mes debe usar formato YYYY-MM.",
+        ) from exc
+    if fecha.strftime("%Y-%m") != mes:
+        raise HTTPException(
+            status_code=422,
+            detail="mes debe usar formato YYYY-MM.",
+        )
+    return mes
 
 
 def _empresa_de_query(empresa_id: int) -> int:
@@ -591,6 +659,96 @@ def consultar_resumen_proyeccion(
         "nota": (
             "Monto esperado y valor de OC se reportan por separado; "
             "no se suman entre sí."
+        ),
+    }
+
+
+@router.get("/transportes")
+def consultar_transportes(
+    empresa_id: int,
+    fecha_corte: date | None = None,
+    _acceso: Acceso = Depends(ver_cartera),
+    fuente: FuenteOperacionesCartera = Depends(obtener_fuente_operaciones),
+) -> dict[str, object]:
+    corte = fecha_corte or date.today()
+    documentos = agrupar_documentos_transporte(
+        listar_operaciones(
+            fuente,
+            empresa_id=empresa_id,
+        ),
+        fecha_corte=corte,
+    )
+
+    por_estado: dict[str, dict[str, object]] = {}
+    for documento in documentos:
+        resumen = por_estado.setdefault(
+            documento.estado,
+            {"documentos": 0, "valor_ddp": Decimal("0")},
+        )
+        resumen["documentos"] += 1
+        resumen["valor_ddp"] += documento.valor_ddp
+
+    return {
+        "fecha_corte": corte.isoformat(),
+        "documentos": len(documentos),
+        "por_estado": [
+            {
+                "estado": estado,
+                "documentos": resumen["documentos"],
+                "valor_ddp": _dinero_texto(resumen["valor_ddp"]),
+            }
+            for estado, resumen in por_estado.items()
+        ],
+        "items": [
+            _documento_transporte_como_dict(documento)
+            for documento in documentos
+        ],
+        "nota": (
+            "Clasificación heredada del tablero de Johan. VENCIDO usa la ETA "
+            "mínima del documento frente a la fecha de corte y no infiere "
+            "llegada real a bodega."
+        ),
+    }
+
+
+@router.get("/alertas")
+def consultar_alertas_cartera(
+    empresa_id: int,
+    mes: str | None = None,
+    _acceso: Acceso = Depends(ver_cartera),
+    fuente_operaciones: FuenteOperacionesCartera = Depends(
+        obtener_fuente_operaciones
+    ),
+    fuente_mora: FuenteMoraCartera = Depends(obtener_fuente_mora),
+    fuente_proyeccion: FuenteProyeccionCartera = Depends(
+        obtener_fuente_proyeccion
+    ),
+) -> dict[str, object]:
+    mes_resuelto = _resolver_mes_alertas(mes)
+    alertas = detectar_alertas_cartera(
+        mora=listar_mora(
+            fuente_mora,
+            empresa_id=empresa_id,
+        ),
+        operaciones=listar_operaciones(
+            fuente_operaciones,
+            empresa_id=empresa_id,
+        ),
+        proyecciones=listar_proyeccion(
+            fuente_proyeccion,
+            empresa_id=empresa_id,
+        ),
+        mes=mes_resuelto,
+    )
+    return {
+        "mes": mes_resuelto,
+        "alertas": len(alertas),
+        "items": [_alerta_como_dict(alerta) for alerta in alertas],
+        "persistidas": False,
+        "nota": (
+            "Reglas heredadas del tablero de Johan. Los umbrales se conservan "
+            "para regresión y siguen pendientes de validación de negocio. "
+            "Estas detecciones todavía no crean registros en core/hallazgos."
         ),
     }
 
