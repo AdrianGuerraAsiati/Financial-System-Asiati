@@ -24,6 +24,9 @@ env:
   LIGHTSAIL_INSTANCE: financial-system-asiati-dev
   LIGHTSAIL_HOST: 3.141.226.208
   DEVELOPMENT_DOMAIN: 3-141-226-208.sslip.io
+  DEV_DATA_BUCKET: financial-system-asiati-dev-data-890876258895
+  DEV_COMPRAS_S3_KEY: dev/compras/source/INFORME_COMPRAS_2024_2026.xlsx
+  DEV_COMPRAS_LOCAL_NAME: INFORME_COMPRAS_2024_2026_DEV.xlsx
 
 jobs:
   deploy:
@@ -77,6 +80,22 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Inspect Compras workbook in S3
+        id: compras_source
+        shell: bash
+        run: |
+          set -euo pipefail
+          METADATA="$(
+            aws s3api head-object               --bucket "$DEV_DATA_BUCKET"               --key "$DEV_COMPRAS_S3_KEY"
+          )"
+          ETAG="$(jq -r '.ETag' <<<"$METADATA" | tr -d '"')"
+          SIZE="$(jq -r '.ContentLength' <<<"$METADATA")"
+          test -n "$ETAG"
+          test "$SIZE" -gt 0
+          echo "etag=$ETAG" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "Workbook S3: $SIZE bytes, ETag $ETAG"
+
       - name: Get temporary Lightsail SSH access
         id: ssh
         shell: bash
@@ -129,6 +148,57 @@ jobs:
           echo "Lightsail no aceptó SSH a tiempo." >&2
           exit 1
 
+      - name: Check Compras workbook cache on Lightsail
+        id: compras_cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+          REMOTE_ETAG="$(
+            ssh               -o BatchMode=yes               -o StrictHostKeyChecking=accept-new               -i /tmp/lightsail.pem               "$SSH_TARGET"               "sudo cat /opt/financial-system-data/compras/.source-etag 2>/dev/null || true"
+          )"
+
+          if [[ "$REMOTE_ETAG" == "${{ steps.compras_source.outputs.etag }}" ]]             && ssh               -o BatchMode=yes               -o StrictHostKeyChecking=accept-new               -i /tmp/lightsail.pem               "$SSH_TARGET"               "sudo test -s /opt/financial-system-data/compras/$DEV_COMPRAS_LOCAL_NAME"; then
+            echo "sync=false" >> "$GITHUB_OUTPUT"
+            echo "La copia operacional ya corresponde al objeto actual de S3."
+          else
+            echo "sync=true" >> "$GITHUB_OUTPUT"
+            echo "Se actualizará la copia operacional desde S3."
+          fi
+
+      - name: Prepare Compras workbook from S3
+        if: steps.compras_cache.outputs.sync == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3 cp             "s3://$DEV_DATA_BUCKET/$DEV_COMPRAS_S3_KEY"             /tmp/compras-source.xlsx             --only-show-errors
+
+          python -m pip install --disable-pip-version-check --quiet "openpyxl>=3.1,<4.0"
+          python ops/preparar_excel_compras_dev.py             --source /tmp/compras-source.xlsx             --output "/tmp/$DEV_COMPRAS_LOCAL_NAME"
+
+          test -s "/tmp/$DEV_COMPRAS_LOCAL_NAME"
+          rm -f /tmp/compras-source.xlsx
+
+      - name: Install Compras workbook on Lightsail
+        if: steps.compras_cache.outputs.sync == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+
+          scp             -o BatchMode=yes             -o StrictHostKeyChecking=accept-new             -i /tmp/lightsail.pem             "/tmp/$DEV_COMPRAS_LOCAL_NAME"             "$SSH_TARGET:/tmp/$DEV_COMPRAS_LOCAL_NAME"
+
+          ssh             -o BatchMode=yes             -o StrictHostKeyChecking=accept-new             -i /tmp/lightsail.pem             "$SSH_TARGET"             "sudo DEV_COMPRAS_LOCAL_NAME='$DEV_COMPRAS_LOCAL_NAME' SOURCE_ETAG='${{ steps.compras_source.outputs.etag }}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          DATA_DIR=/opt/financial-system-data/compras
+          mkdir -p "$DATA_DIR"
+          install -m 640 "/tmp/$DEV_COMPRAS_LOCAL_NAME" "$DATA_DIR/$DEV_COMPRAS_LOCAL_NAME"
+          printf '%s\n' "$SOURCE_ETAG" > "$DATA_DIR/.source-etag"
+          chmod 640 "$DATA_DIR/.source-etag"
+          rm -f "/tmp/$DEV_COMPRAS_LOCAL_NAME"
+          ls -lh "$DATA_DIR/$DEV_COMPRAS_LOCAL_NAME"
+          REMOTE
+
       - name: Copy release to Lightsail
         shell: bash
         run: |
@@ -156,7 +226,8 @@ jobs:
           set -euo pipefail
 
           APP_DIR=/opt/financial-system
-          mkdir -p "$APP_DIR/secrets"
+          DATA_DIR=/opt/financial-system-data/compras
+          mkdir -p "$APP_DIR/secrets" "$DATA_DIR"
 
           if ! command -v docker >/dev/null 2>&1; then
             dnf install -y docker
@@ -211,13 +282,15 @@ jobs:
           CARTERA_SHEETS_RANGE=
           CARTERA_SHEETS_MORA_RANGE=
           CARTERA_SHEETS_PROYECCION_RANGE=
-          COMPRAS_DEMO_MODE=true
-          COMPRAS_SHEETS_EMPRESA_ID=
+          COMPRAS_DEMO_MODE=false
+          COMPRAS_EXCEL_LOCAL_FILE=/data/compras/INFORME_COMPRAS_2024_2026_DEV.xlsx
+          COMPRAS_LOCAL_DATA_DIR=/opt/financial-system-data/compras
+          COMPRAS_SHEETS_EMPRESA_ID=1
           COMPRAS_SHEETS_SPREADSHEET_ID=
-          COMPRAS_SHEETS_CO_RANGE=
-          COMPRAS_SHEETS_EC_RANGE=
-          COMPRAS_SHEETS_CL_RANGE=
-          COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE=
+          COMPRAS_SHEETS_CO_RANGE="'INFORME CLIENTES (CO)'!A:BG"
+          COMPRAS_SHEETS_EC_RANGE="'INFORME CLIENTES (EC)'!A:BG"
+          COMPRAS_SHEETS_CL_RANGE="'INFORME CLIENTES (CL)'!A:BG"
+          COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE="'Supply Chain '!A:Z"
           COMPRAS_SHEETS_CACHE_SECONDS=60
           GOOGLE_SERVICE_ACCOUNT_FILE=./secrets/google-service-account.json
           BACKUP_INTERVAL_SECONDS=86400
@@ -239,13 +312,40 @@ jobs:
             chmod 600 "$APP_DIR/secrets/google-service-account.json"
           fi
 
-          sed -i "s|^ASIATI_DOMAIN=.*|ASIATI_DOMAIN=${DEVELOPMENT_DOMAIN}|" "$APP_DIR/.env.production"
-          sed -i 's|^SESSION_COOKIE_SECURE=.*|SESSION_COOKIE_SECURE=true|' "$APP_DIR/.env.production"
-          sed -i 's|^COMPRAS_SHEETS_CO_RANGE=.*|COMPRAS_SHEETS_CO_RANGE=|' "$APP_DIR/.env.production"
-          sed -i 's|^COMPRAS_SHEETS_EC_RANGE=.*|COMPRAS_SHEETS_EC_RANGE=|' "$APP_DIR/.env.production"
-          sed -i 's|^COMPRAS_SHEETS_CL_RANGE=.*|COMPRAS_SHEETS_CL_RANGE=|' "$APP_DIR/.env.production"
-          sed -i 's|^COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE=.*|COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE=|' "$APP_DIR/.env.production"
+          set_env() {
+            local key="$1"
+            local value="$2"
+            local tmp
+            tmp="$(mktemp)"
+            awk -v key="$key" -v value="$value" '
+              BEGIN { updated = 0 }
+              index($0, key "=") == 1 {
+                print key "=" value
+                updated = 1
+                next
+              }
+              { print }
+              END {
+                if (!updated) print key "=" value
+              }
+            ' "$APP_DIR/.env.production" > "$tmp"
+            cat "$tmp" > "$APP_DIR/.env.production"
+            rm -f "$tmp"
+          }
 
+          set_env ASIATI_DOMAIN "$DEVELOPMENT_DOMAIN"
+          set_env SESSION_COOKIE_SECURE true
+          set_env COMPRAS_DEMO_MODE false
+          set_env COMPRAS_EXCEL_LOCAL_FILE /data/compras/INFORME_COMPRAS_2024_2026_DEV.xlsx
+          set_env COMPRAS_LOCAL_DATA_DIR /opt/financial-system-data/compras
+          set_env COMPRAS_SHEETS_EMPRESA_ID 1
+          set_env COMPRAS_SHEETS_CO_RANGE "\"'INFORME CLIENTES (CO)'!A:BG\""
+          set_env COMPRAS_SHEETS_EC_RANGE "\"'INFORME CLIENTES (EC)'!A:BG\""
+          set_env COMPRAS_SHEETS_CL_RANGE "\"'INFORME CLIENTES (CL)'!A:BG\""
+          set_env COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE "\"'Supply Chain '!A:Z\""
+          chmod 600 "$APP_DIR/.env.production"
+
+          test -s "$DATA_DIR/INFORME_COMPRAS_2024_2026_DEV.xlsx"
           docker compose version
           docker buildx version
           REMOTE
