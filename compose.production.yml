@@ -10,6 +10,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google_service_account
     volumes:
       - comprobantes_data:/data/comprobantes
+      - ${COMPRAS_LOCAL_DATA_DIR:-/opt/financial-system-data/compras}:/data/compras:ro
     secrets:
       - google_service_account
     depends_on:
