@@ -15,3 +15,10 @@ description = "Synthetic JWT fixture reference in auth API tests"
 condition = "AND"
 paths = ['''^tests/test_core_auth_api\.py$''']
 regexes = ['''SECRETO_PRUEBA''']
+
+
+[[allowlists]]
+description = "Known synthetic JWT fixture false positive in historical auth test commit"
+condition = "AND"
+commits = ["ac7ea1821cefe1e9d504d1f539f1f3c0b90dc4fd"]
+paths = ['''^tests/test_core_auth_api\.py$''']
