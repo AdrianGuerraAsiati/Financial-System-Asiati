@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 
 from fastapi.testclient import TestClient
 
@@ -39,3 +40,27 @@ def test_database_backup_and_restore_scripts_exist() -> None:
     assert "pg_dump" in backup
     assert "BACKUP_RETENTION_DAYS" in backup
     assert "psql" in restore
+
+
+def test_private_repo_deploy_uses_s3_artifact_instead_of_server_git_pull() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "deploy-production.yml").read_text()
+
+    assert "actions/checkout@v4" in workflow
+    assert "aws s3 cp" in workflow
+    assert "install_release_artifact.sh" in workflow
+    assert "sha256sum -c -" in workflow
+    assert "git fetch origin main" not in workflow
+    assert "git reset --hard origin/main" not in workflow
+
+
+def test_production_deploy_scripts_have_valid_bash_syntax() -> None:
+    for relative_path in (
+        "ops/deploy_production.sh",
+        "ops/install_release_artifact.sh",
+    ):
+        subprocess.run(
+            ["bash", "-n", str(ROOT / relative_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
