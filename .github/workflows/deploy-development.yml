@@ -307,38 +307,17 @@ jobs:
             -e DEV_ADMIN_NAME="Adrian" \
             api python -m app.core.usuarios.asegurar_superadmin_dev
 
-          "${DC[@]}" run --rm api python - <<'PY'
-          from sqlalchemy import select
+          "${DC[@]}" exec -T db psql \
+            -U asiati \
+            -d financial_system \
+            -v ON_ERROR_STOP=1 \
+            -c "UPDATE usuarios SET rol='ti', debe_cambiar_password=true WHERE email='sistemas@asiati.com.co'; UPDATE usuarios SET debe_cambiar_password=true WHERE email='juan.parra@asiati.com.co';"
 
-          from app.core.session import obtener_session
-          from app.core.usuarios.model import Usuario
-          from app.core.usuarios.roles import ROL_SUPER_ADMINISTRADOR, ROL_TI
-
-          sesiones = obtener_session()
-          session = next(sesiones)
-          try:
-              juan = session.scalar(
-                  select(Usuario).where(Usuario.email == "juan.parra@asiati.com.co")
-              )
-              sistemas = session.scalar(
-                  select(Usuario).where(Usuario.email == "sistemas@asiati.com.co")
-              )
-              if juan is None or sistemas is None:
-                  raise RuntimeError("No se pudieron asegurar los usuarios iniciales.")
-              if juan.rol != ROL_SUPER_ADMINISTRADOR:
-                  raise RuntimeError(f"Rol inesperado para Juan Felipe: {juan.rol}")
-              sistemas.rol = ROL_TI
-              juan.debe_cambiar_password = True
-              sistemas.debe_cambiar_password = True
-              session.commit()
-              print(f"USER {juan.email} {juan.rol} change_password={juan.debe_cambiar_password}")
-              print(f"USER {sistemas.email} {sistemas.rol} change_password={sistemas.debe_cambiar_password}")
-          except Exception:
-              session.rollback()
-              raise
-          finally:
-              sesiones.close()
-          PY
+          "${DC[@]}" exec -T db psql \
+            -U asiati \
+            -d financial_system \
+            -At \
+            -c "SELECT email || '|' || rol || '|' || activo || '|' || debe_cambiar_password FROM usuarios WHERE email IN ('juan.parra@asiati.com.co','sistemas@asiati.com.co') ORDER BY email;"
           REMOTE
 
       - name: Verify HTTPS
