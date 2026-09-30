@@ -15,23 +15,39 @@ from app.motores.cartera_ocs.importacion import (
     normalizar_fila_cartera,
     parsear_numero_cartera,
 )
+from app.motores.cartera_ocs.resumen import (
+    AgrupacionMontoCartera,
+    ResumenMoraCartera,
+    ResumenOperacionesCartera,
+    ResumenProyeccionCartera,
+    resumir_mora,
+    resumir_operaciones,
+    resumir_proyeccion,
+)
 from app.motores.cartera_ocs.validacion import (
     CasoValidacionCartera,
     validar_cartera_en_camino,
 )
 
 __all__ = [
+    "AgrupacionMontoCartera",
     "CasoValidacionCartera",
     "ComprobantePago",
     "CondicionPago",
     "ESTADO_AUDITORIA_PENDIENTE",
     "OperacionFinanciada",
     "RegistroCarteraEnCamino",
+    "ResumenMoraCartera",
+    "ResumenOperacionesCartera",
+    "ResumenProyeccionCartera",
     "TerminosNegociacion",
     "generar_condicion_pago",
     "normalizar_fila_cartera",
     "parsear_numero_cartera",
     "parsear_tipo_negociacion",
     "radicar_comprobante",
+    "resumir_mora",
+    "resumir_operaciones",
+    "resumir_proyeccion",
     "validar_cartera_en_camino",
 ]
