@@ -82,6 +82,7 @@ Resumen vigente:
 - #86 de sanitización de Wallets está fusionado y los identificadores reales se inyectan por runtime;
 - #91 de movimientos/categorización es el único PR funcional abierto y sigue en draft por una decisión de contrato;
 - Cartera sigue sin fuente real identificada; no usar el Excel de Compras como sustituto.
+- Cartera core ya incluye resúmenes descriptivos (#97), agrupación por OC sin colapsar composición (#98) y diagnóstico de negociaciones heredadas (#99).
 
 No asumir que las secciones históricas de `Ai_Handoff.md` sobre autenticación Google o fuente viva describen el entorno desplegado actual; la actualización del 30-sep al inicio de ese archivo y el reporte anterior mandan para estado operativo.
 
