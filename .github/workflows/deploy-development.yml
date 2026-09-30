@@ -22,6 +22,7 @@ env:
   AWS_REGION: us-east-2
   AWS_ROLE_ARN: arn:aws:iam::890876258895:role/financial-system-asiati-github-deploy
   LIGHTSAIL_INSTANCE: financial-system-asiati-dev
+  LIGHTSAIL_HOST: 3.141.226.208
   DEVELOPMENT_DOMAIN: 3-141-226-208.sslip.io
 
 jobs:
@@ -88,22 +89,26 @@ jobs:
               --protocol ssh
           )"
 
-          USERNAME="$(jq -r '.accessDetails.username' <<<"$DETAILS")"
-          HOST="$(jq -r '.accessDetails.ipAddress' <<<"$DETAILS")"
-          jq -r '.accessDetails.privateKey' <<<"$DETAILS" > /tmp/lightsail.pem
-          jq -r '.accessDetails.certKey' <<<"$DETAILS" > /tmp/lightsail.pem-cert.pub
-          chmod 600 /tmp/lightsail.pem
-          chmod 644 /tmp/lightsail.pem-cert.pub
+          USERNAME="$(jq -r '.accessDetails.username // empty' <<<"$DETAILS")"
+          PRIVATE_KEY="$(jq -r '.accessDetails.privateKey // empty' <<<"$DETAILS")"
+          CERT_KEY="$(jq -r '.accessDetails.certKey // empty' <<<"$DETAILS")"
 
           test -n "$USERNAME"
-          test -n "$HOST"
-          test -s /tmp/lightsail.pem
-          test -s /tmp/lightsail.pem-cert.pub
-          grep -q "BEGIN" /tmp/lightsail.pem
-          grep -q "ssh-" /tmp/lightsail.pem-cert.pub
+          test -n "$PRIVATE_KEY"
+
+          printf '%s\n' "$PRIVATE_KEY" > /tmp/lightsail.pem
+          chmod 600 /tmp/lightsail.pem
+          ssh-keygen -y -f /tmp/lightsail.pem >/dev/null
+
+          if [[ -n "$CERT_KEY" ]]; then
+            printf '%s\n' "$CERT_KEY" > /tmp/lightsail.pem-cert.pub
+            chmod 644 /tmp/lightsail.pem-cert.pub
+          else
+            rm -f /tmp/lightsail.pem-cert.pub
+          fi
 
           echo "username=$USERNAME" >> "$GITHUB_OUTPUT"
-          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          echo "host=$LIGHTSAIL_HOST" >> "$GITHUB_OUTPUT"
 
       - name: Wait for SSH
         shell: bash
@@ -181,9 +186,12 @@ jobs:
 
       - name: Deployment summary
         if: always()
+        shell: bash
         run: |
-          echo "### Lightsail development deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Commit: `${{ steps.target.outputs.sha }}`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Instance: `$LIGHTSAIL_INSTANCE`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Host: `${{ steps.ssh.outputs.host }}`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- URL: `https://$DEVELOPMENT_DOMAIN/`" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Lightsail development deployment"
+            printf '%s\n' "- Commit: ${{ steps.target.outputs.sha }}"
+            printf '%s\n' "- Instance: $LIGHTSAIL_INSTANCE"
+            printf '%s\n' "- Host: ${{ steps.ssh.outputs.host }}"
+            printf '%s\n' "- URL: https://$DEVELOPMENT_DOMAIN/"
+          } >> "$GITHUB_STEP_SUMMARY"
