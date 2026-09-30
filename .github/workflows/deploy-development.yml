@@ -140,6 +140,111 @@ jobs:
             "${{ steps.artifact.outputs.archive }}" \
             "${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}:/tmp/financial-system-release.tar.gz"
 
+      - name: Bootstrap Lightsail development
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            "$SSH_TARGET" \
+            "sudo DEVELOPMENT_DOMAIN='$DEVELOPMENT_DOMAIN' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          APP_DIR=/opt/financial-system
+          mkdir -p "$APP_DIR/secrets"
+
+          if ! command -v docker >/dev/null 2>&1; then
+            dnf install -y docker
+          fi
+          systemctl enable --now docker
+
+          install_docker_plugin() {
+            local name="$1"
+            local version="$2"
+            local url_name="$3"
+            if docker "$name" version >/dev/null 2>&1; then
+              return 0
+            fi
+
+            local arch
+            case "$(uname -m)" in
+              x86_64) arch=x86_64 ;;
+              aarch64|arm64) arch=aarch64 ;;
+              *)
+                echo "Arquitectura no soportada para plugin Docker: $(uname -m)" >&2
+                exit 2
+                ;;
+            esac
+
+            mkdir -p /usr/local/lib/docker/cli-plugins
+            curl -fsSL \
+              "https://github.com/docker/${url_name}/releases/download/${version}/${url_name}-linux-${arch}" \
+              -o "/usr/local/lib/docker/cli-plugins/docker-${name}"
+            chmod +x "/usr/local/lib/docker/cli-plugins/docker-${name}"
+            docker "$name" version >/dev/null
+          }
+
+          install_docker_plugin compose v2.40.1 compose
+          install_docker_plugin buildx v0.29.1 buildx
+
+          if [[ ! -f "$APP_DIR/.env.production" ]]; then
+            POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+            JWT_SECRET="$(openssl rand -hex 48)"
+            GOOGLE_SHEETS_CHANGE_SECRET="$(openssl rand -hex 32)"
+
+            cat > "$APP_DIR/.env.production" <<EOF
+          APP_ENV=development
+          ASIATI_DOMAIN=${DEVELOPMENT_DOMAIN}
+          POSTGRES_DB=financial_system
+          POSTGRES_USER=asiati
+          POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          CARTERA_COMPROBANTES_MAX_BYTES=10485760
+          CARTERA_COMPROBANTES_MIME_TYPES=application/pdf,image/jpeg,image/png
+          CARTERA_SHEETS_EMPRESA_ID=
+          CARTERA_SHEETS_SPREADSHEET_ID=
+          CARTERA_SHEETS_RANGE=
+          CARTERA_SHEETS_MORA_RANGE=
+          CARTERA_SHEETS_PROYECCION_RANGE=
+          COMPRAS_DEMO_MODE=true
+          COMPRAS_SHEETS_EMPRESA_ID=
+          COMPRAS_SHEETS_SPREADSHEET_ID=
+          COMPRAS_SHEETS_CO_RANGE='INFORME CLIENTES (CO)'!A:BG
+          COMPRAS_SHEETS_EC_RANGE='INFORME CLIENTES (EC)'!A:BG
+          COMPRAS_SHEETS_CL_RANGE='INFORME CLIENTES (CL)'!A:BG
+          COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE='Supply Chain'!A:Z
+          COMPRAS_SHEETS_CACHE_SECONDS=60
+          GOOGLE_SERVICE_ACCOUNT_FILE=./secrets/google-service-account.json
+          BACKUP_INTERVAL_SECONDS=86400
+          BACKUP_RETENTION_DAYS=14
+          JWT_SECRET=${JWT_SECRET}
+          LOGIN_MAX_INTENTOS_FALLIDOS=5
+          LOGIN_VENTANA_MINUTOS=15
+          SESION_DURACION_HORAS=8
+          SESSION_COOKIE_SECURE=true
+          GOOGLE_SHEETS_CHANGE_SECRET=${GOOGLE_SHEETS_CHANGE_SECRET}
+          GOOGLE_SHEETS_DEBOUNCE_SECONDS=15
+          GOOGLE_SHEETS_MAX_WAIT_SECONDS=60
+          EOF
+            chmod 600 "$APP_DIR/.env.production"
+          fi
+
+          if [[ ! -f "$APP_DIR/secrets/google-service-account.json" ]]; then
+            printf '{}\n' > "$APP_DIR/secrets/google-service-account.json"
+            chmod 600 "$APP_DIR/secrets/google-service-account.json"
+          fi
+
+          sed -i "s|^ASIATI_DOMAIN=.*|ASIATI_DOMAIN=${DEVELOPMENT_DOMAIN}|" "$APP_DIR/.env.production"
+          sed -i 's|^SESSION_COOKIE_SECURE=.*|SESSION_COOKIE_SECURE=true|' "$APP_DIR/.env.production"
+
+          docker compose version
+          docker buildx version
+          REMOTE
+
       - name: Install release on Lightsail
         shell: bash
         run: |
