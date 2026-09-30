@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.auth.api import router as auth_router
 from app.dashboard.api import router as dashboard_router
 from app.core.hallazgos.api import router as hallazgos_router
+from app.core.movimientos.api import router as movimientos_router
 from app.core.supervision.api import router as supervision_router
 from app.core.usuarios.api import router as usuarios_router
 from app.motores.cartera_ocs.api import router as cartera_router
@@ -28,6 +29,7 @@ app.include_router(dashboard_router, prefix=API_V1)
 app.include_router(usuarios_router, prefix=API_V1)
 app.include_router(supervision_router, prefix=API_V1)
 app.include_router(hallazgos_router, prefix=API_V1)
+app.include_router(movimientos_router, prefix=API_V1)
 app.include_router(cartera_router, prefix=API_V1)
 app.include_router(compras_router, prefix=API_V1)
 app.include_router(wiilog_wallet_router, prefix=API_V1)
