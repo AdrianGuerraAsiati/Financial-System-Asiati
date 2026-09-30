@@ -1,0 +1,184 @@
+name: Deploy development
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: development-lightsail
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ROLE_ARN: arn:aws:iam::890876258895:role/financial-system-asiati-github-deploy
+  LIGHTSAIL_INSTANCE: financial-system-asiati-dev
+  DEVELOPMENT_DOMAIN: 3-141-226-208.sslip.io
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve deploy commit
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            SHA="${{ github.event.workflow_run.head_sha }}"
+          else
+            SHA="${{ github.sha }}"
+          fi
+          test -n "$SHA"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact green commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.sha }}
+          fetch-depth: 1
+
+      - name: Build release artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="/tmp/financial-system-${{ steps.target.outputs.sha }}.tar.gz"
+
+          tar \
+            --exclude=.git \
+            --exclude=.env \
+            --exclude=.env.production \
+            --exclude=secrets \
+            --exclude=fixtures \
+            -czf "$ARCHIVE" .
+
+          ARTIFACT_SHA256="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "sha256=$ARTIFACT_SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get temporary Lightsail SSH access
+        id: ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          DETAILS="$(
+            aws lightsail get-instance-access-details \
+              --region "$AWS_REGION" \
+              --instance-name "$LIGHTSAIL_INSTANCE" \
+              --protocol ssh
+          )"
+
+          USERNAME="$(jq -r '.accessDetails.username' <<<"$DETAILS")"
+          HOST="$(jq -r '.accessDetails.ipAddress' <<<"$DETAILS")"
+          jq -r '.accessDetails.privateKey' <<<"$DETAILS" > /tmp/lightsail.pem
+          chmod 600 /tmp/lightsail.pem
+
+          test -n "$USERNAME"
+          test -n "$HOST"
+          test -s /tmp/lightsail.pem
+
+          echo "username=$USERNAME" >> "$GITHUB_OUTPUT"
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            if ssh \
+              -o BatchMode=yes \
+              -o ConnectTimeout=5 \
+              -o StrictHostKeyChecking=accept-new \
+              -i /tmp/lightsail.pem \
+              "${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}" \
+              "echo ready" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Lightsail no aceptó SSH a tiempo." >&2
+          exit 1
+
+      - name: Copy release to Lightsail
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            "${{ steps.artifact.outputs.archive }}" \
+            "${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}:/tmp/financial-system-release.tar.gz"
+
+      - name: Install release on Lightsail
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+          CHECKSUM="${{ steps.artifact.outputs.sha256 }}"
+          RELEASE_SHA="${{ steps.target.outputs.sha }}"
+
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            "$SSH_TARGET" \
+            "echo '$CHECKSUM  /tmp/financial-system-release.tar.gz' | sha256sum -c -"
+
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            "$SSH_TARGET" \
+            "sudo sed -i 's|^ASIATI_DOMAIN=.*|ASIATI_DOMAIN=$DEVELOPMENT_DOMAIN|' /opt/financial-system/.env.production && sudo sed -i 's|^SESSION_COOKIE_SECURE=.*|SESSION_COOKIE_SECURE=true|' /opt/financial-system/.env.production"
+
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            "$SSH_TARGET" \
+            "rm -rf /tmp/financial-system-release-inspect && mkdir -p /tmp/financial-system-release-inspect && tar -xzf /tmp/financial-system-release.tar.gz -C /tmp/financial-system-release-inspect && sudo bash /tmp/financial-system-release-inspect/ops/install_release_artifact.sh /tmp/financial-system-release.tar.gz '$RELEASE_SHA'"
+
+      - name: Verify HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 30); do
+            if curl -fsS "https://$DEVELOPMENT_DOMAIN/ready" | grep -q '"ready"'; then
+              curl -fsS "https://$DEVELOPMENT_DOMAIN/health"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "El entorno de desarrollo no pasó el healthcheck HTTPS." >&2
+          exit 1
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "### Lightsail development deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: `${{ steps.target.outputs.sha }}`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Instance: `$LIGHTSAIL_INSTANCE`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Host: `${{ steps.ssh.outputs.host }}`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: `https://$DEVELOPMENT_DOMAIN/`" >> "$GITHUB_STEP_SUMMARY"
