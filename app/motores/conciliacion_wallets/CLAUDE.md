@@ -1,8 +1,11 @@
 # Motor conciliacion_wallets — reglas para trabajar en esta carpeta
 
-> **Alcance.** Las reglas de este archivo (línea base de julio, ventana de 15 días,
-> reglas C0 a C6) son de la **wallet de Tiendas**. La wallet Wiilog tiene las suyas en
-> `wiilog/CLAUDE.md` y `docs/motores/conciliacion_wallets/WALLET_WIILOG.md`.
+> **Alcance.** Las wallets de tienda (TIENDA) y de pagos (SOLO_PAGOS) tienen sus reglas en
+> `tiendas/CLAUDE.md`, `pagos/CLAUDE.md` y `docs/motores/conciliacion_wallets/WALLETS_TIENDAS_Y_PAGOS.md`.
+> La wallet Wiilog tiene las suyas en `wiilog/CLAUDE.md` y
+> `docs/motores/conciliacion_wallets/WALLET_WIILOG.md`. La conciliación entre wallets ya se
+> construye (decisión 0006). Lo que sigue en este archivo (línea base de julio, ventana de
+> 15 días, reglas C0 a C6) es histórico del PROMPT_MAESTRO y no manda sobre esos documentos.
 
 La especificación completa está en `docs/motores/conciliacion_wallets/PROMPT_MAESTRO.md`.
 Trabaja fase por fase y para al final de cada una.
