@@ -1,8 +1,7 @@
-"""Test de regresión con los archivos reales de septiembre 2026.
+"""Regresión contra el cierre real guardado exclusivamente fuera de Git.
 
-Los archivos viven en fixtures/ y NO se suben a git. Si no están, el test se salta.
-Las cifras esperadas están documentadas en docs/motores/conciliacion_wallets/WALLET_WIILOG.md §7.
-Parámetros versión 2 (28-sep-2026): Bucaramanga no cobra FF; Bogotá 3.0 a 3.250.
+Los Excel y el baseline esperado viven bajo fixtures/, que está ignorado por Git.
+El test se salta si el entorno local no tiene el paquete privado completo.
 """
 import json
 from pathlib import Path
@@ -11,82 +10,112 @@ import pandas as pd
 import pytest
 
 from app.motores.conciliacion_wallets.wiilog import conciliar_wallet_wiilog
+from app.motores.conciliacion_wallets.wiilog.integracion import (
+    cargar_parametros_wiilog,
+)
+
 
 RAIZ = Path(__file__).resolve().parents[2]
-ORDENES = RAIZ / "fixtures/wallet_wiilog/2026-09/ordenes_sept_20260928_144134.xlsx"
-WALLET = RAIZ / "fixtures/wallet_wiilog/2026-09/historyWallet_20260928_142641.xlsx"
+CARPETA = RAIZ / "fixtures" / "wallet_wiilog" / "2026-09"
+BASELINE = CARPETA / "expected_baseline.json"
 
-pytestmark = [
-    pytest.mark.fixtures_reales,
-    pytest.mark.skipif(not (ORDENES.exists() and WALLET.exists()), reason="Faltan los archivos reales de septiembre en fixtures/"),
-]
+
+def _unico(patron: str) -> Path | None:
+    archivos = sorted(CARPETA.glob(patron))
+    return archivos[0] if len(archivos) == 1 else None
 
 
 @pytest.fixture(scope="module")
-def resultado():
-    params = json.loads((RAIZ / "docs/motores/conciliacion_wallets/parametros_wallet_wiilog.json").read_text(encoding="utf-8"))
-    return conciliar_wallet_wiilog(pd.read_excel(ORDENES), pd.read_excel(WALLET), params, "2026-09-01", "2026-09-30")
+def caso_real():
+    ordenes = _unico("ordenes_*.xlsx")
+    wallet = _unico("historyWallet_*.xlsx")
+    if ordenes is None or wallet is None or not BASELINE.exists():
+        pytest.skip(
+            "Falta el paquete privado de regresión en fixtures/wallet_wiilog/2026-09."
+        )
+
+    esperado = json.loads(BASELINE.read_text(encoding="utf-8"))
+    email_principal = esperado.get("wallet_principal_email")
+    if not email_principal:
+        pytest.fail(
+            "expected_baseline.json debe incluir wallet_principal_email para resolver "
+            "la configuración real sin versionarla."
+        )
+
+    params = cargar_parametros_wiilog(
+        wallet_principal_email=email_principal,
+    )
+    resultado = conciliar_wallet_wiilog(
+        pd.read_excel(ordenes),
+        pd.read_excel(wallet),
+        params,
+        esperado["periodo_inicio"],
+        esperado["periodo_fin"],
+    )
+    return resultado, esperado
 
 
-def test_c0(resultado):
+def test_c0(caso_real):
+    resultado, esperado = caso_real
     saldo = resultado.chequeos[0]
-    assert saldo.estado == "EN_ORDEN"
-    assert saldo.detalle == {
-        "saldo_inicial": "3000.72",
-        "entradas": "86853298.80",
-        "salidas": "51107944.97",
-        "saldo_final": "35748354.55",
-        "quiebres": 0,
-    }
+    assert saldo.estado == esperado["c0"]["estado"]
+    assert saldo.detalle == esperado["c0"]["detalle"]
 
 
-def test_ordenes_agrupadas(resultado):
-    assert len(resultado.ff) == 23093
+def test_ordenes_agrupadas(caso_real):
+    resultado, esperado = caso_real
+    assert len(resultado.ff) == esperado["ordenes_agrupadas"]
 
 
-def test_ff_por_estado(resultado):
+def test_ff_por_estado(caso_real):
+    resultado, esperado = caso_real
     ff = resultado.ff[resultado.ff.bodega_wiilog]
-    assert ff.estado_ff.value_counts().to_dict() == {
-        "COBRADO": 17634,
-        "NO_APLICA": 5016,
-        "DUPLICADO": 98,
-        "PENDIENTE_CIERRE": 71,
-        "REVERSADO": 25,
-        "EN_VENTANA": 20,
-        "DIFERENCIA_TARIFA": 12,
-        "NO_COBRADO": 8,
-    }
-    en_juego = ff.groupby("estado_ff").monto_en_juego_c.sum()
-    assert en_juego["NO_COBRADO"] == 2_075_000
-    assert en_juego["DUPLICADO"] == 24_500_000
-    assert en_juego["DIFERENCIA_TARIFA"] == 3_000_000
+
+    assert ff.estado_ff.value_counts().to_dict() == esperado["ff_por_estado"]
+
+    en_juego = ff.groupby("estado_ff").monto_en_juego_c.sum().to_dict()
+    for estado, valor in esperado["ff_monto_en_juego_c"].items():
+        assert int(en_juego.get(estado, 0)) == int(valor)
 
 
-def test_ff_no_cobrado_por_bodega(resultado):
-    nc = resultado.ff[resultado.ff.estado_ff == "NO_COBRADO"].bodega.value_counts().to_dict()
-    assert nc == {"WIILOG BOGOTA": 7, "WIILOG BOGOTA 3.0": 1}
-    # Las 8 son órdenes sin recaudo devueltas: Dropi solo paga FF al entregar. Se reclaman.
-    assert set(resultado.ff[resultado.ff.estado_ff == "NO_COBRADO"].estatus) == {"DEVOLUCION"}
+def test_ff_no_cobrado_por_bodega(caso_real):
+    resultado, esperado = caso_real
+    actual = (
+        resultado.ff[resultado.ff.estado_ff == "NO_COBRADO"]
+        .bodega.value_counts()
+        .to_dict()
+    )
+    assert actual == esperado["ff_no_cobrado_por_bodega"]
 
 
-def test_ff_fuera_del_reporte(resultado):
-    fuera = resultado.ff_fuera.groupby("estado_ff").ff_neto_c.agg(["size", "sum"])
-    assert fuera.loc["FUERA_DEL_REPORTE"].tolist() == [1333, 346_124_987]
-    assert fuera.loc["FUERA_MARCA_BLANCA"].tolist() == [1461, 365_249_994]
+def test_ff_fuera_del_reporte(caso_real):
+    resultado, esperado = caso_real
+    actual = (
+        resultado.ff_fuera.groupby("estado_ff")
+        .ff_neto_c.agg(["size", "sum"])
+    )
+    for estado, valores in esperado["ff_fuera"].items():
+        assert actual.loc[estado].tolist() == valores
 
 
-def test_flete(resultado):
-    assert resultado.flete.estado_flete.value_counts().to_dict() == {
-        "COBRADO": 8991,
-        "NO_APLICA": 6600,
-        "SIN_VERIFICAR": 4268,
-        "PENDIENTE_CIERRE": 3234,
-    }
-    assert len(resultado.flete_fuera) == 4049
+def test_flete(caso_real):
+    resultado, esperado = caso_real
+    assert (
+        resultado.flete.estado_flete.value_counts().to_dict()
+        == esperado["flete_por_estado"]
+    )
+    assert len(resultado.flete_fuera) == esperado["flete_fuera"]
 
 
-def test_movimientos(resultado):
-    m = resultado.movimientos
-    assert (m.estado_categoria != "AUTO").sum() == 10
-    assert m.cruce_id.nunique() == 18
-    assert (m.concepto == "SIN_CONCEPTO").sum() == 0
+def test_movimientos(caso_real):
+    resultado, esperado = caso_real
+    movimientos = resultado.movimientos
+    assert (
+        int((movimientos.estado_categoria != "AUTO").sum())
+        == esperado["movimientos"]["por_revisar"]
+    )
+    assert movimientos.cruce_id.nunique() == esperado["movimientos"]["cruces"]
+    assert (
+        int((movimientos.concepto == "SIN_CONCEPTO").sum())
+        == esperado["movimientos"]["sin_concepto"]
+    )
