@@ -297,27 +297,36 @@ jobs:
           cd /opt/financial-system
           DC=(docker compose --env-file .env.production -f compose.production.yml)
 
-          "${DC[@]}" run --rm -T \
-            -e DEV_ADMIN_EMAIL=juan.parra@asiati.com.co \
-            -e DEV_ADMIN_NAME="Juan Felipe Parra" \
-            api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
+          juan_role="$("${DC[@]}" exec -T db psql -U asiati -d financial_system -At \
+            -c "SELECT rol FROM usuarios WHERE email='juan.parra@asiati.com.co';" </dev/null)"
+          if [[ -z "$juan_role" ]]; then
+            "${DC[@]}" run --rm -T \
+              -e DEV_ADMIN_EMAIL=juan.parra@asiati.com.co \
+              -e DEV_ADMIN_NAME="Juan Felipe Parra" \
+              api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
+            "${DC[@]}" exec -T db psql -U asiati -d financial_system -v ON_ERROR_STOP=1 \
+              -c "UPDATE usuarios SET debe_cambiar_password=true WHERE email='juan.parra@asiati.com.co';" </dev/null
+          elif [[ "$juan_role" != "super_administrador" ]]; then
+            echo "Rol inesperado para Juan Felipe: $juan_role" >&2
+            exit 1
+          fi
 
-          "${DC[@]}" run --rm -T \
-            -e DEV_ADMIN_EMAIL=sistemas@asiati.com.co \
-            -e DEV_ADMIN_NAME="Adrian" \
-            api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
+          sistemas_role="$("${DC[@]}" exec -T db psql -U asiati -d financial_system -At \
+            -c "SELECT rol FROM usuarios WHERE email='sistemas@asiati.com.co';" </dev/null)"
+          if [[ -z "$sistemas_role" ]]; then
+            "${DC[@]}" run --rm -T \
+              -e DEV_ADMIN_EMAIL=sistemas@asiati.com.co \
+              -e DEV_ADMIN_NAME="Adrian" \
+              api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
+            "${DC[@]}" exec -T db psql -U asiati -d financial_system -v ON_ERROR_STOP=1 \
+              -c "UPDATE usuarios SET rol='ti', debe_cambiar_password=true WHERE email='sistemas@asiati.com.co';" </dev/null
+          elif [[ "$sistemas_role" != "ti" ]]; then
+            echo "Rol inesperado para Sistemas: $sistemas_role" >&2
+            exit 1
+          fi
 
-          "${DC[@]}" exec -T db psql \
-            -U asiati \
-            -d financial_system \
-            -v ON_ERROR_STOP=1 \
-            -c "UPDATE usuarios SET rol='ti', debe_cambiar_password=true WHERE email='sistemas@asiati.com.co'; UPDATE usuarios SET debe_cambiar_password=true WHERE email='juan.parra@asiati.com.co';"
-
-          "${DC[@]}" exec -T db psql \
-            -U asiati \
-            -d financial_system \
-            -At \
-            -c "SELECT email || '|' || rol || '|' || activo || '|' || debe_cambiar_password FROM usuarios WHERE email IN ('juan.parra@asiati.com.co','sistemas@asiati.com.co') ORDER BY email;"
+          "${DC[@]}" exec -T db psql -U asiati -d financial_system -At \
+            -c "SELECT email || '|' || rol || '|' || activo || '|' || debe_cambiar_password FROM usuarios WHERE email IN ('juan.parra@asiati.com.co','sistemas@asiati.com.co') ORDER BY email;" </dev/null
           REMOTE
 
       - name: Verify HTTPS
