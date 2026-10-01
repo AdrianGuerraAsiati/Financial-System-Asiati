@@ -56,7 +56,6 @@ integración vive aparte.
 | `POST /wallets/pagos/conciliar` | `conciliacion.ejecutar` | `empresa_id`, `periodo_id`, `wallet_pagos` (usuario_email), `fuente_wallet_id`, `wallet` |
 | `GET /wallets/pagos/hallazgos` | `conciliacion.ver` | `empresa_id`, `periodo_id`, `wallet_pagos` opcional |
 | `GET /wallets/catalogo` | `conciliacion.ver` | `empresa_id` → tiendas y wallets de pagos de **esa** empresa (de los JSON) |
-| `GET /wallets/contexto` | `conciliacion.ver` | `empresa_id` → períodos (abiertos y cerrados) y fuentes de la empresa (ver §6) |
 
 Comportamiento, igual que Wiilog:
 
@@ -196,9 +195,9 @@ La pantalla solo **presenta** según `/auth/me`; el backend valida siempre. Empr
 
 | Dato | ¿Existe? | Quién lo crea y cómo |
 |---|---|---|
-| Empresas WIILOG, ASIATI, TIENDAS ASIATI, ORIGEN VITAL | **No hay endpoint ni script.** Local: solo "ASIATI Demo" del bootstrap. `ROLES_Y_PERMISOS.md §2` nombra WIILOG, CHIN CHIN, ASIATI COMERCIAL | Adrian (núcleo), con script o endpoint de `empresas.gestionar`. El nombre debe ser **idéntico** al campo `empresa` de los JSON; `parametros_wallet_pagos.json` se ajusta al nombre que decida Juan Felipe. |
-| Períodos (sept-2026 abierto por empresa) | No hay endpoint para crear ni listar períodos | Adrian: script de datos o endpoint. La pantalla necesita **listarlos**: `GET /wallets/contexto` (lectura, en el motor) o un endpoint del núcleo si Adrian lo prefiere |
-| Fuentes por wallet | `fuentes` solo tiene `empresa_id` y `nombre`; no hay endpoint | Adrian: crear una fuente por archivo (p. ej. "Wallet Menpros", "Órdenes Dropi") por empresa. La pantalla deja **elegir** la fuente; no se deduce del nombre |
+| Empresas WIILOG, ASIATI, TIENDAS ASIATI, ORIGEN VITAL | **No hay endpoint ni script.** Local: solo "ASIATI Demo" del bootstrap. `ROLES_Y_PERMISOS.md §2` nombra WIILOG, CHIN CHIN, ASIATI COMERCIAL | PR aparte en `app/core` (después del de tiendas y pagos): comando que crea empresas, períodos y fuentes desde un archivo; el archivo con los nombres reales va fuera de git y en el repo solo un ejemplo. Nombres decididos el 30-sep: **WIILOG, ASIATI, TIENDAS ASIATI, ORIGEN VITAL**, idénticos al campo `empresa` de los JSON (`parametros_wallet_pagos.json` ya dice `ASIATI`). |
+| Períodos (sept-2026 abierto por empresa) | No hay endpoint para crear ni listar períodos | El mismo PR de núcleo: crear con el comando y listar con `GET /periodos?empresa_id` (lectura) |
+| Fuentes por wallet | `fuentes` solo tiene `empresa_id` y `nombre`; no hay endpoint | El mismo PR de núcleo: crear con el comando (una fuente por archivo y empresa) y listar con `GET /fuentes?empresa_id`. La pantalla deja **elegir** la fuente; no se deduce del nombre |
 | Usuarios con empresas asignadas | Sí (`PUT /usuarios/{id}/empresas`) | Tú como superadmin, desde la API o la pantalla de usuarios |
 
 Para probar en local, en la Fase 3 creo estos datos con un script **solo local, fuera del repo** (scratchpad),
@@ -257,8 +256,8 @@ Frontend (Fase 3):
 4. `docs/nucleo/ROLES_Y_PERMISOS.md §8`: agregar el endpoint.
 5. Prueba nueva. Sin migración (la tabla y el tipo `NOTA` ya existen).
 
-Posible, si Adrian prefiere que viva en el núcleo y no en el motor: `GET /periodos?empresa_id` y
-`GET /fuentes?empresa_id` (lectura).
+Segundo PR de núcleo (después de tiendas y pagos): comando de datos base (empresas, períodos, fuentes) con archivo de
+ejemplo en el repo y el real fuera de git, más `GET /periodos?empresa_id` y `GET /fuentes?empresa_id` (lectura).
 
 `app/main.py`: registrar los routers de tiendas y pagos (dos líneas, como Wiilog).
 
