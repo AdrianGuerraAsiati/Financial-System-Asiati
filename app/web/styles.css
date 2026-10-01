@@ -1733,6 +1733,31 @@ td {
   font-weight: 670;
 }
 
+.auth-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+}
+
+.auth-card .secondary-button {
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--ink-soft);
+  box-shadow: var(--shadow-xs);
+}
+
+.auth-card .secondary-button:hover {
+  border-color: #b8c0cc;
+  background: #f9fafb;
+  color: var(--ink);
+}
+
+@media (max-width: 460px) {
+  .auth-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Utility polish ---------------------------------------------------------- */
 
 .muted {
