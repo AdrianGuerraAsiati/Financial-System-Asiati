@@ -132,6 +132,12 @@ hallazgo_mensajes                                -- el hilo del caso especial
   id, hallazgo_id, usuario_id, tipo TEXT CHECK (tipo IN ('PREGUNTA','RESPUESTA','NOTA')), texto, creado_at
 ```
 
+> **Autenticación:** en entornos con `AUTH_PROVIDER=cognito`, Cognito autentica
+> correo/contraseña y PostgreSQL conserva exclusivamente la autorización descrita en
+> este documento. Roles y empresas no se duplican en Cognito Groups. La columna
+> histórica `password_hash` funciona como marca de invalidación de sesión y no como
+> almacenamiento de la contraseña externa. Ver ADR 0007.
+
 Los permisos viven en código:
 
 ```python
