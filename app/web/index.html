@@ -91,13 +91,12 @@
         <span class="nav-icon" aria-hidden="true">◇</span>
         <span class="nav-label">Compras</span>
       </button>
-
-      <div class="sidebar-section-label sidebar-section-label-spaced">Próximamente</div>
-      <button class="nav-item" disabled>
+      <button class="nav-item" data-view="wallets" id="nav-wallets" hidden>
         <span class="nav-icon" aria-hidden="true">◫</span>
         <span class="nav-label">Wallets</span>
-        <span class="nav-badge">Pronto</span>
       </button>
+
+      <div class="sidebar-section-label sidebar-section-label-spaced">Próximamente</div>
       <button class="nav-item" disabled>
         <span class="nav-icon" aria-hidden="true">◎</span>
         <span class="nav-label">Chin Chin</span>
@@ -749,11 +748,152 @@
           </section>
         </section>
       </div>
+
+      <div id="vista-wallets" class="module-view" hidden>
+        <section class="intro">
+          <div>
+            <p class="eyebrow">Conciliación · Wallets</p>
+            <h2>Wallets</h2>
+            <p>Concilia archivos por empresa y período, valida C0 y gestiona los hallazgos del motor.</p>
+          </div>
+          <div id="estado-wallets" class="status" role="status">Listo</div>
+        </section>
+
+        <section class="panel" id="wallets-conciliar-panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Conciliar wallet</h3>
+              <p>La empresa se toma del selector superior. Los períodos cerrados se pueden consultar, pero no conciliar.</p>
+            </div>
+          </div>
+
+          <form id="wallets-form" class="wallets-form">
+            <label>Período
+              <select id="wallets-periodo" name="periodo_id" required></select>
+            </label>
+            <label>Tipo de wallet
+              <select id="wallets-tipo" name="tipo" required></select>
+            </label>
+            <label id="wallets-identidad-wrap">Wallet / tienda
+              <select id="wallets-identidad" name="identidad"></select>
+            </label>
+            <label>Fuente de wallet
+              <select id="wallets-fuente-wallet" name="fuente_wallet_id" required></select>
+            </label>
+            <label id="wallets-fuente-ordenes-wrap">Fuente de órdenes
+              <select id="wallets-fuente-ordenes" name="fuente_ordenes_id"></select>
+            </label>
+            <label id="wallets-corte-wrap">Hora de descarga del reporte
+              <input id="wallets-corte" name="corte_ordenes" type="datetime-local">
+              <small class="muted">Opcional. Si el nombre trae _AAAAMMDD_HHMMSS, se precarga.</small>
+            </label>
+            <label>Archivo wallet
+              <input id="wallets-archivo-wallet" name="wallet" type="file" accept=".xlsx,.xls" required>
+            </label>
+            <label id="wallets-archivo-ordenes-wrap">Archivo de órdenes
+              <input id="wallets-archivo-ordenes" name="ordenes" type="file" accept=".xlsx,.xls">
+            </label>
+            <div id="wallets-form-aviso" class="notice span-two" hidden></div>
+            <button id="wallets-conciliar" class="span-two" type="submit">Conciliar</button>
+          </form>
+        </section>
+
+        <section id="wallets-c0-panel" class="panel" hidden>
+          <div class="panel-heading">
+            <div>
+              <h3>Resultado C0</h3>
+              <p>Continuidad del saldo y cobertura del archivo cargado.</p>
+            </div>
+            <span id="wallets-c0-estado" class="wallet-pill">—</span>
+          </div>
+          <div class="wallets-c0-grid">
+            <article><span>Saldo inicial</span><strong id="wallets-c0-inicial">—</strong></article>
+            <article><span>Entradas</span><strong id="wallets-c0-entradas">—</strong></article>
+            <article><span>Salidas</span><strong id="wallets-c0-salidas">—</strong></article>
+            <article><span>Saldo final</span><strong id="wallets-c0-final">—</strong></article>
+          </div>
+          <p id="wallets-c0-mensaje" class="wallets-result-message"></p>
+          <div id="wallets-c0-cobertura" class="notice compact" hidden></div>
+        </section>
+
+        <section id="wallets-resumen-panel" class="panel" hidden>
+          <div class="panel-heading">
+            <div>
+              <h3>Resumen de conciliación</h3>
+              <p>Resumen devuelto por el motor para la última conciliación ejecutada en esta sesión.</p>
+            </div>
+          </div>
+          <p class="notice compact">Resumen de la última conciliación de esta sesión. C0 y resumen aún no se persisten en la base.</p>
+          <div id="wallets-resumen" class="wallets-summary-grid"></div>
+        </section>
+
+        <section id="wallets-hallazgos-panel" class="panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Bandeja de hallazgos</h3>
+              <p>Por defecto muestra la última carga de cada wallet. Puedes consultar el historial completo.</p>
+            </div>
+            <button id="wallets-recargar-hallazgos" class="secondary-button" type="button">Actualizar</button>
+          </div>
+
+          <div class="wallets-filters">
+            <label>Gravedad
+              <select id="wallets-filtro-gravedad">
+                <option value="">Todas</option>
+                <option value="CRITICO">CRÍTICO</option>
+                <option value="MEDIO">MEDIO</option>
+                <option value="INFORMATIVO">INFORMATIVO</option>
+                <option value="REVISAR">REVISAR</option>
+              </select>
+            </label>
+            <label>Estado
+              <select id="wallets-filtro-estado">
+                <option value="">Todos</option>
+                <option value="detectado">DETECTADO</option>
+                <option value="en_gestion">EN GESTIÓN</option>
+                <option value="escalado">ESCALADO</option>
+                <option value="resuelto">RESUELTO</option>
+              </select>
+            </label>
+            <label class="wallets-check">
+              <input id="wallets-todas-cargas" type="checkbox">
+              Mostrar todas las cargas
+            </label>
+          </div>
+
+          <div class="table-wrap">
+            <table class="wallets-table">
+              <thead>
+                <tr>
+                  <th>Gravedad</th>
+                  <th>Referencia</th>
+                  <th>Descripción</th>
+                  <th>Monto</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="wallets-hallazgos-body">
+                <tr><td colspan="6" class="empty">Selecciona empresa y período para consultar hallazgos.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <dialog id="wallets-hallazgo-dialog" class="wallets-dialog">
+          <form method="dialog" class="wallets-dialog-close">
+            <button class="secondary-button" value="cancel" type="submit">Cerrar</button>
+          </form>
+          <div id="wallets-hallazgo-detalle"></div>
+          <div id="wallets-hallazgo-acciones"></div>
+        </dialog>
+      </div>
     </main>
   </div>
 
   </div>
 
   <script src="/static/app.js" defer></script>
+  <script src="/static/wallets.js" defer></script>
 </body>
 </html>
