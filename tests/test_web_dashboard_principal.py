@@ -28,3 +28,5 @@ def test_shell_wires_principal_dashboard_endpoint_and_navigation() -> None:
     assert 'data-home-view' in response.text
     assert 'sesion.permisos?.["cartera.ver"]' in response.text
     assert 'sesion.permisos?.["compras.ver"]' in response.text
+    assert 'sesion.permisos?.["conciliacion.ver"]' in response.text
+    assert 'mostrarModulo("wallets")' in response.text
