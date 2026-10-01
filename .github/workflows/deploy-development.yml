@@ -377,7 +377,6 @@ jobs:
           set_env COMPRAS_DEMO_MODE false
           set_env COMPRAS_EXCEL_LOCAL_FILE /data/compras/INFORME_COMPRAS_2024_2026_DEV.xlsx
           set_env COMPRAS_LOCAL_DATA_DIR /opt/financial-system-data/compras
-          set_env COMPRAS_SHEETS_EMPRESA_ID 1
           set_env COMPRAS_SHEETS_CO_RANGE "\"'INFORME CLIENTES (CO)'!A:BG\""
           set_env COMPRAS_SHEETS_EC_RANGE "\"'INFORME CLIENTES (EC)'!A:BG\""
           set_env COMPRAS_SHEETS_CL_RANGE "\"'INFORME CLIENTES (CL)'!A:BG\""
@@ -443,6 +442,7 @@ jobs:
             "${DC[@]}" run --rm -T \
               -e DEV_ADMIN_EMAIL=juan.parra@asiati.com.co \
               -e DEV_ADMIN_NAME="Juan Felipe Parra" \
+              -e DEV_EMPRESA_NOMBRE=ASIATI \
               api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
             "${DC[@]}" exec -T db psql -U asiati -d financial_system -v ON_ERROR_STOP=1 \
               -c "UPDATE usuarios SET debe_cambiar_password=true WHERE email='juan.parra@asiati.com.co';" </dev/null
@@ -457,6 +457,7 @@ jobs:
             "${DC[@]}" run --rm -T \
               -e DEV_ADMIN_EMAIL=sistemas@asiati.com.co \
               -e DEV_ADMIN_NAME="Adrian" \
+              -e DEV_EMPRESA_NOMBRE=ASIATI \
               api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
             "${DC[@]}" exec -T db psql -U asiati -d financial_system -v ON_ERROR_STOP=1 \
               -c "UPDATE usuarios SET rol='ti', debe_cambiar_password=true WHERE email='sistemas@asiati.com.co';" </dev/null
@@ -467,6 +468,55 @@ jobs:
 
           "${DC[@]}" exec -T db psql -U asiati -d financial_system -At \
             -c "SELECT email || '|' || rol || '|' || activo || '|' || debe_cambiar_password FROM usuarios WHERE email IN ('juan.parra@asiati.com.co','sistemas@asiati.com.co') ORDER BY email;" </dev/null
+          REMOTE
+
+      - name: Normalize development companies
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            "$SSH_TARGET" \
+            "sudo bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/financial-system
+          DC=(docker compose --env-file .env.production -f compose.production.yml)
+
+          "${DC[@]}" run --rm -T api python -m app.core.normalizar_empresas_dev
+
+          ASIATI_ID="$("${DC[@]}" exec -T db psql -U asiati -d financial_system -At \
+            -c "SELECT id FROM empresas WHERE nombre='ASIATI' ORDER BY id LIMIT 1;" </dev/null)"
+          test -n "$ASIATI_ID"
+
+          set_env() {
+            local key="$1"
+            local value="$2"
+            local tmp
+            tmp="$(mktemp)"
+            awk -v key="$key" -v value="$value" '
+              BEGIN { updated = 0 }
+              index($0, key "=") == 1 {
+                print key "=" value
+                updated = 1
+                next
+              }
+              { print }
+              END {
+                if (!updated) print key "=" value
+              }
+            ' .env.production > "$tmp"
+            cat "$tmp" > .env.production
+            rm -f "$tmp"
+          }
+
+          set_env COMPRAS_SHEETS_EMPRESA_ID "$ASIATI_ID"
+          chmod 600 .env.production
+          "${DC[@]}" up -d --force-recreate api
+          echo "Compras enlazado a ASIATI (empresa_id=$ASIATI_ID)."
           REMOTE
 
       - name: Refresh Compras snapshot from local Excel
