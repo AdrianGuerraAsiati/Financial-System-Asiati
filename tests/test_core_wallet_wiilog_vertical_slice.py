@@ -147,6 +147,8 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
     assert response.status_code == 201
     body = response.json()
     assert body["bloqueado"] is False
+    assert body["c0"]["cuadra"] is True
+    assert {"saldo_inicial", "entradas", "salidas", "saldo_final"} <= set(body["c0"])
     assert body["cargas"]["ordenes_id"] > 0
     assert body["cargas"]["wallet_id"] > 0
     assert body["hallazgos_creados"] >= 1

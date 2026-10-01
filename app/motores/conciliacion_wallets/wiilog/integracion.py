@@ -34,8 +34,28 @@ class EjecucionWiilog:
     carga_ordenes_id: int
     carga_wallet_id: int
     bloqueado: bool
+    c0: dict[str, Any]
     hallazgos_creados: int
     resumen: dict[str, Any]
+
+
+def _resultado_c0(chequeos: list) -> dict[str, Any]:
+    """Contrato estructurado del C0 para la pantalla, sin cambiar reglas del motor."""
+    por_codigo = {chequeo.codigo: chequeo for chequeo in chequeos}
+    saldo = por_codigo["C0_SALDO"]
+    cobertura = por_codigo.get("C0_COBERTURA")
+    return {
+        "cuadra": saldo.estado == "EN_ORDEN",
+        "mensaje": saldo.mensaje,
+        **saldo.detalle,
+        "cobertura": None
+        if cobertura is None
+        else {
+            "estado": cobertura.estado,
+            "mensaje": cobertura.mensaje,
+            **cobertura.detalle,
+        },
+    }
 
 
 WIILOG_WALLET_EMAIL_PLACEHOLDER = "{{WIILOG_WALLET_PRINCIPAL_EMAIL}}"
@@ -361,6 +381,7 @@ def ejecutar_y_persistir_wiilog(
         carga_ordenes_id=carga_ordenes.id,
         carga_wallet_id=carga_wallet.id,
         bloqueado=resultado.bloqueado,
+        c0=_resultado_c0(resultado.chequeos),
         hallazgos_creados=creados,
         resumen=resultado.resumen,
     )
