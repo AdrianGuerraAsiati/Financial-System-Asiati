@@ -17,7 +17,6 @@ from app.core.auth.config import (
 from app.core.auth.model import Ingreso
 from app.core.auth.passwords import hashear_password, verificar_password
 from app.core.empresas import Empresa
-from app.core.usuarios import Empresa as _EmpresaImportGuard
 from app.core.usuarios import ROLES_VEN_TODAS_LAS_EMPRESAS, Usuario, UsuarioEmpresa
 
 
