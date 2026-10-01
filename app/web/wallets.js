@@ -475,8 +475,8 @@
   async function abrirHallazgo(id) {
     detalle.innerHTML = '<p class="empty">Cargando detalle…</p>';
     acciones.innerHTML = "";
-    if (typeof dialog.showModal === "function") dialog.showModal();
-    else dialog.setAttribute("open", "");
+    if (!dialog.open && typeof dialog.showModal === "function") dialog.showModal();
+    else if (!dialog.open) dialog.setAttribute("open", "");
     try {
       const h = await walletApi("/api/v1/hallazgos/" + id);
       detalle.innerHTML =
@@ -543,8 +543,7 @@
       renderTipos();
       actualizarTipo();
       restaurarResultado();
-      hallazgosPanel.hidden = false;
-      await cargarHallazgos();
+      if (!hallazgosPanel.hidden) await cargarHallazgos();
       setEstadoWallets("Listo", "");
     } catch (error) {
       periodos = [];
@@ -563,19 +562,16 @@
   tipo.addEventListener("change", async () => {
     actualizarTipo();
     restaurarResultado();
-    hallazgosPanel.hidden = false;
-    await cargarHallazgos();
+    if (!hallazgosPanel.hidden) await cargarHallazgos();
   });
   identidad.addEventListener("change", async () => {
     restaurarResultado();
-    hallazgosPanel.hidden = false;
-    await cargarHallazgos();
+    if (!hallazgosPanel.hidden) await cargarHallazgos();
   });
   periodo.addEventListener("change", async () => {
     actualizarDisponibilidadConciliacion();
     restaurarResultado();
-    hallazgosPanel.hidden = false;
-    await cargarHallazgos();
+    if (!hallazgosPanel.hidden) await cargarHallazgos();
   });
   archivoOrdenes.addEventListener("change", () => {
     if (tipo.value !== "tienda" || corte.value || !archivoOrdenes.files[0]) return;
