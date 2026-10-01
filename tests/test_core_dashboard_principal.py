@@ -75,9 +75,14 @@ def test_principal_dashboard_composes_visible_modules_without_new_scores() -> No
     )
     assert conciliacion["resumen"]["hallazgos_abiertos"] == 1
     assert conciliacion["resumen"]["hallazgos_criticos_abiertos"] == 1
+    assert conciliacion["accion"] == {"vista": "wallets", "texto": "Ver wallets"}
 
     assert any(item["modulo"] == "compras" for item in body["atencion"])
     assert any(item["modulo"] == "conciliacion" for item in body["atencion"])
+    conciliacion_atencion = next(
+        item for item in body["atencion"] if item["modulo"] == "conciliacion"
+    )
+    assert conciliacion_atencion["url_destino"] == "wallets"
 
 
 def test_principal_dashboard_hides_unassigned_company_before_module_reads(
