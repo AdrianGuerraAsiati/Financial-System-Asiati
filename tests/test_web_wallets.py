@@ -41,6 +41,7 @@ def test_wallets_javascript_uses_core_and_motor_contracts() -> None:
     assert 'Conciliando…' in response.text
     assert 'CUADRA' in response.text
     assert 'NO CUADRA' in response.text
+    assert "Promise.allSettled" in response.text
 
 
 def test_wallets_styles_keep_text_labels_when_printed() -> None:
