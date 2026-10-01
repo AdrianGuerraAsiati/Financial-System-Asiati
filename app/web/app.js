@@ -24,9 +24,11 @@ const carteraGuardarSnapshot = document.querySelector("#cartera-guardar-snapshot
 const navInicio = document.querySelector("#nav-inicio");
 const navCartera = document.querySelector("#nav-cartera");
 const navCompras = document.querySelector("#nav-compras");
+const navWallets = document.querySelector("#nav-wallets");
 const vistaInicio = document.querySelector("#vista-inicio");
 const vistaCartera = document.querySelector("#vista-cartera");
 const vistaCompras = document.querySelector("#vista-compras");
+const vistaWallets = document.querySelector("#vista-wallets");
 const inicioSubtitulo = document.querySelector("#inicio-subtitulo");
 const inicioActualizado = document.querySelector("#inicio-actualizado");
 const inicioModulos = document.querySelector("#inicio-modulos");
@@ -91,6 +93,8 @@ empresaInput.addEventListener("change", () => {
     cargarCarteraTodo();
   } else if (moduloActivo === "compras") {
     cargarComprasTodo();
+  } else if (moduloActivo === "wallets" && window.cargarWalletsTodo) {
+    window.cargarWalletsTodo();
   }
 });
 
@@ -113,14 +117,17 @@ function mostrarModulo(modulo) {
   const inicio = modulo === "inicio";
   const cartera = modulo === "cartera";
   const compras = modulo === "compras";
+  const wallets = modulo === "wallets";
 
   vistaInicio.hidden = !inicio;
   vistaCartera.hidden = !cartera;
   vistaCompras.hidden = !compras;
+  vistaWallets.hidden = !wallets;
 
   navInicio.classList.toggle("active", inicio);
   navCartera.classList.toggle("active", cartera);
   navCompras.classList.toggle("active", compras);
+  navWallets.classList.toggle("active", wallets);
 
   if (inicio) {
     cargarDashboardPrincipal();
@@ -128,6 +135,8 @@ function mostrarModulo(modulo) {
     cargarCarteraTodo();
   } else if (compras) {
     cargarComprasTodo();
+  } else if (wallets && window.cargarWalletsTodo) {
+    window.cargarWalletsTodo();
   }
 }
 
@@ -176,6 +185,7 @@ function mostrarCambioPassword() {
 }
 
 function mostrarApp(sesion) {
+  window.ASIATI_SESION = sesion;
   loginView.hidden = true;
   appShell.hidden = false;
   usuarioNombre.textContent = sesion.usuario.nombre;
@@ -191,8 +201,10 @@ function mostrarApp(sesion) {
 
   const puedeVerCartera = Boolean(sesion.permisos?.["cartera.ver"]);
   const puedeVerCompras = Boolean(sesion.permisos?.["compras.ver"]);
+  const puedeVerWallets = Boolean(sesion.permisos?.["conciliacion.ver"]);
   navCartera.hidden = !puedeVerCartera;
   navCompras.hidden = !puedeVerCompras;
+  navWallets.hidden = !puedeVerWallets;
 
   mostrarModulo("inicio");
   iniciarMonitorDashboard();
@@ -1630,6 +1642,7 @@ carteraGuardarSnapshot.addEventListener("click", guardarSnapshotCartera);
 navInicio.addEventListener("click", () => mostrarModulo("inicio"));
 navCartera.addEventListener("click", () => mostrarModulo("cartera"));
 navCompras.addEventListener("click", () => mostrarModulo("compras"));
+navWallets.addEventListener("click", () => mostrarModulo("wallets"));
 document.querySelector("#inicio-actualizar").addEventListener("click", cargarDashboardPrincipal);
 document.querySelector("#compras-refrescar-fuente").addEventListener("click", () => cargarComprasTodo(true));
 document.querySelector("#compras-cargar-kpis").addEventListener("click", cargarComprasKpis);
