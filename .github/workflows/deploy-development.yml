@@ -486,7 +486,7 @@ jobs:
           cd /opt/financial-system
           DC=(docker compose --env-file .env.production -f compose.production.yml)
 
-          "${DC[@]}" run --rm -T api python -m app.core.normalizar_empresas_dev
+          "${DC[@]}" run --rm -T api python -m app.core.normalizar_empresas_dev </dev/null
 
           ASIATI_ID="$("${DC[@]}" exec -T db psql -U asiati -d financial_system -At \
             -c "SELECT id FROM empresas WHERE nombre='ASIATI' ORDER BY id LIMIT 1;" </dev/null)"

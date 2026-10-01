@@ -18,6 +18,6 @@ def test_development_deploy_retires_legacy_demo_company() -> None:
     contenido = DEPLOY.read_text(encoding="utf-8")
 
     assert "-e DEV_EMPRESA_NOMBRE=ASIATI" in contenido
-    assert "python -m app.core.normalizar_empresas_dev" in contenido
+    assert "python -m app.core.normalizar_empresas_dev </dev/null" in contenido
     assert 'set_env COMPRAS_SHEETS_EMPRESA_ID "$ASIATI_ID"' in contenido
     assert "set_env COMPRAS_SHEETS_EMPRESA_ID 1" not in contenido
