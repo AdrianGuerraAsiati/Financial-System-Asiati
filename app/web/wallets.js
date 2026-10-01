@@ -481,7 +481,7 @@
       const h = await walletApi("/api/v1/hallazgos/" + id);
       detalle.innerHTML =
         '<div class="wallet-dialog-heading"><div><span class="wallet-pill">' + escapar(gravedadDe(h)) + "</span>" +
-        "<h3>" + escapar(h.codigo_regla) + "</h3></div><span class="wallet-pill">" + escapar(textoEstado(estadoDe(h))) + "</span></div>" +
+        '<h3>' + escapar(h.codigo_regla) + '</h3></div><span class="wallet-pill">' + escapar(textoEstado(estadoDe(h))) + '</span></div>' +
         "<p>" + escapar(h.descripcion) + "</p>" +
         "<h4>Hilo de mensajes</h4>" + renderMensajes(h.mensajes);
       renderAccionesHallazgo(h);
