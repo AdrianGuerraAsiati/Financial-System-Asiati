@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.auth.api import router as auth_router
+from app.core.catalogos_api import router as catalogos_router
 from app.dashboard.api import router as dashboard_router
 from app.core.hallazgos.api import router as hallazgos_router
 from app.core.supervision.api import router as supervision_router
@@ -29,6 +30,7 @@ app.include_router(dashboard_router, prefix=API_V1)
 app.include_router(usuarios_router, prefix=API_V1)
 app.include_router(supervision_router, prefix=API_V1)
 app.include_router(hallazgos_router, prefix=API_V1)
+app.include_router(catalogos_router, prefix=API_V1)
 app.include_router(cartera_router, prefix=API_V1)
 app.include_router(compras_router, prefix=API_V1)
 app.include_router(wiilog_wallet_router, prefix=API_V1)
