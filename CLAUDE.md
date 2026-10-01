@@ -68,21 +68,18 @@ No elijas en silencio.
 - `/release <versión>` — prepara una versión: changelog, número, tag y release.
 - `/revisar-spec` — compara el código contra la SPEC y lista diferencias, sin tocar código.
 
-## Estado actual · 30-sep-2026
+## Estado actual · 1-oct-2026
 
-Antes de iniciar trabajo, leer `docs/ESTADO_DESARROLLO_2026-09-30.md`.
+Antes de iniciar trabajo, leer `docs/ESTADO_DESARROLLO_2026-10-01.md`.
 
 Resumen vigente:
 
-- desarrollo desplegado en AWS Lightsail;
-- Compras funciona temporalmente con **S3 privado -> copia operacional local -> snapshot PostgreSQL**, no con Google Sheets directo;
-- snapshot de Compras de desarrollo válido: 2.260 líneas;
-- Google Sheets queda pendiente de acceso administrativo de Google Cloud;
-- #89 de wallets tienda/pagos está fusionado;
-- #86 de sanitización de Wallets está fusionado y los identificadores reales se inyectan por runtime;
-- #91 de movimientos/categorización es el único PR funcional abierto y sigue en draft por una decisión de contrato;
-- Cartera sigue sin fuente real identificada; no usar el Excel de Compras como sustituto.
-- Cartera core ya incluye resúmenes descriptivos (#97), agrupación por OC sin colapsar composición (#98) y diagnóstico de negociaciones heredadas (#99).
+- #109 Cognito está fusionado: Cognito autentica credenciales y PostgreSQL conserva roles, empresas y permisos;
+- Wallets ya tiene backend, pantalla, datos base en desarrollo y gestión completa de hallazgos;
+- el siguiente gate es la aceptación operacional definida en `docs/motores/conciliacion_wallets/ACEPTACION_OPERATIVA.md`;
+- #91 de movimientos/categorización fue cerrado sin merge y no tiene reemplazo en `main`; la semántica tipo crudo vs `ingreso_egreso` sigue pendiente;
+- #101 de Cartera sigue draft/divergido y no debe fusionarse antes de identificar la fuente real y validar sus umbrales heredados;
+- Compras continúa en desarrollo con S3 privado -> copia operacional local -> snapshot PostgreSQL;
+- Cartera no debe usar el Excel de Compras como sustituto de su fuente.
 
-No asumir que las secciones históricas de `Ai_Handoff.md` sobre autenticación Google o fuente viva describen el entorno desplegado actual; la actualización del 30-sep al inicio de ese archivo y el reporte anterior mandan para estado operativo.
-
+Las fotografías anteriores quedan como historia. Para estado operativo manda el documento del 1-oct, y para decisiones formales mandan los ADR de `docs/decisiones/`.
