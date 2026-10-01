@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from app.motores.conciliacion_wallets.pagos import conciliar_wallet_pagos
+from app.motores.conciliacion_wallets.plataforma.hallazgos import hallazgos_tienda
 from app.motores.conciliacion_wallets.tiendas import conciliar_wallet_tienda
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -112,3 +113,41 @@ def test_proveeduria_ordenes_de_otra_tienda(proveeduria):
     otra = f[f.motivo == "ORDEN_DE_OTRA_TIENDA"].groupby("concepto").neto_c.agg(["size", "sum"])
     assert otra.loc["COBRO_FULFILLMENT"].tolist() == [13, -3_250_000]
     assert otra.loc["GANANCIA_PROVEEDOR"].tolist() == [10, 13_000_000]
+
+
+# ------------------------------------------------- hallazgos que llegan a la bandeja (PANTALLA_WALLETS.md §2.2)
+
+
+def _gravedades(hallazgos):
+    out = {}
+    for h in hallazgos:
+        out[h.gravedad] = out.get(h.gravedad, 0) + 1
+    return out
+
+
+def test_menpros_no_encontradas_separa_reemplazadas(menpros):
+    [h] = [h for h in hallazgos_tienda(menpros) if h.codigo == "TIENDA_FUERA_NO_ENCONTRADA"]
+    assert h.gravedad == "MEDIO"
+    assert h.evidencia["movimientos"] == 180
+    assert h.evidencia["reemplazadas"]["movimientos"] == 64
+    assert h.evidencia["otros"]["movimientos"] == 116
+
+
+def test_proveeduria_no_encontradas_sin_reemplazadas(proveeduria):
+    [h] = [h for h in hallazgos_tienda(proveeduria) if h.codigo == "TIENDA_FUERA_NO_ENCONTRADA"]
+    assert h.evidencia["reemplazadas"]["movimientos"] == 0
+    assert h.evidencia["otros"]["movimientos"] == 109
+
+
+def test_ordenes_anteriores_al_reporte_son_un_solo_hallazgo(menpros, proveeduria):
+    for r, n in ((menpros, 2246), (proveeduria, 2570)):
+        [h] = [h for h in hallazgos_tienda(r) if h.codigo == "TIENDA_FUERA_ORDEN_ANTERIOR_AL_REPORTE"]
+        assert h.gravedad == "INFORMATIVO"
+        assert h.descripcion.startswith(f"{n} movimientos de órdenes anteriores al reporte")
+
+
+def test_volumen_de_la_bandeja_de_septiembre(menpros, proveeduria):
+    # Menpros: T2 1 crítico; T3 18 medios + 6 informativos; NO_ENCONTRADA 1; anteriores 1; 10 movimientos.
+    assert _gravedades(hallazgos_tienda(menpros)) == {"CRITICO": 1, "MEDIO": 19, "INFORMATIVO": 7, "REVISAR": 10}
+    # Proveeduría: T4 12 duplicados; otra tienda 24; NO_ENCONTRADA 1; anteriores 1; 10 movimientos.
+    assert _gravedades(hallazgos_tienda(proveeduria)) == {"MEDIO": 37, "INFORMATIVO": 1, "REVISAR": 10}
