@@ -342,7 +342,7 @@ def _leer_conciliacion(
                     "estado": "SIN_EJECUCIONES",
                     "detalle": "Todavía no hay períodos para esta empresa.",
                 },
-                "accion": None,
+                "accion": {"vista": "wallets", "texto": "Ver wallets"},
             },
             [],
         )
@@ -372,7 +372,7 @@ def _leer_conciliacion(
             "titulo": hallazgo.codigo_regla or "Hallazgo de conciliación",
             "descripcion": hallazgo.descripcion or "Requiere revisión.",
             "referencia": str(hallazgo.id),
-            "url_destino": None,
+            "url_destino": "wallets",
         }
         for hallazgo in abiertos[:5]
     ]
@@ -396,7 +396,7 @@ def _leer_conciliacion(
                 "estado": "DISPONIBLE",
                 "periodo_id": periodo.id,
             },
-            "accion": None,
+            "accion": {"vista": "wallets", "texto": "Ver wallets"},
         },
         atencion,
     )
