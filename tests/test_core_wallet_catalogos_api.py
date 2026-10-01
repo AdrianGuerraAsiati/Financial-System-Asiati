@@ -6,8 +6,13 @@ from sqlalchemy.orm import Session
 from app.core.empresas import Empresa
 from app.core.fuentes import Fuente
 from app.core.periodos import Periodo
-from app.core.usuarios.roles import ROL_CONCILIACION, ROL_COORDINACION_FINANCIERA, ROL_TI
-from tests.apoyo_auth import cliente_con_rol, cliente_superadmin, engine
+from app.core.usuarios.roles import (
+    ROL_ANALISTA_TESORERIA,
+    ROL_CONCILIACION,
+    ROL_COORDINACION_FINANCIERA,
+    ROL_TI,
+)
+from tests.apoyo_auth import cliente, cliente_con_rol, cliente_superadmin, engine
 
 
 def _catalogo() -> tuple[int, int, int]:
@@ -99,6 +104,37 @@ def test_coordinacion_y_ti_pueden_consultar_catalogos() -> None:
     assert (
         ti.get("/api/v1/fuentes", params={"empresa_id": empresa_id}).status_code
         == 200
+    )
+
+
+def test_analista_tesoreria_no_tiene_conciliacion_ver() -> None:
+    empresa_id, _, _ = _catalogo()
+    analista, _ = cliente_con_rol(
+        ROL_ANALISTA_TESORERIA,
+        empresas=(empresa_id,),
+    )
+
+    assert (
+        analista.get("/api/v1/periodos", params={"empresa_id": empresa_id}).status_code
+        == 403
+    )
+    assert (
+        analista.get("/api/v1/fuentes", params={"empresa_id": empresa_id}).status_code
+        == 403
+    )
+
+
+def test_catalogos_requieren_sesion() -> None:
+    empresa_id, _, _ = _catalogo()
+    sin_sesion = cliente()
+
+    assert (
+        sin_sesion.get("/api/v1/periodos", params={"empresa_id": empresa_id}).status_code
+        == 401
+    )
+    assert (
+        sin_sesion.get("/api/v1/fuentes", params={"empresa_id": empresa_id}).status_code
+        == 401
     )
 
 
