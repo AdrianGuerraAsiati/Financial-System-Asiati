@@ -44,10 +44,9 @@ desactivado.
 
 ### 2.1 Endpoints
 
-Nuevo archivo `app/motores/conciliacion_wallets/tiendas/api.py` y `pagos/api.py` (o uno solo `api_wallets.py`;
-se decide en la Fase 2 por tamaño), con la lógica de base de datos en `tiendas/integracion.py` y
-`pagos/integracion.py`, igual que Wiilog. Los módulos `tiendas/` y `pagos/` siguen siendo Python puro; la
-integración vive aparte.
+Carpeta `app/motores/conciliacion_wallets/plataforma/` (Fase 2): `api.py` (router `/wallets`), `integracion.py`
+(base de datos, igual que `wiilog/integracion.py`) y `hallazgos.py` (Python puro: qué resultado se vuelve hallazgo).
+`tiendas/` y `pagos/` siguen siendo Python puro, como piden sus CLAUDE.md.
 
 | Endpoint | Permiso | Form / query |
 |---|---|---|
@@ -100,6 +99,16 @@ Decisiones del 30-sep (Juan Felipe):
 Código de regla: `TIENDA_T1_SIN_PAGO`, `TIENDA_T3_DIFERENCIA_TARIFA`, `TIENDA_FUERA_ORDEN_DE_OTRA_TIENDA`,
 `TIENDA_C0_SALDO`, `PAGOS_C0_SALDO`, etc. Evidencia siempre con `wallet` (usuario_email), `tipo_wallet`, `gravedad`,
 `carga_wallet_id`, `orden_id` o `mov_id`, montos en texto decimal (`"34998.00"`) y el estado de la regla.
+
+Volumen con los archivos de septiembre (regresión en `tests/wallet_tiendas/test_regresion_tiendas_septiembre.py`):
+
+| Wallet | CRÍTICO | MEDIO | INFORMATIVO | REVISAR | Total |
+|---|---:|---:|---:|---:|---:|
+| Menpros | 1 | 19 | 7 | 10 | 37 |
+| Proveeduría ASIATI | 0 | 37 | 1 | 10 | 48 |
+
+Sin agrupar habrían sido ~4.800 movimientos de órdenes anteriores al reporte y 289 de órdenes no encontradas.
+NO_ENCONTRADA separa en su evidencia `reemplazadas` (Menpros 64, Proveeduría 0) y `otros` (116 y 109).
 
 Wiilog: sus hallazgos ya existentes no traen `gravedad`. Se agrega `evidencia.gravedad` a los que se creen desde
 ahora (crítico → CRITICO, severidad medio → MEDIO, movimiento → REVISAR, C0 advertencia → INFORMATIVO). No cambia
