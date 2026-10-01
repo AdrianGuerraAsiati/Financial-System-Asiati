@@ -70,3 +70,27 @@ El comando de producción es `bash ops/deploy_production.sh`. El script exige
 falla si `/ready` o `/health` no responden.
 
 Detalles de la infraestructura: `docs/PRODUCTION_INFRA.md`.
+
+
+## Autenticación con Cognito
+
+La plataforma admite dos proveedores mediante `AUTH_PROVIDER`:
+
+- `local`: compatibilidad y pruebas; valida el hash Argon2 de PostgreSQL.
+- `cognito`: Cognito User Pools valida la identidad y PostgreSQL conserva rol,
+  empresas, estado activo, permisos e historial.
+
+Cuando se usa Cognito deben existir `COGNITO_REGION`, `COGNITO_CLIENT_ID` y
+`COGNITO_CLIENT_SECRET`. El client secret es confidencial y no se versiona.
+
+En desarrollo, `.github/workflows/deploy-development.yml` obtiene el client secret
+directamente desde AWS mediante OIDC y `DescribeUserPoolClient`; luego lo instala en
+`.env.production` con permisos restringidos. Lightsail no conserva access keys de IAM.
+
+La creación de usuarios desde la API registra la identidad con Cognito y envía un código
+de confirmación al correo. Login, cambio de contraseña y recuperación pasan por Cognito;
+la cookie de sesión de la plataforma permanece HttpOnly/Secure para no exponer tokens
+de Cognito al navegador.
+
+La decisión de arquitectura y el rollback están en
+`docs/decisiones/0007-cognito-autenticacion.md`.
