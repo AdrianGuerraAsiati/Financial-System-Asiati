@@ -300,3 +300,25 @@ def test_cognito_unconfirmed_user_gets_guidance(
 
     assert respuesta.status_code == 409
     assert "Verificar cuenta" in respuesta.json()["detail"]
+
+
+def test_cognito_unconfirmed_identity_without_local_user_is_not_enumerated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _usar_cognito(monkeypatch)
+
+    def pendiente(self, correo, password):
+        raise CognitoUsuarioNoConfirmado()
+
+    monkeypatch.setattr(ClienteCognito, "autenticar", pendiente)
+
+    respuesta = cliente().post(
+        "/api/v1/auth/login",
+        json={
+            "email": "identidad-externa@asiati.test",
+            "password": "temporal",
+        },
+    )
+
+    assert respuesta.status_code == 401
+    assert "Correo o contraseña incorrectos" in respuesta.json()["detail"]
