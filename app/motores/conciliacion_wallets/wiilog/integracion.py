@@ -80,8 +80,10 @@ def _registrar(
     descripcion: str,
     evidencia: dict[str, Any],
     critico: bool,
+    gravedad: str,
 ) -> Hallazgo:
-    evidencia = {"wallet": "WIILOG", **evidencia}
+    # La gravedad va en la evidencia para la bandeja (PANTALLA_WALLETS.md §2.2); no cambia qué es hallazgo.
+    evidencia = {"wallet": "WIILOG", "gravedad": gravedad, **evidencia}
     return registrar_hallazgo_motor(
         session,
         periodo_id=periodo_id,
@@ -119,6 +121,7 @@ def _persistir_chequeos(
                 "detalle": chequeo.detalle,
             },
             critico=chequeo.estado == "BLOQUEADO",
+            gravedad="CRITICO" if chequeo.estado == "BLOQUEADO" else "INFORMATIVO",
         )
         creados += 1
     return creados
@@ -156,6 +159,7 @@ def _persistir_movimientos(
                 "requiere_observacion": bool(fila.requiere_observacion),
             },
             critico=False,
+            gravedad="REVISAR",
         )
         creados += 1
     return creados
@@ -190,6 +194,7 @@ def _persistir_ff(
                 "ff_movimientos": _valor_texto(fila.get("ff_movimientos")),
             },
             critico=str(fila["severidad"]) == "critico",
+            gravedad=str(fila["severidad"]).upper(),
         )
         creados += 1
     return creados
@@ -227,6 +232,7 @@ def _persistir_flete(
                 ),
             },
             critico=str(fila["severidad"]) == "critico",
+            gravedad=str(fila["severidad"]).upper(),
         )
         creados += 1
     return creados
