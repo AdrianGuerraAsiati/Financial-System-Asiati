@@ -1,0 +1,135 @@
+name: Load development Wallets base data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ROLE_ARN: arn:aws:iam::890876258895:role/financial-system-asiati-github-deploy
+  LIGHTSAIL_INSTANCE: financial-system-asiati-dev
+  LIGHTSAIL_HOST: 3.141.226.208
+  DEV_DATA_BUCKET: financial-system-asiati-dev-data-890876258895
+  DEV_WALLETS_BASE_DATA_KEY: dev/wallets/config/datos_base.json
+
+jobs:
+  load-base-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Wallets base data from private S3
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3 cp             "s3://$DEV_DATA_BUCKET/$DEV_WALLETS_BASE_DATA_KEY"             /tmp/datos_base_wallets.json             --only-show-errors
+          python -m json.tool /tmp/datos_base_wallets.json >/dev/null
+
+      - name: Get temporary Lightsail SSH access
+        id: ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          DETAILS="$(
+            aws lightsail get-instance-access-details               --region "$AWS_REGION"               --instance-name "$LIGHTSAIL_INSTANCE"               --protocol ssh
+          )"
+
+          USERNAME="$(jq -r '.accessDetails.username // empty' <<<"$DETAILS")"
+          PRIVATE_KEY="$(jq -r '.accessDetails.privateKey // empty' <<<"$DETAILS")"
+          CERT_KEY="$(jq -r '.accessDetails.certKey // empty' <<<"$DETAILS")"
+
+          test -n "$USERNAME"
+          test -n "$PRIVATE_KEY"
+
+          printf '%s\n' "$PRIVATE_KEY" > /tmp/lightsail.pem
+          chmod 600 /tmp/lightsail.pem
+
+          if [[ -n "$CERT_KEY" ]]; then
+            printf '%s\n' "$CERT_KEY" > /tmp/lightsail.pem-cert.pub
+            chmod 644 /tmp/lightsail.pem-cert.pub
+          else
+            rm -f /tmp/lightsail.pem-cert.pub
+          fi
+
+          echo "username=$USERNAME" >> "$GITHUB_OUTPUT"
+          echo "host=$LIGHTSAIL_HOST" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            if ssh               -o BatchMode=yes               -o ConnectTimeout=5               -o StrictHostKeyChecking=accept-new               -i /tmp/lightsail.pem               "${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"               "echo ready" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Lightsail no aceptó SSH a tiempo." >&2
+          exit 1
+
+      - name: Copy base data to development host
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp             -o BatchMode=yes             -o StrictHostKeyChecking=accept-new             -i /tmp/lightsail.pem             /tmp/datos_base_wallets.json             "${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}:/tmp/datos_base_wallets.json"
+
+      - name: Apply Wallets base data
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+
+          ssh             -o BatchMode=yes             -o StrictHostKeyChecking=accept-new             -i /tmp/lightsail.pem             "$SSH_TARGET"             "sudo bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/financial-system
+          DC=(docker compose --env-file .env.production -f compose.production.yml)
+
+          cleanup() {
+            rm -f /tmp/datos_base_wallets.json
+            "${DC[@]}" exec -T api rm -f /tmp/datos_base_wallets.json >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          test -s /tmp/datos_base_wallets.json
+
+          cat /tmp/datos_base_wallets.json |             "${DC[@]}" exec -T api sh -c 'cat > /tmp/datos_base_wallets.json'
+
+          RESULT="$(
+            "${DC[@]}" exec -T api               python -m app.core.datos_base               --archivo /tmp/datos_base_wallets.json
+          )"
+
+          printf '%s' "$RESULT" | "${DC[@]}" exec -T api python -c '
+          import json
+          import sys
+
+          data = json.load(sys.stdin)
+          keys = (
+              "empresas_creadas",
+              "empresas_reutilizadas",
+              "periodos_creados",
+              "periodos_reutilizados",
+              "fuentes_creadas",
+              "fuentes_reutilizadas",
+          )
+          print(json.dumps({key: data[key] for key in keys}, ensure_ascii=False))
+          '
+          REMOTE
+
+      - name: Deployment data summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Wallets development base data"
+            printf '%s\n' "- Bucket: $DEV_DATA_BUCKET"
+            printf '%s\n' "- Key: $DEV_WALLETS_BASE_DATA_KEY"
+            printf '%s\n' "- Instance: $LIGHTSAIL_INSTANCE"
+          } >> "$GITHUB_STEP_SUMMARY"
