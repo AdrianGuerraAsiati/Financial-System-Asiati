@@ -151,6 +151,11 @@ def _autenticar_cognito(
             ip=ip,
             user_agent=user_agent,
         )
+        # Solo una identidad que además existe en el directorio local puede
+        # recibir orientación de confirmación. Así Cognito no se convierte en
+        # un canal de enumeración de cuentas ajenas a la plataforma.
+        if usuario is None:
+            raise CredencialesInvalidasError() from exc
         raise UsuarioNoConfirmadoError() from exc
     except CognitoCredencialesInvalidas as exc:
         _registrar_ingreso(
