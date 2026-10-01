@@ -22,6 +22,10 @@ XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 @pytest.fixture(autouse=True)
 def entorno(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("JWT_SECRET", SECRETO_PRUEBA)
+    monkeypatch.setenv(
+        "WIILOG_WALLET_PRINCIPAL_EMAIL",
+        "wallet-principal@wiilog.test",
+    )
 
 
 def _xlsx(frame: pd.DataFrame) -> bytes:
