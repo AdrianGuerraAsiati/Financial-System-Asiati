@@ -49,14 +49,14 @@
   let cargandoContexto = false;
 
   const SIGNIFICADOS = {
-    ganancia_por_estado: "T1 Ganancia: contrasta la ganancia esperada de la orden con los pagos observados en la wallet.",
-    sin_recaudo_cobro: "T2 Sin recaudo: revisa cobros asociados a órdenes sin recaudo y sus estados.",
-    sin_recaudo_reembolso: "T2 Sin recaudo: revisa el reembolso esperado cuando la orden no tuvo recaudo.",
-    devolucion_por_estado: "T3 Devolución: revisa cobros de devolución con recaudo.",
-    fulfillment_por_estado: "T4 Fulfillment: revisa cobros y tarifas de fulfillment.",
-    fuera_del_reporte: "Movimientos asociados a órdenes que no aparecen en el reporte cargado.",
-    movimientos: "Movimientos clasificados por el motor según flujo y concepto.",
-    por_revisar: "Movimientos que requieren revisión del conciliador antes del cierre."
+    ganancia_por_estado: "T1 · Ganancia. Neto = pagos − correcciones de guía. Ventana: 2 días desde la entrega. Tolerancia: 1 peso.",
+    sin_recaudo_cobro: "T2 · Orden sin recaudo. Cobro al crear la orden = PRECIO PROVEEDOR X CANTIDAD + PRECIO FLETE, una vez.",
+    sin_recaudo_reembolso: "T2 · Reembolso: CANCELADO o RECHAZADO = todo lo cobrado; DEVOLUCION = solo el producto (el flete se pierde).",
+    devolucion_por_estado: "T3 · Devolución con recaudo. Un solo cobro por devolución y es el mismo flete, pero sin la comisión de recaudo.",
+    fulfillment_por_estado: "T4 · Fulfillment al proveedor. Tarifa de la bodega una vez por orden; Dropi la reparte entre líneas.",
+    fuera_del_reporte: "Movimientos de órdenes que no son de la tienda en el reporte, con motivo.",
+    movimientos: "Cada movimiento recibe un concepto por el texto de Dropi y de ahí: ingreso/egreso, unidad de negocio, categoría y requiere revisión.",
+    por_revisar: "Los movimientos con requiere_revision quedan para confirmación del conciliador con observación obligatoria."
   };
 
   function empresaIdWallets() {
