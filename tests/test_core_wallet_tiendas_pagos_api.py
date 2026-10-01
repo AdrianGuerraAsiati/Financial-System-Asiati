@@ -281,6 +281,16 @@ def test_catalogo_lista_solo_las_wallets_de_la_empresa(monkeypatch) -> None:
     assert [w["usuario_email"] for w in body["pagos"]] == ["pagos@x.co"]
 
 
+def test_catalogo_no_exige_identificador_privado_de_wiilog_para_listar(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    monkeypatch.delenv("WIILOG_WALLET_PRINCIPAL_EMAIL", raising=False)
+
+    respuesta = _conciliador(ctx).get("/api/v1/wallets/catalogo", params={"empresa_id": ctx["empresa_id"]})
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["wiilog"] is False
+
+
 @pytest.mark.parametrize("rol", [ROL_COORDINACION_FINANCIERA, ROL_TI])
 def test_coordinador_y_ti_no_concilian_pero_si_ven(monkeypatch, rol: str) -> None:
     ctx = _contexto(monkeypatch)
