@@ -530,30 +530,46 @@
     setEstadoWallets("Cargando catálogos…", "");
     try {
       const empresa = empresaIdWallets();
-      const resultados = await Promise.all([
-        walletApi("/api/v1/periodos?empresa_id=" + empresa),
-        walletApi("/api/v1/fuentes?empresa_id=" + empresa),
-        walletApi("/api/v1/wallets/catalogo?empresa_id=" + empresa)
-      ]);
-      periodos = resultados[0];
-      fuentes = resultados[1];
-      catalogo = resultados[2];
+      const consultas = [
+        {nombre: "Períodos", url: "/api/v1/periodos?empresa_id=" + empresa},
+        {nombre: "Fuentes", url: "/api/v1/fuentes?empresa_id=" + empresa},
+        {nombre: "Catálogo Wallets", url: "/api/v1/wallets/catalogo?empresa_id=" + empresa}
+      ];
+      const resultados = await Promise.allSettled(
+        consultas.map((consulta) => walletApi(consulta.url))
+      );
+
+      periodos = resultados[0].status === "fulfilled" ? resultados[0].value : [];
+      fuentes = resultados[1].status === "fulfilled" ? resultados[1].value : [];
+      catalogo = resultados[2].status === "fulfilled"
+        ? resultados[2].value
+        : {wiilog: false, tiendas: [], pagos: []};
+
       renderPeriodos();
       renderFuentes();
       renderTipos();
       actualizarTipo();
       restaurarResultado();
       if (!hallazgosPanel.hidden) await cargarHallazgos();
-      setEstadoWallets("Listo", "");
+
+      const errores = resultados
+        .map((resultado, indice) => resultado.status === "rejected"
+          ? consultas[indice].nombre + ": " + resultado.reason.message
+          : null)
+        .filter(Boolean);
+
+      setEstadoWallets(
+        errores.length ? errores.join(" · ") : "Listo",
+        errores.length ? "error" : ""
+      );
+      if (errores.length) {
+        hallazgosBody.innerHTML =
+          '<tr><td colspan="6" class="empty">' + escapar(errores.join(" · ")) + "</td></tr>";
+      }
     } catch (error) {
-      periodos = [];
-      fuentes = [];
-      catalogo = {wiilog: false, tiendas: [], pagos: []};
-      renderPeriodos();
-      renderFuentes();
-      renderTipos();
       setEstadoWallets(error.message, "error");
-      hallazgosBody.innerHTML = '<tr><td colspan="6" class="empty">' + escapar(error.message) + "</td></tr>";
+      hallazgosBody.innerHTML =
+        '<tr><td colspan="6" class="empty">' + escapar(error.message) + "</td></tr>";
     } finally {
       cargandoContexto = false;
     }
