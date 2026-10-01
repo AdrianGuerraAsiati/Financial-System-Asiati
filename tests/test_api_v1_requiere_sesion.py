@@ -8,6 +8,10 @@ from app.main import app
 PUBLICOS = {
     ("POST", "/api/v1/auth/login"),
     ("POST", "/api/v1/auth/logout"),
+    ("POST", "/api/v1/auth/confirmar-registro"),
+    ("POST", "/api/v1/auth/reenviar-confirmacion"),
+    ("POST", "/api/v1/auth/solicitar-restablecimiento"),
+    ("POST", "/api/v1/auth/confirmar-restablecimiento"),
 }
 AUTENTICADOS_POR_MAQUINA = {
     ("POST", "/api/v1/integrations/google-sheets/changed"),
@@ -26,6 +30,10 @@ def _endpoints_v1() -> list[tuple[str, str]]:
 def test_session_endpoints_are_registered() -> None:
     assert ("GET", "/api/v1/auth/me") in _endpoints_v1()
     assert ("POST", "/api/v1/hallazgos/{hallazgo_id}/escalar") in _endpoints_v1()
+
+
+def test_public_auth_endpoints_are_explicit() -> None:
+    assert PUBLICOS <= set(_endpoints_v1())
 
 
 def test_machine_authenticated_endpoints_are_explicit() -> None:
