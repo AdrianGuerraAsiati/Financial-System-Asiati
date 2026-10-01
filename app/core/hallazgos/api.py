@@ -8,6 +8,7 @@ from app.core.hallazgos.casos import (
     escalar_hallazgo,
     listar_hallazgos,
     mensajes_del_hallazgo,
+    observar_hallazgo,
     responder_escalado,
 )
 from app.core.hallazgos.escalamiento import (
@@ -32,6 +33,11 @@ def empresa_de_hallazgo(
 
 class EscalarEntrada(BaseModel):
     pregunta: str | None = None
+
+
+class ObservarEntrada(BaseModel):
+    observacion: str | None = None
+    resolver: bool = False
 
 
 class ResponderEntrada(BaseModel):
@@ -132,6 +138,30 @@ def escalar(
             hallazgo,
             usuario_id=acceso.usuario.id,
             pregunta=datos.pregunta,
+            ip=acceso.ip,
+        ),
+    )
+    return _hallazgo_json(hallazgo, empresa_del_hallazgo(session, hallazgo_id))
+
+
+@router.post("/{hallazgo_id}/observar")
+def observar(
+    hallazgo_id: int,
+    datos: ObservarEntrada,
+    acceso: Acceso = Depends(
+        requiere("hallazgos.gestionar", empresa_de=empresa_de_hallazgo)
+    ),
+    session: Session = Depends(obtener_session),
+) -> dict[str, object]:
+    hallazgo = session.get(Hallazgo, hallazgo_id)
+    _ejecutar_caso(
+        session,
+        lambda: observar_hallazgo(
+            session,
+            hallazgo,
+            usuario_id=acceso.usuario.id,
+            observacion=datos.observacion,
+            resolver=datos.resolver,
             ip=acceso.ip,
         ),
     )

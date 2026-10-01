@@ -14,6 +14,7 @@ ESTADOS = (
     ESTADO_CERRADO,
 )
 ESTADOS_ESCALABLES = (ESTADO_DETECTADO, ESTADO_EN_GESTION)
+ESTADOS_OBSERVABLES = (ESTADO_DETECTADO, ESTADO_EN_GESTION)
 
 
 class TextoObligatorioError(ValueError):
@@ -49,5 +50,20 @@ def transicion_responder(estado: str, respuesta: str | None, *, resolver: bool) 
         raise EscalamientoInvalidoError(
             f"Este hallazgo está {estado}, no escalado. "
             "Solo se responden casos que están esperando al coordinador."
+        )
+    return ESTADO_RESUELTO if resolver else ESTADO_EN_GESTION
+
+
+def transicion_observar(estado: str, observacion: str | None, *, resolver: bool) -> str:
+    _exigir_texto(observacion, "observación")
+    if estado == ESTADO_ESCALADO:
+        raise EscalamientoInvalidoError(
+            "Este hallazgo está escalado y lo decide el coordinador. "
+            "Espera su respuesta antes de dejar otra observación."
+        )
+    if estado not in ESTADOS_OBSERVABLES:
+        raise EscalamientoInvalidoError(
+            f"Este hallazgo está {estado} y ya no admite observaciones. "
+            "Solo se gestionan hallazgos detectados o en gestión."
         )
     return ESTADO_RESUELTO if resolver else ESTADO_EN_GESTION

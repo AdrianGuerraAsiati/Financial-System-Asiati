@@ -104,6 +104,14 @@ ENDPOINTS = {
         "hallazgos.escalar",
         lambda e: (f"/api/v1/hallazgos/{_hallazgo(e)}/escalar", {"pregunta": "¿Se cobra?"}),
     ),
+    "observar_hallazgo": Endpoint(
+        "POST",
+        "hallazgos.gestionar",
+        lambda e: (
+            f"/api/v1/hallazgos/{_hallazgo(e)}/observar",
+            {"observacion": "Transferencia a proveedor", "resolver": False},
+        ),
+    ),
     "responder_escalado": Endpoint(
         "POST",
         "hallazgos.responder_escalado",
