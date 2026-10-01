@@ -2,10 +2,21 @@ name: Load development Wallets base data
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
 
 permissions:
   id-token: write
   contents: read
+
+concurrency:
+  group: development-lightsail
+  cancel-in-progress: false
 
 env:
   AWS_REGION: us-east-2
@@ -17,6 +28,7 @@ env:
 
 jobs:
   load-base-data:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
 
     steps:
