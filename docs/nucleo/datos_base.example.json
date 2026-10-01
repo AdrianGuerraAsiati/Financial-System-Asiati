@@ -1,0 +1,18 @@
+{
+  "empresas": [
+    {
+      "nombre": "EMPRESA DEMO",
+      "periodos": [
+        {
+          "fecha_inicio": "2030-09-01",
+          "fecha_fin": "2030-09-30",
+          "cerrado": false
+        }
+      ],
+      "fuentes": [
+        "Wallet Demo",
+        "Órdenes Demo"
+      ]
+    }
+  ]
+}
