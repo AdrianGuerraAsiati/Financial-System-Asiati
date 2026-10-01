@@ -139,7 +139,7 @@ def catalogo_de_empresa(session: Session, empresa_id: int) -> dict[str, Any]:
 
     return {
         "empresa": empresa,
-        "wiilog": cargar_parametros_wiilog().get("empresa") == empresa,
+        "wiilog": cargar_json("parametros_wallet_wiilog.json").get("empresa") == empresa,
         "tiendas": de_empresa(cargar_parametros_tienda()["tiendas"], ("usuario_email", "nombre", "rol")),
         "pagos": de_empresa(cargar_parametros_pagos()["wallets"], ("usuario_email", "nombre")),
     }
