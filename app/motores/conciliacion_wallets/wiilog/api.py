@@ -78,6 +78,7 @@ def conciliar_wiilog(
 
     return {
         "bloqueado": ejecucion.bloqueado,
+        "c0": ejecucion.c0,
         "cargas": {
             "ordenes_id": ejecucion.carga_ordenes_id,
             "wallet_id": ejecucion.carga_wallet_id,
