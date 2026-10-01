@@ -163,6 +163,7 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
         if item["codigo_regla"] == "WIILOG_FF_NO_COBRADO"
     )
     assert no_cobrado["critico"] is True
+    assert no_cobrado["evidencia"]["gravedad"] == "CRITICO"
     assert no_cobrado["evidencia"]["orden_id"] == "2"
     assert no_cobrado["evidencia"]["monto_en_juego_c"] == 250000
 
