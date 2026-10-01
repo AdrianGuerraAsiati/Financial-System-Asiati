@@ -1,5 +1,11 @@
 import pytest
 from sqlalchemy import select
+
+from app.core.auth.cognito import (
+    ClienteCognito,
+    CognitoUsuarioNoConfirmado,
+    ResultadoCognito,
+)
 from sqlalchemy.orm import Session
 
 from app.core.auth.model import Ingreso
@@ -27,6 +33,7 @@ def entorno(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LOGIN_MAX_INTENTOS_FALLIDOS", "5")
     monkeypatch.setenv("LOGIN_VENTANA_MINUTOS", "15")
     monkeypatch.setenv("SESSION_COOKIE_SECURE", "true")
+    monkeypatch.setenv("AUTH_PROVIDER", "local")
 
 
 def _ingresos(email: str) -> list[Ingreso]:
@@ -215,3 +222,103 @@ def test_deactivated_user_loses_an_open_session() -> None:
         session.commit()
 
     assert client.get("/api/v1/auth/me").status_code == 401
+
+
+def _usar_cognito(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTH_PROVIDER", "cognito")
+    monkeypatch.setenv("COGNITO_REGION", "us-east-2")
+    monkeypatch.setenv("COGNITO_CLIENT_ID", "client-test")
+    monkeypatch.setenv("COGNITO_CLIENT_SECRET", "c" * 32)
+
+
+def test_cognito_login_uses_external_identity_and_local_role(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _usar_cognito(monkeypatch)
+    _, email = crear_usuario_prueba(ROL_CONCILIACION)
+    monkeypatch.setattr(
+        ClienteCognito,
+        "autenticar",
+        lambda self, correo, password: ResultadoCognito(
+            requiere_nueva_password=False,
+            access_token="token-test",
+        ),
+    )
+
+    respuesta = cliente().post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "credencial-externa"},
+    )
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == {"debe_cambiar_password": False}
+    assert _ingresos(email)[-1].exito is True
+
+
+def test_cognito_new_password_challenge_activates_existing_guard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _usar_cognito(monkeypatch)
+    usuario_id, email = crear_usuario_prueba(
+        ROL_CONCILIACION,
+        debe_cambiar_password=False,
+    )
+    monkeypatch.setattr(
+        ClienteCognito,
+        "autenticar",
+        lambda self, correo, password: ResultadoCognito(
+            requiere_nueva_password=True,
+        ),
+    )
+
+    respuesta = cliente().post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "temporal"},
+    )
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == {"debe_cambiar_password": True}
+    with Session(engine()) as session:
+        assert session.get(Usuario, usuario_id).debe_cambiar_password is True
+
+
+def test_cognito_unconfirmed_user_gets_guidance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _usar_cognito(monkeypatch)
+    _, email = crear_usuario_prueba(ROL_CONCILIACION)
+
+    def pendiente(self, correo, password):
+        raise CognitoUsuarioNoConfirmado()
+
+    monkeypatch.setattr(ClienteCognito, "autenticar", pendiente)
+
+    respuesta = cliente().post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "temporal"},
+    )
+
+    assert respuesta.status_code == 409
+    assert "Verificar cuenta" in respuesta.json()["detail"]
+
+
+def test_cognito_unconfirmed_identity_without_local_user_is_not_enumerated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _usar_cognito(monkeypatch)
+
+    def pendiente(self, correo, password):
+        raise CognitoUsuarioNoConfirmado()
+
+    monkeypatch.setattr(ClienteCognito, "autenticar", pendiente)
+
+    respuesta = cliente().post(
+        "/api/v1/auth/login",
+        json={
+            "email": "identidad-externa@asiati.test",
+            "password": "temporal",
+        },
+    )
+
+    assert respuesta.status_code == 401
+    assert "Correo o contraseña incorrectos" in respuesta.json()["detail"]

@@ -27,6 +27,9 @@ env:
   DEV_DATA_BUCKET: financial-system-asiati-dev-data-890876258895
   DEV_COMPRAS_S3_KEY: dev/compras/source/INFORME_COMPRAS_2024_2026.xlsx
   DEV_COMPRAS_LOCAL_NAME: INFORME_COMPRAS_2024_2026_DEV.xlsx
+  COGNITO_REGION: us-east-2
+  COGNITO_USER_POOL_ID: us-east-2_KXOYOSosH
+  COGNITO_CLIENT_ID: 3vkuevu6bnb1lpe0o82krognvl
 
 jobs:
   deploy:
@@ -79,6 +82,23 @@ jobs:
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Fetch Cognito client secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLIENT_SECRET="$(
+            aws cognito-idp describe-user-pool-client \
+              --region "$COGNITO_REGION" \
+              --user-pool-id "$COGNITO_USER_POOL_ID" \
+              --client-id "$COGNITO_CLIENT_ID" \
+              --query 'UserPoolClient.ClientSecret' \
+              --output text
+          )"
+          test -n "$CLIENT_SECRET"
+          test "$CLIENT_SECRET" != "None"
+          printf '%s' "$CLIENT_SECRET" > /tmp/cognito-client-secret
+          chmod 600 /tmp/cognito-client-secret
 
       - name: Inspect Compras workbook in S3
         id: compras_source
@@ -147,6 +167,18 @@ jobs:
           done
           echo "Lightsail no aceptó SSH a tiempo." >&2
           exit 1
+
+      - name: Copy Cognito client secret to Lightsail
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            /tmp/cognito-client-secret \
+            "${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}:/tmp/cognito-client-secret"
+          rm -f /tmp/cognito-client-secret
 
       - name: Check Compras workbook cache on Lightsail
         id: compras_cache
@@ -222,7 +254,7 @@ jobs:
             -o StrictHostKeyChecking=accept-new \
             -i /tmp/lightsail.pem \
             "$SSH_TARGET" \
-            "sudo DEVELOPMENT_DOMAIN='$DEVELOPMENT_DOMAIN' bash -s" <<'REMOTE'
+            "sudo DEVELOPMENT_DOMAIN='$DEVELOPMENT_DOMAIN' COGNITO_REGION='$COGNITO_REGION' COGNITO_CLIENT_ID='$COGNITO_CLIENT_ID' bash -s" <<'REMOTE'
           set -euo pipefail
 
           APP_DIR=/opt/financial-system
@@ -333,6 +365,13 @@ jobs:
             rm -f "$tmp"
           }
 
+          COGNITO_CLIENT_SECRET="$(cat /tmp/cognito-client-secret)"
+          test -n "$COGNITO_CLIENT_SECRET"
+
+          set_env AUTH_PROVIDER cognito
+          set_env COGNITO_REGION "$COGNITO_REGION"
+          set_env COGNITO_CLIENT_ID "$COGNITO_CLIENT_ID"
+          set_env COGNITO_CLIENT_SECRET "$COGNITO_CLIENT_SECRET"
           set_env ASIATI_DOMAIN "$DEVELOPMENT_DOMAIN"
           set_env SESSION_COOKIE_SECURE true
           set_env COMPRAS_DEMO_MODE false
@@ -344,6 +383,7 @@ jobs:
           set_env COMPRAS_SHEETS_CL_RANGE "\"'INFORME CLIENTES (CL)'!A:BG\""
           set_env COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE "\"'Supply Chain '!A:Z\""
           chmod 600 "$APP_DIR/.env.production"
+          rm -f /tmp/cognito-client-secret
 
           test -s "$DATA_DIR/INFORME_COMPRAS_2024_2026_DEV.xlsx"
           docker compose version

@@ -5,8 +5,19 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.auditoria import registrar_auditoria
-from app.core.auth.dependencias import Acceso, requiere
-from app.core.auth.passwords import generar_password_temporal, hashear_password
+from app.core.auth.cognito import (
+    ClienteCognito,
+    CognitoNoDisponible,
+    CognitoPasswordInvalida,
+    CognitoUsuarioExiste,
+)
+from app.core.auth.config import ConfiguracionAuth, PROVEEDOR_AUTH_COGNITO
+from app.core.auth.dependencias import Acceso, obtener_configuracion, requiere
+from app.core.auth.passwords import (
+    generar_marca_sesion_externa,
+    generar_password_temporal,
+    hashear_password,
+)
 from app.core.empresas import Empresa
 from app.core.session import obtener_session
 from app.core.usuarios.errors import EmailInvalidoError, RolUsuarioInvalidoError
@@ -107,7 +118,7 @@ def _asignar(
 
 
 def _estado_auditable(usuario: Usuario) -> dict[str, object]:
-    # Nunca incluye password_hash.
+    # Nunca incluye password_hash ni marcas de sesión.
     return {
         "email": usuario.email,
         "nombre": usuario.nombre,
@@ -130,6 +141,7 @@ def crear(
     datos: UsuarioCrear,
     acceso: Acceso = Depends(gestionar),
     session: Session = Depends(obtener_session),
+    configuracion: ConfiguracionAuth = Depends(obtener_configuracion),
 ) -> dict[str, object]:
     try:
         email = normalizar_email(datos.email)
@@ -155,12 +167,43 @@ def crear(
     empresas = _validar_empresas(session, empresas)
 
     password_temporal = generar_password_temporal()
+    usa_cognito = configuracion.proveedor == PROVEEDOR_AUTH_COGNITO
+
+    if usa_cognito:
+        try:
+            ClienteCognito(configuracion).registrar_usuario(
+                email=email,
+                nombre=datos.nombre.strip(),
+                password_temporal=password_temporal,
+            )
+        except CognitoUsuarioExiste as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Ese correo ya existe en Amazon Cognito. "
+                    "Avisa a TI para vincular o limpiar la identidad antes de reintentar."
+                ),
+            ) from exc
+        except CognitoPasswordInvalida as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="La contraseña temporal no cumple la política de Cognito.",
+            ) from exc
+        except CognitoNoDisponible as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Amazon Cognito no pudo crear la identidad. Intenta de nuevo.",
+            ) from exc
+        password_hash = generar_marca_sesion_externa()
+    else:
+        password_hash = hashear_password(password_temporal)
+
     usuario = crear_usuario(
         session,
         email=email,
         nombre=datos.nombre,
         rol=datos.rol,
-        password_hash=hashear_password(password_temporal),
+        password_hash=password_hash,
         creado_por=acceso.usuario.id,
     )
     session.flush()
@@ -171,7 +214,11 @@ def crear(
         accion="usuario.crear",
         entidad="usuario",
         entidad_id=usuario.id,
-        despues={**_estado_auditable(usuario), "empresas": empresas},
+        despues={
+            **_estado_auditable(usuario),
+            "empresas": empresas,
+            "proveedor_auth": configuracion.proveedor,
+        },
         ip=acceso.ip,
     )
     try:
@@ -184,10 +231,12 @@ def crear(
             detail="Ya existe un usuario con ese correo. Búscalo en la lista y edítalo.",
         ) from exc
 
-    # La contraseña temporal solo se muestra aquí; el usuario la cambia al entrar.
+    # En Cognito, el usuario también recibe un código de confirmación por correo.
+    # La contraseña temporal solo se muestra en esta respuesta.
     return {
         "usuario": _usuario_json(session, usuario),
         "password_temporal": password_temporal,
+        "confirmacion_requerida": usa_cognito,
     }
 
 
@@ -270,10 +319,44 @@ def restablecer_password(
     usuario_id: int,
     acceso: Acceso = Depends(gestionar),
     session: Session = Depends(obtener_session),
+    configuracion: ConfiguracionAuth = Depends(obtener_configuracion),
 ) -> dict[str, object]:
     usuario = _obtener(session, usuario_id)
-    password_temporal = generar_password_temporal()
 
+    if configuracion.proveedor == PROVEEDOR_AUTH_COGNITO:
+        try:
+            ClienteCognito(configuracion).solicitar_restablecimiento(
+                email=usuario.email
+            )
+        except CognitoNoDisponible as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Amazon Cognito no pudo iniciar el restablecimiento. "
+                    "Intenta de nuevo."
+                ),
+            ) from exc
+
+        # Invalida sesiones abiertas en la plataforma. Cognito enviará el código
+        # de recuperación al correo verificado.
+        usuario.password_hash = generar_marca_sesion_externa()
+        usuario.debe_cambiar_password = True
+        registrar_auditoria(
+            session,
+            usuario_id=acceso.usuario.id,
+            accion="usuario.restablecer_password",
+            entidad="usuario",
+            entidad_id=usuario.id,
+            despues={"proveedor_auth": "cognito", "correo_enviado": True},
+            ip=acceso.ip,
+        )
+        session.commit()
+        return {
+            "usuario": _usuario_json(session, usuario),
+            "restablecimiento": "correo_enviado",
+        }
+
+    password_temporal = generar_password_temporal()
     # Cambiar el hash invalida las sesiones abiertas del usuario.
     usuario.password_hash = hashear_password(password_temporal)
     usuario.debe_cambiar_password = True

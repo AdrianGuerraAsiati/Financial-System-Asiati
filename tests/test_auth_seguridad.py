@@ -24,6 +24,10 @@ def entorno(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     monkeypatch.delenv("SESION_DURACION_HORAS", raising=False)
     monkeypatch.delenv("SESSION_COOKIE_SECURE", raising=False)
     monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.setenv("AUTH_PROVIDER", "local")
+    monkeypatch.delenv("COGNITO_REGION", raising=False)
+    monkeypatch.delenv("COGNITO_CLIENT_ID", raising=False)
+    monkeypatch.delenv("COGNITO_CLIENT_SECRET", raising=False)
     return monkeypatch
 
 
@@ -150,3 +154,28 @@ def test_token_signed_with_other_secret_is_rejected(
 
     with pytest.raises(SesionInvalidaError):
         leer_token(cargar_configuracion(), token)
+
+
+def test_cognito_provider_requires_its_configuration(
+    entorno: pytest.MonkeyPatch,
+) -> None:
+    entorno.setenv("AUTH_PROVIDER", "cognito")
+
+    with pytest.raises(ConfiguracionAuthError, match="COGNITO_REGION"):
+        cargar_configuracion()
+
+
+def test_cognito_provider_loads_external_configuration(
+    entorno: pytest.MonkeyPatch,
+) -> None:
+    entorno.setenv("AUTH_PROVIDER", "cognito")
+    entorno.setenv("COGNITO_REGION", "us-east-2")
+    entorno.setenv("COGNITO_CLIENT_ID", "client-test")
+    entorno.setenv("COGNITO_CLIENT_SECRET", "c" * 32)
+
+    configuracion = cargar_configuracion()
+
+    assert configuracion.proveedor == "cognito"
+    assert configuracion.cognito_region == "us-east-2"
+    assert configuracion.cognito_client_id == "client-test"
+    assert configuracion.cognito_client_secret == "c" * 32

@@ -3,6 +3,14 @@ const loginForm = document.querySelector("#login-form");
 const loginError = document.querySelector("#login-error");
 const passwordForm = document.querySelector("#password-form");
 const passwordError = document.querySelector("#password-error");
+const confirmForm = document.querySelector("#confirm-form");
+const confirmStatus = document.querySelector("#confirm-status");
+const resetForm = document.querySelector("#reset-form");
+const resetStatus = document.querySelector("#reset-status");
+const authConfirmOpen = document.querySelector("#auth-confirm-open");
+const authConfirmResend = document.querySelector("#auth-confirm-resend");
+const authResetOpen = document.querySelector("#auth-reset-open");
+const authResetSend = document.querySelector("#auth-reset-send");
 const appShell = document.querySelector("#app-shell");
 const usuarioNombre = document.querySelector("#usuario-nombre");
 const logoutButton = document.querySelector("#logout");
@@ -169,19 +177,44 @@ function escapar(valor) {
   return div.innerHTML;
 }
 
+function ocultarFormulariosAuth() {
+  loginForm.hidden = true;
+  passwordForm.hidden = true;
+  confirmForm.hidden = true;
+  resetForm.hidden = true;
+}
+
 function mostrarLogin() {
   detenerMonitorDashboard();
   appShell.hidden = true;
-  passwordForm.hidden = true;
+  ocultarFormulariosAuth();
   loginForm.hidden = false;
   loginView.hidden = false;
 }
 
 function mostrarCambioPassword() {
   appShell.hidden = true;
-  loginForm.hidden = true;
+  ocultarFormulariosAuth();
   passwordForm.hidden = false;
   loginView.hidden = false;
+}
+
+function mostrarConfirmacion(email = "") {
+  appShell.hidden = true;
+  ocultarFormulariosAuth();
+  confirmStatus.hidden = true;
+  confirmForm.hidden = false;
+  loginView.hidden = false;
+  if (email) confirmForm.elements.email.value = email;
+}
+
+function mostrarRestablecimiento(email = "") {
+  appShell.hidden = true;
+  ocultarFormulariosAuth();
+  resetStatus.hidden = true;
+  resetForm.hidden = false;
+  loginView.hidden = false;
+  if (email) resetForm.elements.email.value = email;
 }
 
 function mostrarApp(sesion) {
@@ -287,6 +320,121 @@ passwordForm.addEventListener("submit", async (event) => {
   } catch (error) {
     passwordError.textContent = error.message;
     passwordError.hidden = false;
+  }
+});
+
+authConfirmOpen.addEventListener("click", () => {
+  mostrarConfirmacion(loginForm.elements.email.value);
+});
+
+authResetOpen.addEventListener("click", () => {
+  mostrarRestablecimiento(loginForm.elements.email.value);
+});
+
+document.querySelectorAll(".auth-back-login").forEach((button) => {
+  button.addEventListener("click", mostrarLogin);
+});
+
+confirmForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  confirmStatus.hidden = true;
+  const data = new FormData(confirmForm);
+  try {
+    await api("/api/v1/auth/confirmar-registro", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        email: data.get("email"),
+        codigo: data.get("codigo"),
+      }),
+    });
+    loginForm.elements.email.value = data.get("email");
+    confirmForm.reset();
+    mostrarLogin();
+    loginError.textContent = "Cuenta verificada. Ya puedes iniciar sesión.";
+    loginError.className = "status ok";
+    loginError.hidden = false;
+  } catch (error) {
+    confirmStatus.textContent = error.message;
+    confirmStatus.className = "status error";
+    confirmStatus.hidden = false;
+  }
+});
+
+authConfirmResend.addEventListener("click", async () => {
+  confirmStatus.hidden = true;
+  const email = confirmForm.elements.email.value;
+  if (!email) {
+    confirmStatus.textContent = "Escribe primero tu correo.";
+    confirmStatus.className = "status error";
+    confirmStatus.hidden = false;
+    return;
+  }
+  try {
+    await api("/api/v1/auth/reenviar-confirmacion", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email}),
+    });
+    confirmStatus.textContent = "Si la cuenta está pendiente, Cognito envió un código nuevo.";
+    confirmStatus.className = "status ok";
+    confirmStatus.hidden = false;
+  } catch (error) {
+    confirmStatus.textContent = error.message;
+    confirmStatus.className = "status error";
+    confirmStatus.hidden = false;
+  }
+});
+
+authResetSend.addEventListener("click", async () => {
+  resetStatus.hidden = true;
+  const email = resetForm.elements.email.value;
+  if (!email) {
+    resetStatus.textContent = "Escribe primero tu correo.";
+    resetStatus.className = "status error";
+    resetStatus.hidden = false;
+    return;
+  }
+  try {
+    await api("/api/v1/auth/solicitar-restablecimiento", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email}),
+    });
+    resetStatus.textContent = "Si el correo existe, Cognito envió el código de recuperación.";
+    resetStatus.className = "status ok";
+    resetStatus.hidden = false;
+  } catch (error) {
+    resetStatus.textContent = error.message;
+    resetStatus.className = "status error";
+    resetStatus.hidden = false;
+  }
+});
+
+resetForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  resetStatus.hidden = true;
+  const data = new FormData(resetForm);
+  try {
+    await api("/api/v1/auth/confirmar-restablecimiento", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        email: data.get("email"),
+        codigo: data.get("codigo"),
+        password_nueva: data.get("password_nueva"),
+      }),
+    });
+    loginForm.elements.email.value = data.get("email");
+    resetForm.reset();
+    mostrarLogin();
+    loginError.textContent = "Contraseña actualizada. Ya puedes iniciar sesión.";
+    loginError.className = "status ok";
+    loginError.hidden = false;
+  } catch (error) {
+    resetStatus.textContent = error.message;
+    resetStatus.className = "status error";
+    resetStatus.hidden = false;
   }
 });
 
