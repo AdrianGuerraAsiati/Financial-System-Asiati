@@ -29,6 +29,10 @@
       </label>
       <div id="login-error" class="status error" hidden></div>
       <button type="submit">Entrar</button>
+      <div class="auth-actions">
+        <button id="auth-confirm-open" class="secondary-button" type="button">Verificar cuenta</button>
+        <button id="auth-reset-open" class="secondary-button" type="button">Olvidé mi contraseña</button>
+      </div>
     </form>
 
     <form id="password-form" class="auth-card" hidden>
@@ -53,6 +57,63 @@
       </label>
       <div id="password-error" class="status error" hidden></div>
       <button type="submit">Guardar contraseña</button>
+    </form>
+
+    <form id="confirm-form" class="auth-card" hidden>
+      <div class="auth-brand">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <div class="brand-copy">
+          <p class="eyebrow">ASIATI · ECOSISTEMA 360°</p>
+          <strong>Plataforma Financiera</strong>
+          <span>Identidad administrada por Amazon Cognito</span>
+        </div>
+      </div>
+      <div class="auth-heading">
+        <p class="eyebrow">Confirmación de cuenta</p>
+        <h1>Verificar correo</h1>
+        <p>Escribe el código que Cognito envió a tu correo.</p>
+      </div>
+      <label>Correo
+        <input name="email" type="email" autocomplete="username" required>
+      </label>
+      <label>Código
+        <input name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" required>
+      </label>
+      <div id="confirm-status" class="status" hidden></div>
+      <button type="submit">Confirmar cuenta</button>
+      <div class="auth-actions">
+        <button id="auth-confirm-resend" class="secondary-button" type="button">Reenviar código</button>
+        <button class="secondary-button auth-back-login" type="button">Volver al login</button>
+      </div>
+    </form>
+
+    <form id="reset-form" class="auth-card" hidden>
+      <div class="auth-brand">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <div class="brand-copy">
+          <p class="eyebrow">ASIATI · ECOSISTEMA 360°</p>
+          <strong>Plataforma Financiera</strong>
+          <span>Identidad administrada por Amazon Cognito</span>
+        </div>
+      </div>
+      <div class="auth-heading">
+        <p class="eyebrow">Recuperación de acceso</p>
+        <h1>Restablecer contraseña</h1>
+        <p>Primero solicita el código y luego define una contraseña nueva.</p>
+      </div>
+      <label>Correo
+        <input name="email" type="email" autocomplete="username" required>
+      </label>
+      <button id="auth-reset-send" class="secondary-button" type="button">Enviar código</button>
+      <label>Código
+        <input name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" required>
+      </label>
+      <label>Nueva contraseña
+        <input name="password_nueva" type="password" autocomplete="new-password" minlength="12" required>
+      </label>
+      <div id="reset-status" class="status" hidden></div>
+      <button type="submit">Guardar nueva contraseña</button>
+      <button class="secondary-button auth-back-login" type="button">Volver al login</button>
     </form>
   </section>
 
