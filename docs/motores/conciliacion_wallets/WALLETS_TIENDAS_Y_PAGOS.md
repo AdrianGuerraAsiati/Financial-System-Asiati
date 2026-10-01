@@ -69,7 +69,7 @@ DUPLICADA · REVERSADA · PAGO_POSTERIOR_AL_REPORTE (pagó después de descargar
 - Cobro al crear la orden = `PRECIO PROVEEDOR X CANTIDAD` + `PRECIO FLETE`, una vez.
 - Reembolso: CANCELADO o RECHAZADO = todo lo cobrado; DEVOLUCION = solo el producto (el flete se pierde).
 - Estados del cobro: COBRO_CORRECTO · DIFERENCIA_COBRO · COBRO_DUPLICADO · SIN_COBRO.
-- Estados del reembolso: REEMBOLSADO · SIN_REEMBOLSO (crítico) · REEMBOLSO_PARCIAL (crítico) · REEMBOLSO_NO_ESPERADO · NO_APLICA.
+- Estados del reembolso: REEMBOLSADO · SIN_REEMBOLSO (crítico) · REEMBOLSO_PARCIAL (crítico) · REEMBOLSO_NO_ESPERADO (informativo, 30-sep) · NO_APLICA.
 
 ### T3 · Devolución con recaudo (DROPSHIPPER)
 
@@ -105,6 +105,12 @@ EN_VENTANA · COBRO_ANTICIPADO (cobró antes de que la orden quedara en devoluci
 
 Movimientos de órdenes que no son de la tienda en el reporte, con motivo:
 ORDEN_ANTERIOR_AL_REPORTE (meses anteriores) · ORDEN_POSTERIOR_AL_REPORTE · ORDEN_DE_OTRA_TIENDA (revisar) · NO_ENCONTRADA (revisar).
+
+Gravedad (30-sep): ORDEN_DE_OTRA_TIENDA y NO_ENCONTRADA = MEDIO; ORDEN_ANTERIOR_AL_REPORTE = INFORMATIVO;
+ORDEN_POSTERIOR_AL_REPORTE no es hallazgo (se valida con el reporte siguiente). En la plataforma,
+ORDEN_ANTERIOR_AL_REPORTE y NO_ENCONTRADA se guardan como **un solo hallazgo por carga de wallet** (ver
+`PANTALLA_WALLETS.md` §2.2); NO_ENCONTRADA separa los reembolsos de órdenes reemplazadas (REEMPLAZADA en la
+descripción: el reporte de Dropi no las incluye) del resto.
 
 ## 5. Wallets de solo pagos
 

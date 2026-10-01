@@ -22,6 +22,7 @@ GRAVEDAD = {
     "DIFERENCIA_VALOR": "CRITICO",
     "SIN_REEMBOLSO": "CRITICO",
     "REEMBOLSO_PARCIAL": "CRITICO",
+    "REEMBOLSO_NO_ESPERADO": "INFORMATIVO",
     "PAGO_SIN_ENTREGA": "MEDIO",
     "DUPLICADA": "INFORMATIVO",
     "DUPLICADO": "MEDIO",
@@ -287,6 +288,9 @@ def fuera_del_reporte(mov: pd.DataFrame, ordenes: pd.DataFrame, conceptos_de_ord
     ORDEN_POSTERIOR_AL_REPORTE  ID mayor que el último del reporte (se crearon después de descargarlo).
     ORDEN_DE_OTRA_TIENDA        La orden está en el reporte pero la línea no es de esta tienda: revisar.
     NO_ENCONTRADA               ID dentro del rango pero no está en el reporte: revisar.
+
+    Gravedad: OTRA_TIENDA y NO_ENCONTRADA = MEDIO; ANTERIOR = INFORMATIVO; POSTERIOR = OK (se valida con el
+    reporte siguiente, no es hallazgo; decisión 30-sep).
     """
     m = mov[mov.orden_id.notna() & mov.concepto.isin(conceptos_de_orden) & ~mov.orden_id.isin(ordenes.index)].copy()
     ids = set(ids_reporte.dropna())
@@ -298,5 +302,9 @@ def fuera_del_reporte(mov: pd.DataFrame, ordenes: pd.DataFrame, conceptos_de_ord
         ["ORDEN_DE_OTRA_TIENDA", "ORDEN_ANTERIOR_AL_REPORTE", "ORDEN_POSTERIOR_AL_REPORTE"],
         default="NO_ENCONTRADA",
     )
-    m["gravedad"] = np.where(m.motivo.isin(["ORDEN_DE_OTRA_TIENDA", "NO_ENCONTRADA"]), "MEDIO", "INFORMATIVO")
+    m["gravedad"] = np.select(
+        [m.motivo.isin(["ORDEN_DE_OTRA_TIENDA", "NO_ENCONTRADA"]), m.motivo == "ORDEN_POSTERIOR_AL_REPORTE"],
+        ["MEDIO", "OK"],
+        default="INFORMATIVO",
+    )
     return m[["mov_id", "fecha", "concepto", "orden_id", "neto_c", "motivo", "gravedad", "descripcion"]]

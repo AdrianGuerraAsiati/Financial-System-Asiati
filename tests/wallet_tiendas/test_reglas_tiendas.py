@@ -244,3 +244,20 @@ def test_fuera_del_reporte_por_motivo():
     motivo = r.fuera_del_reporte.set_index("orden_id").motivo.to_dict()
     assert motivo == {"50": "ORDEN_ANTERIOR_AL_REPORTE", "200": "ORDEN_DE_OTRA_TIENDA",
                       "150": "NO_ENCONTRADA", "300": "ORDEN_POSTERIOR_AL_REPORTE"}
+
+
+def test_gravedad_fuera_del_reporte_posterior_no_es_hallazgo():
+    ords = [orden(100, "ENTREGADO"), orden(200, "ENTREGADO", prov="otro@x.co")]
+    movs = [ff(50), ff(200), ff(150), ff(300, f="28-09-2026 16:00")]
+    r = correr(ords, movs, tienda=PROV)
+    gravedad = r.fuera_del_reporte.set_index("orden_id").gravedad.to_dict()
+    assert gravedad == {"50": "INFORMATIVO", "200": "MEDIO", "150": "MEDIO", "300": "OK"}
+
+
+def test_reembolso_no_esperado_es_informativo():
+    ords = [orden(1, "ENTREGADO", envio="SIN RECAUDO")]
+    movs = [("18-09-2026 09:00", "SALIDA", 45000, 1, "SALIDA POR NUEVA ORDEN: 1"),
+            ("19-09-2026 09:00", "ENTRADA", 45000, 1, "ENTRADA POR CAMBIO DE ESTATUS: CANCELADO, EN LA ORDEN: 1")]
+    r = correr(ords, movs)
+    assert r.sin_recaudo.loc["1", "estado_reembolso"] == "REEMBOLSO_NO_ESPERADO"
+    assert r.sin_recaudo.loc["1", "gravedad"] == "INFORMATIVO"
