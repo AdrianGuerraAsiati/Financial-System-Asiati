@@ -35,3 +35,8 @@ def validar_password_nueva(password: str) -> None:
 def generar_password_temporal() -> str:
     """Contraseña de un solo uso; el usuario debe cambiarla al primer ingreso."""
     return secrets.token_urlsafe(15)
+
+
+def generar_marca_sesion_externa() -> str:
+    """Marca aleatoria usada para invalidar sesiones cuando la clave vive fuera de PostgreSQL."""
+    return "external-session:" + secrets.token_urlsafe(32)
