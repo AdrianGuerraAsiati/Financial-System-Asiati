@@ -1,5 +1,20 @@
 # AI Handoff — Plataforma Financiera ASIATI
 
+> ## Actualización operativa · 1-oct-2026
+>
+> El estado vigente está en `docs/ESTADO_DESARROLLO_2026-10-01.md`.
+>
+> Cambios desde la fotografía del 30-sep:
+> - #102-#108 cerraron el flujo de Wallets en plataforma y cargaron sus datos base en desarrollo;
+> - #109 Cognito quedó fusionado en `main`;
+> - #91 de movimientos/categorización fue cerrado sin merge y su decisión de contrato sigue pendiente;
+> - #101 de Cartera permanece draft y no debe fusionarse antes de fuente + validación funcional;
+> - el siguiente gate del proyecto es la aceptación operacional de Wallets documentada en
+>   `docs/motores/conciliacion_wallets/ACEPTACION_OPERATIVA.md`.
+>
+> Esta actualización manda sobre las secciones históricas de este archivo para estado operativo.
+>
+
 > ## Actualización operativa · 30-sep-2026
 >
 > Para el estado vigente de PRs, AWS, Google, Compras, Cartera y Wallets, leer primero
@@ -13,7 +28,7 @@
 > abierto es #91 y permanece en draft por una decisión de contrato de categorización.
 >
 
-**Última actualización:** 29 de septiembre de 2026  
+**Última actualización:** 1 de octubre de 2026  
 **Repositorio:** `AdrianGuerraAsiati/Financial-System-Asiati`
 
 ---
