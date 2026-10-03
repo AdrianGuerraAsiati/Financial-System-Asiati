@@ -1,9 +1,9 @@
-import re
 from dataclasses import dataclass
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date
 from typing import Any, Mapping, Protocol
 
+from app.motores.cartera_ocs.fechas import parsear_fecha_cartera
 from app.motores.cartera_ocs.importacion import parsear_numero_cartera
 
 
@@ -26,43 +26,8 @@ class RegistroProyeccionPago:
 
 
 def parsear_fecha_proyeccion(valor: Any) -> date | None:
-    """Replica aFechaP() del tablero actual para fechas de proyección."""
-    if isinstance(valor, datetime):
-        return valor.date()
-
-    if isinstance(valor, date):
-        return valor
-
-    texto = str(valor or "").strip()
-    if not texto:
-        return None
-
-    match = re.match(r"^(\d{4})-(\d{2})-(\d{2})", texto)
-    if match:
-        try:
-            return date(int(match.group(1)), int(match.group(2)), int(match.group(3)))
-        except ValueError:
-            return None
-
-    match = re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$", texto)
-    if match:
-        try:
-            return date(int(match.group(3)), int(match.group(2)), int(match.group(1)))
-        except ValueError:
-            return None
-
-    match = re.match(r"^Date\((\d+),(\d+),(\d+)", texto)
-    if match:
-        try:
-            return date(
-                int(match.group(1)),
-                int(match.group(2)) + 1,
-                int(match.group(3)),
-            )
-        except ValueError:
-            return None
-
-    return None
+    """Mantiene el nombre público del parser legado usando el parser compartido."""
+    return parsear_fecha_cartera(valor)
 
 
 def normalizar_fila_proyeccion(

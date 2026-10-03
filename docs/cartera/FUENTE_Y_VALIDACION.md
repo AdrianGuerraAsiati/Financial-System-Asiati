@@ -106,3 +106,41 @@ El código de Cartera ya tiene contratos, consultas, mora, proyección y flujo d
 No se debe asumir que `INFORME COMPRAS 2024-2026` es la fuente de Cartera. Aunque comparte algunos encabezados, no contiene el contrato completo observado por el tablero anterior (por ejemplo `VALOR ANTICIPO`, `VALOR FINANCIADO` y `CARTERA`).
 
 El siguiente hito es identificar/compartir la hoja real, configurar los tres rangos y ejecutar `/fuente/estado` antes de tocar reglas financieras.
+
+
+## 6. Lógica heredada del tablero de Johan portada sin depender de la fuente
+
+Mientras se identifica/configura la hoja real, el módulo conserva reglas que pueden
+validarse únicamente con los tres contratos ya conocidos (Operaciones/FC, Mora y
+Proyección):
+
+- parser compartido de fechas observado en FC y PROYECCIONES;
+- agrupación de FC por DOCUMENTO DE TRANSPORTE;
+- clasificación heredada de documentos como VENCIDO, EN_CAMINO, SIN_ETA o
+  SIN_DOCUMENTO;
+- cruce conservador de clientes en MORA con operaciones en tránsito;
+- concentración de mora usando el umbral heredado > 50 % para los tres registros
+  principales;
+- concentración mensual de proyección por cliente > 35 %;
+- concentración mensual de proyección por fecha > 30 %;
+- identificación descriptiva de registros SALDADO.
+
+Endpoints de diagnóstico:
+
+```
+GET /api/v1/cartera/transportes?empresa_id=<id>&fecha_corte=YYYY-MM-DD
+GET /api/v1/cartera/alertas?empresa_id=<id>&mes=YYYY-MM
+```
+
+Guardrails:
+
+- 50 %, 35 % y 30 % son umbrales heredados del tablero, no parámetros aprobados
+  todavía por negocio;
+- las alertas se calculan read-only y aún no crean registros en core/hallazgos;
+- el cruce Mora/FC usa nombre normalizado exacto. El tablero legado también usaba
+  inclusión parcial de strings, pero esa heurística no se porta como decisión
+  automática hasta contar con cliente_id o catálogo de alias;
+- ETA se interpreta al construir el diagnóstico de transporte, pero se conserva el
+  valor crudo de la fuente en el contrato/snapshot;
+- CIERRE MES ANTERIOR, MES VIGENTE, PAGOS y TRM siguen fuera de este port hasta
+  conocer su origen y semántica en el Apps Script/Sheets de Johan.
