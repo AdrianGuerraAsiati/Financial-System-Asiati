@@ -5,12 +5,13 @@
 > El estado vigente está en `docs/ESTADO_DESARROLLO_2026-10-06.md`.
 >
 > Desde la foto anterior, Wallets pasó la regresión real de septiembre y se fusionaron los ajustes operativos
-> (#113-#117), el diagnóstico SSH del deploy (#118), el catálogo v2 para categorización manual (#119) y la
-> clave estable de hallazgos del núcleo (#120). La decisión de categorización quedó formalizada en el ADR 0008.
+> (#113-#118), catálogo v2 y ADR 0008 (#119), clave estable de hallazgos (#120), listas administrables (#121),
+> categorización manual/sincronización de punta a punta (#122) y siembra automática de dimensiones en desarrollo
+> (#123).
 >
 > La aceptación operacional formal de Motor 01 sigue usando
 > `docs/motores/conciliacion_wallets/ACEPTACION_OPERATIVA.md`; no confundir regresión técnica verde con firma
-> funcional completa. Cartera #101 continúa draft y bloqueada por fuente/validación de negocio.
+> funcional completa. Cartera #101 fue cerrado sin merge por obsoleto y debe retomarse desde `main` vigente.
 >
 > Esta actualización manda sobre las fotografías anteriores para estado operativo.
 >
