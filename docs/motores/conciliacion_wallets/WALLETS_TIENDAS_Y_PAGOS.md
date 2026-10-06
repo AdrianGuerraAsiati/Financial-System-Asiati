@@ -47,6 +47,29 @@ Cambios respecto a la tabla del flujo de caja anterior:
 4. **Textos nuevos** que no estaban en la tabla: corrección de guía como dropshipper/proveedor/referidos, cobro y reverso de
    fulfillment, dispersión y mantenimiento de tarjeta, RET. ADMIN por saldo negativo, cruces de marca blanca. Ver `origen` en el catálogo.
 
+Cambios del catálogo v2 (6-oct-2026, Juan Felipe Parra). Solo cambian etiquetas y qué va a revisión; ninguna cifra:
+
+5. **La unidad DROPSHIPPING deja de existir:** toda fila con esa unidad pasa a **TIENDAS**. La categoría DROPSHIPPING
+   (ganancia de la tienda) se mantiene.
+6. **Flete marca blanca:** INGRESO · FF · COMISIONES (antes la unidad era UM).
+7. **Retiro a banco** (`RETIRO_SALDO`; en Wiilog `RETIRO_BANCARIO`): unidad de negocio vacía y `requiere_revision`. En
+   septiembre agrega 5 movimientos por revisar en Menpros, 22 en Proveeduría, 2 en Pagos y 0 en Recompra.
+8. **Transferencias a cuentas destino del grupo** (`cuentas_destino_grupo`): unidad y categoría vacías; las elige el
+   conciliador.
+
+**Categorización manual (decisión 6-oct-2026, Juan Felipe Parra).** Todo movimiento `SIN_CONCEPTO` o con
+`requiere_revision` lo categoriza el auxiliar de conciliación a mano, con las 7 dimensiones: ingreso/egreso, unidad de
+negocio, categoría, empresa, tercero, modalidad y fijo/variable. Aplica a Wiilog, Tiendas y Pagos.
+
+- El motor propone ingreso/egreso, unidad y categoría desde el catálogo común (`catalogo_conceptos_wallets.json`).
+- El auxiliar solo elige de listas cerradas que administra el coordinador financiero. El único texto libre es el
+  tercero (precargado desde el texto de Dropi). La empresa es la de la wallet y no se edita; la modalidad es WALLET.
+- La observación es obligatoria. Si ninguna categoría sirve, el auxiliar escala al coordinador.
+- Un texto de Dropi que el catálogo no reconoce (`SIN_CONCEPTO`) llega a revisión sin propuesta y marcado
+  "Texto nuevo de Dropi" (`evidencia.texto_nuevo`).
+- La categorización no se pierde al volver a conciliar la misma wallet y período (lo garantiza la clave estable
+  de hallazgos del núcleo; ver `docs/decisiones/0008-categorizacion-manual-wallets.md`).
+
 ## 4. Reglas de tienda
 
 Gravedad (las tiendas son del grupo): plata que Dropi le debe a la tienda = CRÍTICO; cobro de más = MEDIO; lo demás = INFORMATIVO.

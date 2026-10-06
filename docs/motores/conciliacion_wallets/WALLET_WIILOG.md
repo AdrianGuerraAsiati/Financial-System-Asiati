@@ -54,6 +54,38 @@ mismo minuto entre varios movimientos.
 El match usa “empieza con” y, cuando corresponde, “contiene”, sobre texto
 normalizado. La primera regla que empareja gana.
 
+Desde el 6-oct-2026 (Juan Felipe Parra), ingreso/egreso, unidad de negocio y categoría de cada movimiento salen del
+catálogo común (`catalogo_conceptos_wallets.json`), en la fila del mismo texto de Dropi
+(`parametros_wallet_wiilog.json` → `concepto_catalogo_comun`). La columna "Categoría por defecto" de las tablas de
+abajo queda como descripción del concepto. No cambia FF, flete ni ninguna cifra; solo la propuesta de categoría:
+
+| Concepto Wiilog | Fila del catálogo común | Ingreso/egreso · unidad · categoría |
+|---|---|---|
+| `FF_GUIA_GENERADA`, `FF_CIERRE` | `FF_MARCA_BLANCA` | INGRESO · FF · FF |
+| `FF_OTRO_USUARIO` | `FF_OTRO_USUARIO` | INGRESO · FF · FF |
+| `FF_CORRECCION` | `REVERSO_FF_RECIBIDO` | EGRESO · FF · FF |
+| `FLETE_MB` | `FLETE_MARCA_BLANCA` | INGRESO · FF · COMISIONES |
+| `TRASLADO_WALLET_WIILOG` | `TRASLADO_WALLET_WIILOG` | TRASLADO · FF · RETIRO |
+| `CRUCE_*` | `CRUCE_*` | NETO_CERO · FF · CRUCE DE CARTERA DROPI |
+| `RECARGA_RECIBIDA` | `RECARGA_RECIBIDA` | INGRESO · FF · RECARGA |
+| `TRANSFERENCIA_RECIBIDA` (retiro admin en usuario) | `RETIRO_ADMIN_EN_USER` | INGRESO · vacío · vacío |
+| `TRANSFERENCIA_ENVIADA` (recarga por super admin) | `TRANSFERENCIA_SUPER_ADMIN` | EGRESO · FF · RETIRO |
+| `RETIRO_BANCARIO` | `RETIRO_SALDO` | EGRESO · vacío · RETIRO, y pasa a revisar |
+| `SIN_CONCEPTO` | — | vacío |
+
+**Categorización manual (decisión 6-oct-2026, Juan Felipe Parra).** Todo movimiento `SIN_CONCEPTO` o con
+`requiere_revision` lo categoriza el auxiliar de conciliación a mano, con las 7 dimensiones: ingreso/egreso, unidad de
+negocio, categoría, empresa, tercero, modalidad y fijo/variable. Aplica a Wiilog, Tiendas y Pagos.
+
+- El motor propone ingreso/egreso, unidad y categoría desde el catálogo común (`catalogo_conceptos_wallets.json`).
+- El auxiliar solo elige de listas cerradas que administra el coordinador financiero. El único texto libre es el
+  tercero (precargado desde el texto de Dropi). La empresa es la de la wallet y no se edita; la modalidad es WALLET.
+- La observación es obligatoria. Si ninguna categoría sirve, el auxiliar escala al coordinador.
+- Un texto de Dropi que el catálogo no reconoce (`SIN_CONCEPTO`) llega a revisión sin propuesta y marcado
+  "Texto nuevo de Dropi" (`evidencia.texto_nuevo`).
+- La categorización no se pierde al volver a conciliar la misma wallet y período (lo garantiza la clave estable
+  de hallazgos del núcleo; ver `docs/decisiones/0008-categorizacion-manual-wallets.md`).
+
 ### Entradas
 
 | Concepto | Patrón funcional | Categoría por defecto | Estado |
@@ -75,7 +107,7 @@ normalizado. La primera regla que empareja gana.
 | `TRANSFERENCIA_ENVIADA` | Recarga hacia otro usuario por super admin | Transferencia a otro usuario por SUPER ADMIN | Revisar + observación |
 | `CRUCE_RETIRO_OUT` | Retiro cruzado de marca blanca | Cruce de cartera Dropi | Neto cero |
 | `FF_CORRECCION` | Corrección de entrada de fulfillment | Reverso de fulfillment | Automático |
-| `RETIRO_BANCARIO` | Movimiento con `CUENTA` diligenciada | Retiro a cuenta bancaria | Automático |
+| `RETIRO_BANCARIO` | Movimiento con `CUENTA` diligenciada | Retiro a cuenta bancaria | Revisar + observación (desde 6-oct) |
 
 ### Cruces neto cero
 
