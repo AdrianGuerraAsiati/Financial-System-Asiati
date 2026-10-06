@@ -28,7 +28,7 @@ from app.core.periodos.errors import PeriodoCerradoError
 
 from ..pagos import conciliar_wallet_pagos
 from ..tiendas import conciliar_wallet_tienda
-from ..wiilog.integracion import cargar_parametros_wiilog
+from ..wiilog.integracion import cargar_parametros_wiilog, resolver_identificador_wallet
 from .hallazgos import HallazgoNuevo, hallazgos_pagos, hallazgos_tienda, resultado_c0
 
 MOTOR_SLUG = "conciliacion_wallets"
@@ -262,7 +262,8 @@ def ejecutar_y_persistir_tienda(
     corte: str | None = None,
 ) -> EjecucionWallet:
     periodo = _periodo_abierto(session, empresa_id=empresa_id, periodo_id=periodo_id)
-    params = cargar_parametros_tienda()
+    params = resolver_identificador_wallet(cargar_parametros_tienda())
+    catalogo = resolver_identificador_wallet(cargar_catalogo())
     tienda = _wallet_de_empresa(params["tiendas"], tienda_email, nombre_empresa(session, empresa_id), "tienda")
     corte_reporte = corte_ordenes(corte, nombre_ordenes)
 
@@ -277,7 +278,7 @@ def ejecutar_y_persistir_tienda(
         _leer_excel(ordenes_contenido, "órdenes"),
         _leer_excel(wallet_contenido, "wallet"),
         params,
-        cargar_catalogo(),
+        catalogo,
         tienda,
         periodo.fecha_inicio,
         periodo.fecha_fin,
@@ -315,7 +316,8 @@ def ejecutar_y_persistir_pagos(
     wallet_contenido: bytes,
 ) -> EjecucionWallet:
     periodo = _periodo_abierto(session, empresa_id=empresa_id, periodo_id=periodo_id)
-    params = cargar_parametros_pagos()
+    params = resolver_identificador_wallet(cargar_parametros_pagos())
+    catalogo = resolver_identificador_wallet(cargar_catalogo())
     wallet = _wallet_de_empresa(params["wallets"], wallet_email, nombre_empresa(session, empresa_id), "wallet de pagos")
 
     carga_wallet = _carga_de_wallet(
@@ -324,7 +326,7 @@ def ejecutar_y_persistir_pagos(
     resultado = conciliar_wallet_pagos(
         _leer_excel(wallet_contenido, "wallet"),
         params,
-        cargar_catalogo(),
+        catalogo,
         wallet,
         periodo.fecha_inicio,
         periodo.fecha_fin,
