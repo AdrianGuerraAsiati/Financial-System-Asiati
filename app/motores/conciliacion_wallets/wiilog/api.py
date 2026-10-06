@@ -9,7 +9,13 @@ from app.core.cargas.errors import ContextoCargaInvalidoError
 from app.core.periodos.errors import PeriodoCerradoError
 from app.core.session import obtener_session
 
-from .integracion import ejecutar_y_persistir_wiilog, listar_hallazgos_wiilog
+from ..plataforma.api import hallazgo_json
+from .integracion import (
+    MENSAJE_CONFIGURACION_FALTANTE,
+    ConfiguracionWiilogFaltanteError,
+    ejecutar_y_persistir_wiilog,
+    listar_hallazgos_wiilog,
+)
 
 
 router = APIRouter(prefix="/wallets/wiilog", tags=["wallets"])
@@ -63,6 +69,12 @@ def conciliar_wiilog(
                 "Usa una exportación nueva o consulta la conciliación existente."
             ),
         ) from exc
+    except ConfiguracionWiilogFaltanteError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail=MENSAJE_CONFIGURACION_FALTANTE,
+        ) from exc
     except ContextoCargaInvalidoError as exc:
         session.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -84,6 +96,7 @@ def conciliar_wiilog(
             "wallet_id": ejecucion.carga_wallet_id,
         },
         "hallazgos_creados": ejecucion.hallazgos_creados,
+        "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,
         "resumen": ejecucion.resumen,
     }
 
@@ -104,14 +117,4 @@ def consultar_hallazgos_wiilog(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    return [
-        {
-            "id": hallazgo.id,
-            "codigo_regla": hallazgo.codigo_regla,
-            "descripcion": hallazgo.descripcion,
-            "critico": hallazgo.critico,
-            "resuelto": hallazgo.resuelto,
-            "evidencia": hallazgo.evidencia,
-        }
-        for hallazgo in hallazgos
-    ]
+    return [hallazgo_json(hallazgo) for hallazgo in hallazgos]
