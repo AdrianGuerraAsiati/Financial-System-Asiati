@@ -4,9 +4,10 @@ from datetime import date
 
 import pandas as pd
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
+from app.core.cargas import Carga
 from app.core.empresas import Empresa
 from app.core.fuentes import Fuente
 from app.core.periodos import Periodo
@@ -152,6 +153,8 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
     assert body["cargas"]["ordenes_id"] > 0
     assert body["cargas"]["wallet_id"] > 0
     assert body["hallazgos_creados"] >= 1
+    assert body["hallazgos_por_gravedad"]["CRITICO"] >= 1
+    assert sum(body["hallazgos_por_gravedad"].values()) == body["hallazgos_creados"]
 
     hallazgos = client.get(
         "/api/v1/wallets/wiilog/hallazgos",
@@ -165,6 +168,8 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
         if item["codigo_regla"] == "WIILOG_FF_NO_COBRADO"
     )
     assert no_cobrado["critico"] is True
+    assert no_cobrado["gravedad"] == "CRITICO"
+    assert no_cobrado["estado"] == "detectado"
     assert no_cobrado["evidencia"]["gravedad"] == "CRITICO"
     assert no_cobrado["evidencia"]["orden_id"] == "2"
     assert no_cobrado["evidencia"]["monto_en_juego_c"] == 250000
@@ -173,3 +178,60 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
 
     assert duplicate.status_code == 409
     assert "ya fue cargado" in duplicate.json()["detail"].lower()
+
+
+def _conciliar(client, contexto: tuple[int, int, int, int]):
+    empresa_id, periodo_id, fuente_ordenes_id, fuente_wallet_id = contexto
+    xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    return client.post(
+        "/api/v1/wallets/wiilog/conciliar",
+        data={
+            "empresa_id": str(empresa_id),
+            "periodo_id": str(periodo_id),
+            "fuente_ordenes_id": str(fuente_ordenes_id),
+            "fuente_wallet_id": str(fuente_wallet_id),
+        },
+        files={
+            "ordenes": ("ordenes.xlsx", _ordenes_bytes(), xlsx),
+            "wallet": ("wallet.xlsx", _wallet_bytes(), xlsx),
+        },
+    )
+
+
+def test_wiilog_inbox_reflects_state_after_observation() -> None:
+    contexto = _contexto()
+    empresa_id, periodo_id, _, _ = contexto
+    client = cliente_superadmin()
+    assert _conciliar(client, contexto).status_code == 201
+    params = {"empresa_id": empresa_id, "periodo_id": periodo_id}
+    primero = client.get("/api/v1/wallets/wiilog/hallazgos", params=params).json()[0]
+
+    observado = client.post(
+        f"/api/v1/hallazgos/{primero['id']}/observar",
+        json={"observacion": "Revisado con la bodega.", "resolver": False},
+    )
+
+    assert observado.status_code == 200, observado.text
+    items = client.get("/api/v1/wallets/wiilog/hallazgos", params=params).json()
+    actual = next(item for item in items if item["id"] == primero["id"])
+    assert actual["estado"] == "en_gestion"
+
+
+def test_wiilog_without_principal_wallet_config_answers_clearly_and_registers_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("WIILOG_WALLET_PRINCIPAL_EMAIL", raising=False)
+    contexto = _contexto()
+    client = cliente_superadmin()
+
+    response = _conciliar(client, contexto)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Falta configurar la wallet principal de Wiilog. Pide a TI que la defina."
+    )
+    with Session(_engine()) as session:
+        cargas = session.scalar(
+            select(func.count()).select_from(Carga).where(Carga.empresa_id == contexto[0])
+        )
+    assert cargas == 0

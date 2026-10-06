@@ -6,8 +6,10 @@ from datetime import date
 
 import pandas as pd
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.cargas import Carga
 from app.core.empresas import Empresa
 from app.core.fuentes import Fuente
 from app.core.periodos import Periodo
@@ -239,6 +241,41 @@ def test_hora_de_descarga_sale_del_nombre_del_archivo_o_del_formulario(monkeypat
     assert "AAAA-MM-DD HH:MM" in invalida.json()["detail"]
 
 
+def test_respuesta_dice_que_corte_de_ordenes_uso_y_de_donde_salio(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    client = _conciliador(ctx)
+
+    del_nombre = _conciliar_tienda(client, ctx, nombre_ordenes="ordenes_sept_20260928_144134.xlsx")
+    escrita = _conciliar_tienda(
+        client, ctx, tienda="otra@x.co", wallet_bytes=_wallet(gan_ds(2, 1.0)), corte="2026-09-27 10:00"
+    )
+    del_reporte = _conciliar_tienda(
+        client, ctx, wallet_bytes=_wallet(gan_ds(4, 1.0)), ordenes=_xlsx(pd.DataFrame([orden(1, "ENTREGADO")]))
+    )
+
+    assert del_nombre.json()["corte_ordenes_usado"] == {"valor": "2026-09-28 14:41:34", "origen": "nombre_archivo"}
+    assert escrita.json()["corte_ordenes_usado"] == {"valor": "2026-09-27 10:00:00", "origen": "formulario"}
+    assert del_reporte.status_code == 201, del_reporte.text
+    assert del_reporte.json()["corte_ordenes_usado"] == {
+        "valor": del_reporte.json()["resumen"]["corte_reporte_ordenes"],
+        "origen": "fecha_de_reporte",
+    }
+
+
+def test_tienda_sin_configuracion_de_wiilog_responde_claro_y_no_registra_cargas(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    monkeypatch.delenv("WIILOG_WALLET_PRINCIPAL_EMAIL", raising=False)
+    client = _conciliador(ctx)
+
+    respuesta = _conciliar_tienda(client, ctx)
+
+    assert respuesta.status_code == 503
+    assert respuesta.json()["detail"] == "Falta configurar la wallet principal de Wiilog. Pide a TI que la defina."
+    with Session(engine()) as session:
+        cargas = session.scalar(select(func.count()).select_from(Carga).where(Carga.empresa_id == ctx["empresa_id"]))
+    assert cargas == 0
+
+
 def test_conciliar_pagos_guarda_solo_hallazgos_de_pagos(monkeypatch) -> None:
     ctx = _contexto(monkeypatch)
     client = _conciliador(ctx)
@@ -261,6 +298,7 @@ def test_conciliar_pagos_guarda_solo_hallazgos_de_pagos(monkeypatch) -> None:
     assert respuesta.status_code == 201, respuesta.text
     assert respuesta.json()["c0"]["cuadra"] is True
     assert respuesta.json()["cargas"]["ordenes_id"] is None
+    assert respuesta.json()["corte_ordenes_usado"] is None
     items = _hallazgos(client, ctx, ruta="pagos").json()
     assert items and all(h["codigo_regla"].startswith("PAGOS_") for h in items)
     revisar = [h for h in items if h["codigo_regla"] == "PAGOS_MOVIMIENTO_REVISAR"]

@@ -56,6 +56,7 @@ class EjecucionWallet:
     hallazgos_creados: int
     hallazgos_por_gravedad: dict[str, int]
     resumen: dict[str, Any]
+    corte_ordenes_usado: dict[str, str] | None = None
 
 
 def _json(datos: Any) -> Any:
@@ -177,6 +178,22 @@ def corte_ordenes(texto: str | None, nombre_archivo: str | None) -> pd.Timestamp
     return None
 
 
+def origen_corte_ordenes(texto: str | None, nombre_archivo: str | None) -> str:
+    """De dónde sale el corte que usa el motor, en el mismo orden de corte_ordenes()."""
+    if texto and texto.strip():
+        return "formulario"
+    if corte_ordenes(None, nombre_archivo) is not None:
+        return "nombre_archivo"
+    return "fecha_de_reporte"
+
+
+def _corte_usado(resumen: dict | None, texto: str | None, nombre_archivo: str | None) -> dict[str, str] | None:
+    """Corte que aplicó el motor; si C0 bloquea no hay resumen y tampoco corte."""
+    if not resumen or "corte_reporte_ordenes" not in resumen:
+        return None
+    return {"valor": str(resumen["corte_reporte_ordenes"]), "origen": origen_corte_ordenes(texto, nombre_archivo)}
+
+
 def _carga_de_ordenes(
     session: Session, *, empresa_id: int, periodo_id: int, fuente_id: int, contenido: bytes
 ) -> tuple[Carga, bool]:
@@ -266,6 +283,8 @@ def ejecutar_y_persistir_tienda(
     catalogo = resolver_identificador_wallet(cargar_catalogo())
     tienda = _wallet_de_empresa(params["tiendas"], tienda_email, nombre_empresa(session, empresa_id), "tienda")
     corte_reporte = corte_ordenes(corte, nombre_ordenes)
+    # Antes de registrar cargas: si falta la configuración de Wiilog no debe quedar nada guardado.
+    tarifas_ff = cargar_parametros_wiilog()["fulfillment"]["tarifas_por_bodega"]
 
     carga_ordenes, reutilizada = _carga_de_ordenes(
         session, empresa_id=empresa_id, periodo_id=periodo_id, fuente_id=fuente_ordenes_id, contenido=ordenes_contenido
@@ -282,7 +301,7 @@ def ejecutar_y_persistir_tienda(
         tienda,
         periodo.fecha_inicio,
         periodo.fecha_fin,
-        cargar_parametros_wiilog()["fulfillment"]["tarifas_por_bodega"],
+        tarifas_ff,
         corte_ordenes=corte_reporte,
     )
     hallazgos = hallazgos_tienda(resultado)
@@ -303,6 +322,7 @@ def ejecutar_y_persistir_tienda(
         hallazgos_creados=len(hallazgos),
         hallazgos_por_gravedad=conteo,
         resumen=_json(resultado.resumen),
+        corte_ordenes_usado=_corte_usado(resultado.resumen, corte, nombre_ordenes),
     )
 
 

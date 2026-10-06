@@ -12,6 +12,10 @@ from app.core.hallazgos import Hallazgo
 from app.core.periodos.errors import PeriodoCerradoError
 from app.core.session import obtener_session
 
+from ..wiilog.integracion import (
+    MENSAJE_CONFIGURACION_FALTANTE,
+    ConfiguracionWiilogFaltanteError,
+)
 from .integracion import (
     CargaDuplicadaError,
     EjecucionWallet,
@@ -53,6 +57,9 @@ def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet]) -> dict[s
     except (CargaDuplicadaError, PeriodoCerradoError) as exc:
         session.rollback()
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ConfiguracionWiilogFaltanteError as exc:
+        session.rollback()
+        raise HTTPException(status_code=503, detail=MENSAJE_CONFIGURACION_FALTANTE) from exc
     except ContextoCargaInvalidoError as exc:
         session.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -74,10 +81,11 @@ def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet]) -> dict[s
         "hallazgos_creados": ejecucion.hallazgos_creados,
         "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,
         "resumen": ejecucion.resumen,
+        "corte_ordenes_usado": ejecucion.corte_ordenes_usado,
     }
 
 
-def _hallazgo_json(hallazgo: Hallazgo) -> dict[str, object]:
+def hallazgo_json(hallazgo: Hallazgo) -> dict[str, object]:
     evidencia = hallazgo.evidencia or {}
     return {
         "id": hallazgo.id,
@@ -96,7 +104,7 @@ def _listar(session: Session, **filtros) -> list[dict[str, object]]:
         hallazgos = listar_hallazgos_wallet(session, **filtros)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return [_hallazgo_json(h) for h in hallazgos]
+    return [hallazgo_json(h) for h in hallazgos]
 
 
 @router.get("/catalogo")

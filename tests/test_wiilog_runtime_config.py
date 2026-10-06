@@ -1,6 +1,7 @@
 import pytest
 
 from app.motores.conciliacion_wallets.wiilog.integracion import (
+    ConfiguracionWiilogFaltanteError,
     cargar_parametros_wiilog,
 )
 
@@ -30,3 +31,14 @@ def test_wiilog_runtime_identifier_is_required(
 
     with pytest.raises(RuntimeError, match="WIILOG_WALLET_PRINCIPAL_EMAIL"):
         cargar_parametros_wiilog()
+
+
+def test_missing_runtime_identifier_has_operator_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("WIILOG_WALLET_PRINCIPAL_EMAIL", "   ")
+
+    with pytest.raises(ConfiguracionWiilogFaltanteError) as error:
+        cargar_parametros_wiilog()
+
+    assert "Falta configurar la wallet principal de Wiilog" in str(error.value)

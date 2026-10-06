@@ -29,6 +29,7 @@
   const c0Final = $("#wallets-c0-final");
   const c0Mensaje = $("#wallets-c0-mensaje");
   const c0Cobertura = $("#wallets-c0-cobertura");
+  const c0Corte = $("#wallets-c0-corte");
 
   const resumenPanel = $("#wallets-resumen-panel");
   const resumen = $("#wallets-resumen");
@@ -133,9 +134,15 @@
     );
   }
 
+  function preseleccionarUnica(select, items, valueKey) {
+    if (items.length === 1 && !select.value) select.value = String(items[0][valueKey]);
+  }
+
   function renderFuentes() {
     llenarSelect(fuenteWallet, fuentes, "id", (item) => item.nombre, "Selecciona una fuente");
     llenarSelect(fuenteOrdenes, fuentes, "id", (item) => item.nombre, "Selecciona una fuente");
+    preseleccionarUnica(fuenteWallet, fuentes, "id");
+    preseleccionarUnica(fuenteOrdenes, fuentes, "id");
   }
 
   function renderTipos() {
@@ -215,6 +222,16 @@
     return hallazgo.critico ? "CRITICO" : "MEDIO";
   }
 
+  function textoGravedad(valor) {
+    const mapa = {
+      CRITICO: "CRÍTICO",
+      MEDIO: "MEDIO",
+      INFORMATIVO: "INFORMATIVO",
+      REVISAR: "REVISAR"
+    };
+    return mapa[valor] || valor;
+  }
+
   function estadoDe(hallazgo) {
     if (hallazgo.estado) return hallazgo.estado;
     return hallazgo.resuelto ? "resuelto" : "detectado";
@@ -257,7 +274,7 @@
       const g = gravedadDe(h);
       const est = estadoDe(h);
       return "<tr>" +
-        '<td><span class="wallet-pill wallet-gravedad-' + escapar(g.toLowerCase()) + '">' + escapar(g) + "</span></td>" +
+        '<td><span class="wallet-pill wallet-gravedad-' + escapar(g.toLowerCase()) + '">' + escapar(textoGravedad(g)) + "</span></td>" +
         "<td>" + escapar(referenciaDe(h)) + "</td>" +
         "<td>" + escapar(h.descripcion) + "</td>" +
         "<td>" + escapar(montoDe(h)) + "</td>" +
@@ -304,6 +321,26 @@
     }
   }
 
+  const ORIGEN_CORTE = {
+    formulario: "hora escrita en el formulario",
+    nombre_archivo: "tomada del nombre del archivo",
+    fecha_de_reporte: "fin del día de FECHA DE REPORTE"
+  };
+
+  function pesos(valor) {
+    // Los montos llegan como texto decimal; formatearDecimal (app.js) no pasa por float.
+    if (valor === null || valor === undefined || valor === "") return "—";
+    const texto = String(valor).trim();
+    if (texto.startsWith("-")) return "-$ " + formatearDecimal(texto.slice(1));
+    return "$ " + formatearDecimal(texto);
+  }
+
+  function mensajeNoCuadra(quiebres) {
+    const puntos = Number(quiebres) === 1 ? "1 punto" : String(quiebres ?? "varios") + " puntos";
+    return "El saldo no cuadra en " + puntos + ". " +
+      "El archivo puede estar incompleto: descárgalo de nuevo de Dropi y vuelve a conciliar.";
+  }
+
   function mostrarC0(data) {
     if (!data || !data.c0) {
       c0Panel.hidden = true;
@@ -313,15 +350,20 @@
     c0Panel.hidden = false;
     c0Estado.textContent = c0.cuadra ? "CUADRA" : "NO CUADRA";
     c0Estado.className = "wallet-pill " + (c0.cuadra ? "wallet-pill-ok" : "wallet-pill-danger");
-    c0Inicial.textContent = c0.saldo_inicial || "—";
-    c0Entradas.textContent = c0.entradas || "—";
-    c0Salidas.textContent = c0.salidas || "—";
-    c0Final.textContent = c0.saldo_final || "—";
-    c0Mensaje.textContent = c0.mensaje || "";
+    c0Inicial.textContent = pesos(c0.saldo_inicial);
+    c0Entradas.textContent = pesos(c0.entradas);
+    c0Salidas.textContent = pesos(c0.salidas);
+    c0Final.textContent = pesos(c0.saldo_final);
+    c0Mensaje.textContent = c0.cuadra ? (c0.mensaje || "") : mensajeNoCuadra(c0.quiebres);
     const cobertura = c0.cobertura;
     c0Cobertura.hidden = !cobertura || cobertura.estado === "EN_ORDEN";
     c0Cobertura.textContent = cobertura && cobertura.estado !== "EN_ORDEN"
       ? "Cobertura: " + cobertura.mensaje
+      : "";
+    const corteUsado = data.corte_ordenes_usado;
+    c0Corte.hidden = !corteUsado;
+    c0Corte.textContent = corteUsado
+      ? "Corte del reporte de órdenes: " + corteUsado.valor + " · " + (ORIGEN_CORTE[corteUsado.origen] || corteUsado.origen)
       : "";
   }
 
@@ -480,7 +522,7 @@
     try {
       const h = await walletApi("/api/v1/hallazgos/" + id);
       detalle.innerHTML =
-        '<div class="wallet-dialog-heading"><div><span class="wallet-pill">' + escapar(gravedadDe(h)) + "</span>" +
+        '<div class="wallet-dialog-heading"><div><span class="wallet-pill">' + escapar(textoGravedad(gravedadDe(h))) + "</span>" +
         '<h3>' + escapar(h.codigo_regla) + '</h3></div><span class="wallet-pill">' + escapar(textoEstado(estadoDe(h))) + '</span></div>' +
         "<p>" + escapar(h.descripcion) + "</p>" +
         "<h4>Hilo de mensajes</h4>" + renderMensajes(h.mensajes);

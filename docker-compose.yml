@@ -22,6 +22,8 @@ x-app-environment: &app-environment
   COMPRAS_SHEETS_CL_RANGE: ${COMPRAS_SHEETS_CL_RANGE:-'INFORME CLIENTES (CL)'!A:BG}
   COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE: ${COMPRAS_SHEETS_SUPPLY_CHAIN_RANGE:-'Supply Chain'!A:Z}
   COMPRAS_SHEETS_CACHE_SECONDS: ${COMPRAS_SHEETS_CACHE_SECONDS:-60}
+  # Identificador operativo de la wallet principal de Wiilog: se define en .env, nunca en Git.
+  WIILOG_WALLET_PRINCIPAL_EMAIL: ${WIILOG_WALLET_PRINCIPAL_EMAIL:-}
 
 services:
   db:
