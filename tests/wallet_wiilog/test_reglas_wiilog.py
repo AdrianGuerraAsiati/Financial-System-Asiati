@@ -247,3 +247,66 @@ def test_v2_bodega_con_tarifa_por_confirmar_acepta_el_cobro():
     res = correr([orden(1, bodega="WIILOG BOGOTÁ 2.0")], Wallet().mov("ENTRADA", 4000, ff_gg(1), 1))
     assert estado_ff(res, 1) == "COBRADO"
     assert bool(res.ff.loc["1", "tarifa_confirmada"]) is False
+
+
+
+# ------------------------------------------------------------------ catálogo común (Juan Felipe, 6-oct)
+
+CATALOGO_TEXT = (
+    Path(__file__).resolve().parents[2]
+    / "docs/motores/conciliacion_wallets/catalogo_conceptos_wallets.json"
+).read_text(encoding="utf-8")
+CATALOGO = json.loads(CATALOGO_TEXT.replace("{{WIILOG_WALLET_PRINCIPAL_EMAIL}}", "wallet-principal@wiilog.test"))
+
+
+def correr_con_catalogo(ordenes_filas, wallet: Wallet):
+    o = pd.DataFrame([f for grupo in ordenes_filas for f in grupo], columns=COLS_O)
+    wallet.mov("ENTRADA", 1000, flete(999999), orden_id=999999, fecha="28-09-2026 12:00")
+    return conciliar_wallet_wiilog(o, wallet.df(), PARAMS, "2026-09-01", "2026-09-30", catalogo=CATALOGO)
+
+
+def _dimensiones(res, mov_id):
+    m = res.movimientos.set_index("mov_id").loc[mov_id]
+    return (m.ingreso_egreso, m.unidad_negocio, m.categoria)
+
+
+def test_cada_concepto_de_wiilog_apunta_a_una_fila_del_catalogo_comun():
+    comunes = {c["codigo"] for c in CATALOGO["conceptos"]}
+    propios = {r["codigo"] for r in PARAMS["conceptos_wallet"]}
+    mapa = PARAMS["concepto_catalogo_comun"]
+    assert propios == set(mapa)
+    assert set(mapa.values()) <= comunes
+
+
+def test_ff_y_flete_de_wiilog_toman_dimensiones_del_catalogo_comun():
+    w = Wallet().mov("ENTRADA", 2500, ff_gg(1), 1).mov("ENTRADA", 1000, flete(1), 1)
+    w.mov("SALIDA", 2500, "CORRECCION DE ENTRADA DE FULFILLMENT. ORDEN ID *1*", 1)
+    res = correr_con_catalogo([orden(1, entregado="12/09/2026")], w)
+    assert _dimensiones(res, 1001) == ("INGRESO", "FF", "FF")
+    assert _dimensiones(res, 1002) == ("INGRESO", "FF", "COMISIONES")
+    assert _dimensiones(res, 1003) == ("EGRESO", "FF", "FF")
+
+
+def test_traslado_a_wallet_principal_es_traslado_ff_retiro():
+    w = Wallet(5_000_000).mov("SALIDA", 1_000_000, "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO wallet-principal@wiilog.test, POR SUPER ADMIN")
+    res = correr_con_catalogo([orden(1)], w.mov("ENTRADA", 2500, ff_gg(1), 1))
+    assert _dimensiones(res, 1001) == ("TRASLADO", "FF", "RETIRO")
+
+
+def test_retiro_bancario_de_wiilog_queda_sin_unidad_y_para_revisar():
+    w = Wallet(5_000_000)
+    w.mov("SALIDA", 1_000_000, "RETIRO DE SALDO")
+    w.filas[-1][9] = "CUENTA BANCARIA"
+    res = correr_con_catalogo([orden(1)], w.mov("ENTRADA", 2500, ff_gg(1), 1))
+    m = res.movimientos.set_index("mov_id").loc[1001]
+    assert m.concepto == "RETIRO_BANCARIO"
+    assert m.unidad_negocio is None
+    assert m.estado_categoria == "REVISAR"
+
+
+def test_texto_nuevo_en_wiilog_queda_sin_dimensiones():
+    w = Wallet(5_000).mov("ENTRADA", 700, "ENTRADA POR UN CONCEPTO QUE DROPI ACABA DE CREAR")
+    res = correr_con_catalogo([orden(1)], w.mov("ENTRADA", 2500, ff_gg(1), 1))
+    m = res.movimientos.set_index("mov_id").loc[1001]
+    assert m.concepto == "SIN_CONCEPTO"
+    assert _dimensiones(res, 1001) == (None, None, None)

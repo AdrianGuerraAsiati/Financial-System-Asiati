@@ -17,6 +17,7 @@ from app.core.periodos import Periodo
 from app.core.periodos.errors import PeriodoCerradoError
 
 from .motor import ResultadoWiilog, conciliar_wallet_wiilog
+from .normalizar import pesos
 
 
 MOTOR_SLUG = "conciliacion_wallets"
@@ -27,6 +28,7 @@ PARAMS_PATH = (
     / "conciliacion_wallets"
     / "parametros_wallet_wiilog.json"
 )
+CATALOGO_COMUN_PATH = PARAMS_PATH.parent / "catalogo_conceptos_wallets.json"
 
 
 MENSAJE_CONFIGURACION_FALTANTE = (
@@ -129,6 +131,17 @@ def cargar_parametros_wiilog(
     parametros = json.loads(PARAMS_PATH.read_text(encoding="utf-8"))
     return resolver_identificador_wallet(
         parametros,
+        wallet_principal_email=wallet_principal_email,
+    )
+
+
+def cargar_catalogo_comun(
+    *,
+    wallet_principal_email: str | None = None,
+) -> dict[str, Any]:
+    catalogo = json.loads(CATALOGO_COMUN_PATH.read_text(encoding="utf-8"))
+    return resolver_identificador_wallet(
+        catalogo,
         wallet_principal_email=wallet_principal_email,
     )
 
@@ -246,11 +259,18 @@ def _persistir_movimientos(
                 "El movimiento requiere revisión y explicación antes del cierre."
             ),
             evidencia={
+                "tipo": "REVISAR_MOVIMIENTO",
                 "mov_id": int(fila.mov_id),
                 "fecha": str(fila.fecha),
                 "concepto": _valor_texto(fila.concepto),
+                "texto_dropi": _valor_texto(fila.descripcion),
+                "entrada_salida": _valor_texto(fila.tipo),
+                "texto_nuevo": fila.concepto == "SIN_CONCEPTO",
                 "flujo": _valor_texto(fila.flujo),
+                "ingreso_egreso": _valor_texto(fila.ingreso_egreso),
+                "unidad_negocio": _valor_texto(fila.unidad_negocio),
                 "categoria": _valor_texto(fila.categoria),
+                "monto": str(pesos(int(fila.neto_c))),
                 "monto_c": int(fila.monto_c),
                 "tercero": _valor_texto(fila.tercero),
                 "requiere_observacion": bool(fila.requiere_observacion),
@@ -350,6 +370,7 @@ def ejecutar_y_persistir_wiilog(
     ordenes_contenido: bytes,
     wallet_contenido: bytes,
     params: dict[str, Any] | None = None,
+    catalogo: dict[str, Any] | None = None,
 ) -> EjecucionWiilog:
     periodo = _periodo_abierto(
         session,
@@ -358,6 +379,7 @@ def ejecutar_y_persistir_wiilog(
     )
     # Antes de registrar cargas: si falta configuración no debe quedar nada guardado.
     configuracion = params or cargar_parametros_wiilog()
+    catalogo_comun = catalogo or cargar_catalogo_comun()
 
     carga_ordenes = registrar_carga(
         session,
@@ -384,6 +406,7 @@ def ejecutar_y_persistir_wiilog(
         configuracion,
         periodo.fecha_inicio,
         periodo.fecha_fin,
+        catalogo=catalogo_comun,
     )
 
     conteo: dict[str, int] = {}

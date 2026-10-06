@@ -272,3 +272,31 @@ def test_reembolso_no_esperado_es_informativo():
     r = correr(ords, movs)
     assert r.sin_recaudo.loc["1", "estado_reembolso"] == "REEMBOLSO_NO_ESPERADO"
     assert r.sin_recaudo.loc["1", "gravedad"] == "INFORMATIVO"
+
+
+# ------------------------------------------------------------------ reglas del catálogo (Juan Felipe, 6-oct)
+
+def _concepto(codigo):
+    return next(c for c in CATALOGO["conceptos"] if c["codigo"] == codigo)
+
+
+def test_dropshipping_no_vuelve_como_unidad_de_negocio():
+    unidades = {c["unidad_negocio"] for c in CATALOGO["conceptos"]}
+    assert "DROPSHIPPING" not in unidades
+    assert "TIENDAS" in unidades
+    # La categoría DROPSHIPPING (ganancia de la tienda) se mantiene.
+    assert _concepto("GANANCIA_DROPSHIPPER")["categoria"] == "DROPSHIPPING"
+
+
+def test_flete_marca_blanca_es_ingreso_ff_comisiones():
+    c = _concepto("FLETE_MARCA_BLANCA")
+    assert (c["ingreso_egreso"], c["unidad_negocio"], c["categoria"]) == ("INGRESO", "FF", "COMISIONES")
+
+
+def test_retiro_a_banco_queda_sin_unidad_y_para_revisar():
+    w = carga.leer_wallet(wallet([("10-09-2026 10:00", "SALIDA", 100, None,
+                                   "SALIDA POR PETICION DE RETIRO DE SALDO EN CARTERA")], 1000), PARAMS)
+    m = categorizar(w, CATALOGO, {**DS, "wallets_propias": []}).iloc[0]
+    assert m.concepto == "RETIRO_SALDO"
+    assert m.unidad_negocio is None
+    assert bool(m.requiere_revision) is True

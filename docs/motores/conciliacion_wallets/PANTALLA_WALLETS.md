@@ -104,8 +104,11 @@ Volumen con los archivos de septiembre (regresión en `tests/wallet_tiendas/test
 
 | Wallet | CRÍTICO | MEDIO | INFORMATIVO | REVISAR | Total |
 |---|---:|---:|---:|---:|---:|
-| Menpros | 1 | 19 | 7 | 10 | 37 |
-| Proveeduría ASIATI | 0 | 37 | 1 | 10 | 48 |
+| Menpros | 1 | 19 | 7 | 15 | 42 |
+| Proveeduría ASIATI | 0 | 37 | 1 | 32 | 70 |
+
+REVISAR subió el 6-oct (Menpros 10 → 15, Proveeduría 10 → 32): los retiros a banco quedan sin unidad de negocio y
+los categoriza el conciliador (ver §3). Las cifras de la conciliación no cambian.
 
 Sin agrupar habrían sido ~4.800 movimientos de órdenes anteriores al reporte y 289 de órdenes no encontradas.
 NO_ENCONTRADA separa en su evidencia `reemplazadas` (Menpros 64, Proveeduría 0) y `otros` (116 y 109).
@@ -124,6 +127,23 @@ qué es hallazgo ni la severidad; solo la escribe. Para los viejos, la pantalla 
 ---
 
 ## 3. Movimientos que requieren revisión
+
+**Categorización manual (decisión 6-oct-2026, Juan Felipe Parra).** Todo movimiento `SIN_CONCEPTO` o con
+`requiere_revision` lo categoriza el auxiliar de conciliación a mano, con las 7 dimensiones: ingreso/egreso, unidad de
+negocio, categoría, empresa, tercero, modalidad y fijo/variable. Aplica a Wiilog, Tiendas y Pagos.
+
+- El motor propone ingreso/egreso, unidad y categoría desde el catálogo común (`catalogo_conceptos_wallets.json`).
+- El auxiliar solo elige de listas cerradas que administra el coordinador financiero. El único texto libre es el
+  tercero (precargado desde el texto de Dropi). La empresa es la de la wallet y no se edita; la modalidad es WALLET.
+- La observación es obligatoria. Si ninguna categoría sirve, el auxiliar escala al coordinador.
+- Un texto de Dropi que el catálogo no reconoce (`SIN_CONCEPTO`) llega a revisión sin propuesta y marcado
+  "Texto nuevo de Dropi" (`evidencia.texto_nuevo`).
+- La categorización no se pierde al volver a conciliar la misma wallet y período (lo garantiza la clave estable
+  de hallazgos del núcleo; ver `docs/decisiones/0008-categorizacion-manual-wallets.md`).
+
+La evidencia de cada movimiento por revisar trae, además, el texto de Dropi (`texto_dropi`), entrada o salida
+(`entrada_salida`), el monto en pesos (`monto`) y la propuesta del motor (`ingreso_egreso`, `unidad_negocio`,
+`categoria`), igual en Wiilog, Tiendas y Pagos.
 
 Propuesta: cada movimiento con `requiere_revision` se guarda como hallazgo con `codigo_regla`
 `TIENDA_MOVIMIENTO_REVISAR` o `PAGOS_MOVIMIENTO_REVISAR`, `evidencia.tipo = "REVISAR_MOVIMIENTO"`, gravedad REVISAR,

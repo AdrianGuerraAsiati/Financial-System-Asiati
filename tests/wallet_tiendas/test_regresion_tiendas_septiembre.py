@@ -159,7 +159,9 @@ def test_ordenes_anteriores_al_reporte_son_un_solo_hallazgo(menpros, proveeduria
 
 
 def test_volumen_de_la_bandeja_de_septiembre(menpros, proveeduria):
-    # Menpros: T2 1 crítico; T3 18 medios + 6 informativos; NO_ENCONTRADA 1; anteriores 1; 10 movimientos.
-    assert _gravedades(hallazgos_tienda(menpros)) == {"CRITICO": 1, "MEDIO": 19, "INFORMATIVO": 7, "REVISAR": 10}
-    # Proveeduría: T4 12 duplicados; otra tienda 24; NO_ENCONTRADA 1; anteriores 1; 10 movimientos.
-    assert _gravedades(hallazgos_tienda(proveeduria)) == {"MEDIO": 37, "INFORMATIVO": 1, "REVISAR": 10}
+    # Menpros: T2 1 crítico; T3 18 medios + 6 informativos; NO_ENCONTRADA 1; anteriores 1;
+    # 15 movimientos (10 + 5 retiros a banco, decisión 6-oct: la unidad la pone el conciliador).
+    assert _gravedades(hallazgos_tienda(menpros)) == {"CRITICO": 1, "MEDIO": 19, "INFORMATIVO": 7, "REVISAR": 15}
+    # Proveeduría: T4 12 duplicados; otra tienda 24; NO_ENCONTRADA 1; anteriores 1;
+    # 32 movimientos (10 + 22 retiros a banco).
+    assert _gravedades(hallazgos_tienda(proveeduria)) == {"MEDIO": 37, "INFORMATIVO": 1, "REVISAR": 32}

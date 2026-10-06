@@ -70,7 +70,8 @@ def validar_integridad(wallet: pd.DataFrame, periodo_inicio, periodo_fin, tolera
 # ------------------------------------------------------------ conceptos y categoría
 
 CATEGORIA_POR_CONCEPTO = {
-    # concepto: (flujo, categoría por defecto, estado, observación obligatoria)
+    # concepto: (flujo, descripción, estado, observación obligatoria).
+    # Ingreso/egreso, unidad de negocio y categoría salen del catálogo común (concepto_catalogo_comun).
     "FF_GUIA_GENERADA": ("INGRESO", "Fulfillment", "AUTO", False),
     "FF_CIERRE": ("INGRESO", "Fulfillment sin recaudo", "AUTO", False),
     "FF_OTRO_USUARIO": ("INGRESO", "Fulfillment órdenes fuera de marca blanca", "AUTO", False),
@@ -83,15 +84,30 @@ CATEGORIA_POR_CONCEPTO = {
     "RECARGA_RECIBIDA": ("INGRESO", "Recarga recibida", "REVISAR", True),
     "TRASLADO_WALLET_WIILOG": ("TRASLADO", "Traslado a wallet principal Wiilog", "AUTO", False),
     "TRANSFERENCIA_ENVIADA": ("EGRESO", "Transferencia a otro usuario por SUPER ADMIN", "REVISAR", True),
-    "RETIRO_BANCARIO": ("EGRESO", "Retiro a cuenta bancaria", "AUTO", False),
+    # Decisión 6-oct: el retiro a banco no tiene unidad de negocio; la pone el conciliador.
+    "RETIRO_BANCARIO": ("EGRESO", "Retiro a cuenta bancaria", "REVISAR", True),
     "SIN_CONCEPTO": ("PENDIENTE", None, "PENDIENTE", True),
 }
+
+# Dimensiones de las filas CRUCE_* del catálogo común: un cruce emparejado es neto cero.
+DIMENSIONES_CRUCE = ("NETO_CERO", "FF", "CRUCE DE CARTERA DROPI")
 
 _CORREO = re.compile(r"(?:USUARIO|USER)\s+([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})")
 
 
-def clasificar(wallet: pd.DataFrame, params: dict) -> pd.DataFrame:
-    """Asigna concepto (primera regla que empareja gana) y la categoría por defecto."""
+def _dimensiones_comunes(conceptos: pd.Series, params: dict, catalogo: dict | None) -> pd.DataFrame:
+    """Ingreso/egreso, unidad y categoría desde la fila del catálogo común; vacío si no hay fila (SIN_CONCEPTO)."""
+    columnas = ["ingreso_egreso", "unidad_negocio", "categoria"]
+    if catalogo is None:
+        return pd.DataFrame({c: [None] * len(conceptos) for c in columnas}, index=conceptos.index)
+    por_codigo = {r["codigo"]: r for r in catalogo["conceptos"]}
+    mapa = params.get("concepto_catalogo_comun", {})
+    filas = conceptos.map(lambda c: por_codigo.get(mapa.get(c), {}))
+    return pd.DataFrame({c: filas.map(lambda f, c=c: f.get(c)) for c in columnas}, index=conceptos.index)
+
+
+def clasificar(wallet: pd.DataFrame, params: dict, catalogo: dict | None = None) -> pd.DataFrame:
+    """Asigna concepto (primera regla que empareja gana) y las dimensiones del catálogo común."""
     reglas = params["conceptos_wallet"]
     w = wallet.copy()
 
@@ -112,7 +128,7 @@ def clasificar(wallet: pd.DataFrame, params: dict) -> pd.DataFrame:
     w["tercero"] = w["descripcion_norm"].map(lambda s: (m.group(1).lower() if (m := _CORREO.search(s)) else None))
     cat = w["concepto"].map(CATEGORIA_POR_CONCEPTO)
     w["flujo"] = cat.map(lambda t: t[0])
-    w["categoria"] = cat.map(lambda t: t[1])
+    w[["ingreso_egreso", "unidad_negocio", "categoria"]] = _dimensiones_comunes(w["concepto"], params, catalogo)
     w["estado_categoria"] = cat.map(lambda t: t[2])
     w["requiere_observacion"] = cat.map(lambda t: t[3])
     w["observacion"] = ""
@@ -146,7 +162,7 @@ def emparejar_cruces(w: pd.DataFrame, params: dict) -> pd.DataFrame:
             for k in (i, j):
                 w.at[k, "cruce_id"] = f"CRUCE-{cruce:03d}"
                 w.at[k, "flujo"] = "NETO_CERO"
-                w.at[k, "categoria"] = "Cruce de cartera Dropi"
+                w.at[k, "ingreso_egreso"], w.at[k, "unidad_negocio"], w.at[k, "categoria"] = DIMENSIONES_CRUCE
                 w.at[k, "estado_categoria"] = "AUTO"
                 w.at[k, "requiere_observacion"] = False
     # Un cruce sin pareja no es neto cero: se revisa.
