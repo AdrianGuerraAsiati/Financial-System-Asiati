@@ -38,7 +38,7 @@ ver_conciliacion = requiere("conciliacion.ver", empresa_de=_empresa_de_query)
 @router.post("/conciliar", status_code=201)
 def conciliar_wiilog(
     empresa_id: int = Form(...),
-    _acceso: Acceso = Depends(ejecutar_conciliacion),
+    acceso: Acceso = Depends(ejecutar_conciliacion),
     periodo_id: int = Form(...),
     fuente_ordenes_id: int = Form(...),
     fuente_wallet_id: int = Form(...),
@@ -58,6 +58,7 @@ def conciliar_wiilog(
             fuente_wallet_id=fuente_wallet_id,
             ordenes_contenido=ordenes_contenido,
             wallet_contenido=wallet_contenido,
+            usuario_id=acceso.usuario.id,
         )
         session.commit()
     except IntegrityError as exc:
@@ -97,6 +98,7 @@ def conciliar_wiilog(
         },
         "hallazgos_creados": ejecucion.hallazgos_creados,
         "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,
+        "sincronizacion": ejecucion.sincronizacion,
         "resumen": ejecucion.resumen,
     }
 
@@ -105,6 +107,7 @@ def conciliar_wiilog(
 def consultar_hallazgos_wiilog(
     empresa_id: int,
     periodo_id: int,
+    todas_las_cargas: bool = False,
     _acceso: Acceso = Depends(ver_conciliacion),
     session: Session = Depends(obtener_session),
 ) -> list[dict[str, object]]:
@@ -113,6 +116,7 @@ def consultar_hallazgos_wiilog(
             session,
             empresa_id=empresa_id,
             periodo_id=periodo_id,
+            todas_las_cargas=todas_las_cargas,
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

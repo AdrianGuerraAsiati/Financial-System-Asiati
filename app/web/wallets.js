@@ -247,14 +247,45 @@
     return mapa[valor] || String(valor || "DETECTADO").replaceAll("_", " ").toUpperCase();
   }
 
+  function esRevisarMovimiento(h) {
+    return Boolean(h.evidencia && h.evidencia.tipo === "REVISAR_MOVIMIENTO");
+  }
+
+  function textoEstadoDe(h) {
+    const texto = textoEstado(estadoDe(h));
+    return h.resuelto_por_sistema ? texto + " · SISTEMA" : texto;
+  }
+
   function referenciaDe(h) {
     const e = h.evidencia || {};
+    if (esRevisarMovimiento(h)) {
+      return String(e.fecha || "").slice(0, 16) + " · Mov. " + e.mov_id;
+    }
     return e.orden_id || e.mov_id || e.wallet || "—";
   }
 
   function montoDe(h) {
     const e = h.evidencia || {};
-    return e.monto_en_juego || e.monto || e.neto || (e.detalle && e.detalle.monto_en_juego) || "—";
+    const valor = e.monto_en_juego || e.monto || e.neto || (e.detalle && e.detalle.monto_en_juego);
+    if (!valor) return "—";
+    const texto = /^-?\d+(\.\d+)?$/.test(String(valor)) ? pesos(valor) : String(valor);
+    return esRevisarMovimiento(h) && e.entrada_salida ? e.entrada_salida + " " + texto : texto;
+  }
+
+  function dimensionesTexto(datos) {
+    return [datos.categoria, datos.unidad_negocio, datos.ingreso_egreso].map((v) => v || "sin definir").join(" · ");
+  }
+
+  function descripcionHtml(h) {
+    const e = h.evidencia || {};
+    if (!esRevisarMovimiento(h)) return escapar(h.descripcion);
+    const categorizacion = e.categorizacion;
+    const linea = categorizacion
+      ? "Categorizado: " + dimensionesTexto(categorizacion)
+      : "Propuesta del motor: " + dimensionesTexto(e);
+    return (e.texto_nuevo ? '<span class="wallet-pill wallet-gravedad-revisar">TEXTO NUEVO DE DROPI</span> ' : "") +
+      escapar(e.texto_dropi || h.descripcion) +
+      "<br><small>Tercero: " + escapar(e.tercero || "—") + " · " + escapar(linea) + "</small>";
   }
 
   function renderHallazgos() {
@@ -276,9 +307,9 @@
       return "<tr>" +
         '<td><span class="wallet-pill wallet-gravedad-' + escapar(g.toLowerCase()) + '">' + escapar(textoGravedad(g)) + "</span></td>" +
         "<td>" + escapar(referenciaDe(h)) + "</td>" +
-        "<td>" + escapar(h.descripcion) + "</td>" +
+        "<td>" + descripcionHtml(h) + "</td>" +
         "<td>" + escapar(montoDe(h)) + "</td>" +
-        '<td><span class="wallet-pill wallet-estado-' + escapar(est) + '">' + escapar(textoEstado(est)) + "</span></td>" +
+        '<td><span class="wallet-pill wallet-estado-' + escapar(est) + '">' + escapar(textoEstadoDe(h)) + "</span></td>" +
         '<td><button type="button" class="secondary-button wallet-detalle" data-hallazgo-id="' + escapar(h.id) + '">Detalle</button></td>' +
         "</tr>";
     }).join("");
@@ -310,7 +341,7 @@
     });
     if (tipo.value === "tienda" && identidad.value) params.set("tienda", identidad.value);
     if (tipo.value === "pagos" && identidad.value) params.set("wallet_pagos", identidad.value);
-    if (tipo.value !== "wiilog" && todasCargas.checked) params.set("todas_las_cargas", "true");
+    if (todasCargas.checked) params.set("todas_las_cargas", "true");
 
     try {
       hallazgos = await walletApi(endpoint + "?" + params.toString());
@@ -472,7 +503,7 @@
       mostrarResumen(resultado);
       hallazgosPanel.hidden = Boolean(resultado.bloqueado);
       setEstadoWallets(
-        resultado.bloqueado ? "C0 bloqueado. Corrige el archivo antes de continuar." : "Conciliación terminada.",
+        resultado.bloqueado ? "C0 bloqueado. Corrige el archivo antes de continuar." : textoSincronizacion(resultado.sincronizacion),
         resultado.bloqueado ? "error" : "success"
       );
       if (!resultado.bloqueado) await cargarHallazgos();
@@ -492,7 +523,75 @@
     ).join("") + "</div>";
   }
 
-  function renderAccionesHallazgo(h) {
+  function textoSincronizacion(s) {
+    if (!s) return "Conciliación terminada.";
+    return "Conciliación terminada: " + s.creados + " hallazgos nuevos, " + s.actualizados +
+      " actualizados (se conserva lo que ya revisaste), " + s.resueltos_por_sistema +
+      " resueltos por el sistema y " + s.reabiertos + " reabiertos.";
+  }
+
+  // Listas de categorización (docs/nucleo/DIMENSIONES.md): solo valores activos.
+  const DIMENSIONES_FORM = [
+    ["ingreso_egreso", "Ingreso/egreso"],
+    ["unidad_negocio", "Unidad de negocio"],
+    ["categoria", "Categoría"],
+    ["fijo_variable", "Fijo/variable"]
+  ];
+  let listasCache = null;
+
+  function normalizar(valor) {
+    return String(valor || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().split(/\s+/).filter(Boolean).join(" ");
+  }
+
+  async function listasCategorizacion() {
+    if (!listasCache) {
+      const valores = await walletApi("/api/v1/dimensiones");
+      listasCache = {};
+      valores.forEach((v) => { (listasCache[v.dimension] = listasCache[v.dimension] || []).push(v.valor); });
+    }
+    return listasCache;
+  }
+
+  function empresaActualNombre() {
+    const select = $("#empresa-id");
+    return select && select.selectedOptions[0] ? select.selectedOptions[0].textContent.trim() : "";
+  }
+
+  function selectDimension(nombre, etiqueta, opciones, preferido) {
+    const elegido = opciones.find((o) => normalizar(o) === normalizar(preferido)) || "";
+    return "<label>" + escapar(etiqueta) + '<select data-dimension="' + nombre + '"><option value="">Elige…</option>' +
+      opciones.map((o) => '<option value="' + escapar(o) + '"' + (o === elegido ? " selected" : "") + ">" + escapar(o) + "</option>").join("") +
+      "</select></label>";
+  }
+
+  async function formularioCategorizacion(h) {
+    const e = h.evidencia || {};
+    const base = e.categorizacion || {
+      ingreso_egreso: e.ingreso_egreso,
+      unidad_negocio: e.unidad_negocio,
+      categoria: e.categoria,
+      fijo_variable: "VARIABLE",
+      tercero: e.tercero
+    };
+    const listas = await listasCategorizacion();
+    return '<div class="wallet-categorizacion form-grid">' +
+      (e.texto_nuevo ? '<p class="notice compact">Texto nuevo de Dropi: el motor no tiene propuesta. Elige cada dimensión.</p>' : "") +
+      DIMENSIONES_FORM.map(([nombre, etiqueta]) => selectDimension(nombre, etiqueta, listas[nombre] || [], base[nombre])).join("") +
+      '<label>Empresa<input data-dimension="empresa" value="' + escapar(empresaActualNombre()) + '" disabled></label>' +
+      '<label>Modalidad<input data-dimension="modalidad" value="WALLET" disabled></label>' +
+      '<label>Tercero<input data-dimension="tercero" maxlength="200" value="' + escapar(base.tercero || "") + '"></label>' +
+      "</div>";
+  }
+
+  function leerCategorizacion() {
+    const datos = {};
+    acciones.querySelectorAll("[data-dimension]").forEach((campo) => { datos[campo.dataset.dimension] = campo.value; });
+    const falta = DIMENSIONES_FORM.find(([nombre]) => !datos[nombre]);
+    if (falta) throw new Error("Elige un valor de " + falta[1] + ". Si ninguno sirve, escala al coordinador.");
+    return datos;
+  }
+
+  async function renderAccionesHallazgo(h) {
     const gestionar = puede("hallazgos.gestionar") && estadoDe(h) !== "escalado" && estadoDe(h) !== "resuelto";
     const escalar = puede("hallazgos.escalar") && estadoDe(h) !== "escalado" && estadoDe(h) !== "resuelto";
     const responder = puede("hallazgos.responder_escalado") && estadoDe(h) === "escalado";
@@ -500,17 +599,30 @@
       acciones.innerHTML = '<p class="notice compact">Tu rol tiene acceso de lectura para este hallazgo.</p>';
       return;
     }
+    const categorizar = gestionar && esRevisarMovimiento(h) && puede("movimientos.categorizar");
+    let formulario = "";
+    if (categorizar) {
+      try {
+        formulario = await formularioCategorizacion(h);
+      } catch (fallo) {
+        formulario = '<p class="status error">' + escapar(fallo.message) + "</p>";
+      }
+    }
 
     acciones.innerHTML =
-      '<div class="wallet-action-box"><label>Observación / mensaje<textarea id="wallets-accion-texto" rows="4" placeholder="Escribe el contexto necesario para la acción."></textarea></label>' +
+      '<div class="wallet-action-box">' + formulario +
+      '<label>Observación / mensaje<textarea id="wallets-accion-texto" rows="4" placeholder="Escribe el contexto necesario para la acción."></textarea></label>' +
+      '<p id="wallets-accion-error" class="status error" hidden></p>' +
       '<div class="wallet-action-buttons">' +
-      (gestionar ? '<button type="button" data-wallet-action="observar">Guardar observación</button><button type="button" data-wallet-action="resolver" class="secondary-button">Observar y marcar resuelto</button>' : "") +
+      (categorizar
+        ? '<button type="button" data-wallet-action="observar">Guardar</button><button type="button" data-wallet-action="resolver" class="secondary-button">Guardar y resolver</button>'
+        : (gestionar ? '<button type="button" data-wallet-action="observar">Guardar observación</button><button type="button" data-wallet-action="resolver" class="secondary-button">Observar y marcar resuelto</button>' : "")) +
       (escalar ? '<button type="button" data-wallet-action="escalar" class="secondary-button">Escalar</button>' : "") +
       (responder ? '<button type="button" data-wallet-action="responder">Responder</button><button type="button" data-wallet-action="responder-resolver" class="secondary-button">Responder y resolver</button>' : "") +
       "</div></div>";
 
     acciones.querySelectorAll("[data-wallet-action]").forEach((button) => {
-      button.addEventListener("click", () => ejecutarAccionHallazgo(h.id, button.dataset.walletAction));
+      button.addEventListener("click", () => ejecutarAccionHallazgo(h.id, button.dataset.walletAction, categorizar));
     });
   }
 
@@ -524,18 +636,23 @@
       detalle.innerHTML =
         '<div class="wallet-dialog-heading"><div><span class="wallet-pill">' + escapar(textoGravedad(gravedadDe(h))) + "</span>" +
         '<h3>' + escapar(h.codigo_regla) + '</h3></div><span class="wallet-pill">' + escapar(textoEstado(estadoDe(h))) + '</span></div>' +
-        "<p>" + escapar(h.descripcion) + "</p>" +
+        "<p>" + descripcionHtml(h) + "</p>" +
+        (h.resuelto_por_sistema ? '<p class="notice compact">Resuelto por el sistema: ya no aparece en la carga más reciente.</p>' : "") +
         "<h4>Hilo de mensajes</h4>" + renderMensajes(h.mensajes);
-      renderAccionesHallazgo(h);
+      await renderAccionesHallazgo(h);
     } catch (error) {
       detalle.innerHTML = '<p class="status error">' + escapar(error.message) + "</p>";
     }
   }
 
-  async function ejecutarAccionHallazgo(id, accion) {
+  async function ejecutarAccionHallazgo(id, accion, categorizar) {
     const campo = $("#wallets-accion-texto");
+    const error = $("#wallets-accion-error");
     const texto = (campo && campo.value || "").trim();
+    error.hidden = true;
     if (!texto) {
+      error.textContent = "Escribe la observación: es obligatoria.";
+      error.hidden = false;
       campo.focus();
       return;
     }
@@ -545,6 +662,15 @@
     if (accion === "observar" || accion === "resolver") {
       url = "/api/v1/hallazgos/" + id + "/observar";
       body = {observacion: texto, resolver: accion === "resolver"};
+      if (categorizar) {
+        try {
+          body.categorizacion = leerCategorizacion();
+        } catch (falta) {
+          error.textContent = falta.message;
+          error.hidden = false;
+          return;
+        }
+      }
     } else if (accion === "escalar") {
       url = "/api/v1/hallazgos/" + id + "/escalar";
       body = {pregunta: texto};
@@ -561,8 +687,9 @@
       });
       await cargarHallazgos();
       await abrirHallazgo(id);
-    } catch (error) {
-      setEstadoWallets(error.message, "error");
+    } catch (fallo) {
+      error.textContent = fallo.message;
+      error.hidden = false;
     }
   }
 

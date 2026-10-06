@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.cargas import calcular_hash_contenido, registrar_carga
-from app.core.hallazgos import Hallazgo, registrar_hallazgo_motor
+from app.core.hallazgos import Hallazgo, HallazgoMotorNuevo, sincronizar_hallazgos_motor
 from app.core.periodos import Periodo
 from app.core.periodos.errors import PeriodoCerradoError
 
@@ -49,6 +49,7 @@ class EjecucionWiilog:
     hallazgos_creados: int
     hallazgos_por_gravedad: dict[str, int]
     resumen: dict[str, Any]
+    sincronizacion: dict[str, int]
 
 
 def _resultado_c0(chequeos: list) -> dict[str, Any]:
@@ -177,6 +178,18 @@ def _periodo_abierto(
     return periodo
 
 
+ALCANCE_WIILOG = "WIILOG|"
+
+
+@dataclass
+class _Lote:
+    """Hallazgos de una carga, con su clave estable (decisión 0008): se sincronizan al final."""
+
+    carga_wallet_id: int
+    nuevos: list[HallazgoMotorNuevo]
+    conteo: dict[str, int]
+
+
 def _registrar(
     session: Session,
     *,
@@ -186,19 +199,20 @@ def _registrar(
     evidencia: dict[str, Any],
     critico: bool,
     gravedad: str,
-    conteo: dict[str, int],
-) -> Hallazgo:
+    lote: _Lote,
+) -> None:
     # La gravedad va en la evidencia para la bandeja (PANTALLA_WALLETS.md §2.2); no cambia qué es hallazgo.
-    evidencia = {"wallet": "WIILOG", "gravedad": gravedad, **evidencia}
-    conteo[gravedad] = conteo.get(gravedad, 0) + 1
-    return registrar_hallazgo_motor(
-        session,
-        periodo_id=periodo_id,
-        motor_slug=MOTOR_SLUG,
-        codigo_regla=codigo,
-        descripcion=descripcion,
-        evidencia=evidencia,
-        critico=critico,
+    evidencia = {"wallet": "WIILOG", "gravedad": gravedad, "carga_wallet_id": lote.carga_wallet_id, **evidencia}
+    lote.conteo[gravedad] = lote.conteo.get(gravedad, 0) + 1
+    identificador = evidencia.get("orden_id") or evidencia.get("mov_id") or "-"
+    lote.nuevos.append(
+        HallazgoMotorNuevo(
+            clave=f"{ALCANCE_WIILOG}{codigo}|{identificador}",
+            codigo_regla=codigo,
+            descripcion=descripcion,
+            evidencia=evidencia,
+            critico=critico,
+        )
     )
 
 
@@ -213,7 +227,7 @@ def _persistir_chequeos(
     *,
     periodo_id: int,
     resultado: ResultadoWiilog,
-    conteo: dict[str, int],
+    lote: _Lote,
 ) -> int:
     creados = 0
     for chequeo in resultado.chequeos:
@@ -230,7 +244,7 @@ def _persistir_chequeos(
             },
             critico=chequeo.estado == "BLOQUEADO",
             gravedad="CRITICO" if chequeo.estado == "BLOQUEADO" else "INFORMATIVO",
-            conteo=conteo,
+            lote=lote,
         )
         creados += 1
     return creados
@@ -241,7 +255,7 @@ def _persistir_movimientos(
     *,
     periodo_id: int,
     resultado: ResultadoWiilog,
-    conteo: dict[str, int],
+    lote: _Lote,
 ) -> int:
     if resultado.movimientos is None:
         return 0
@@ -277,7 +291,7 @@ def _persistir_movimientos(
             },
             critico=False,
             gravedad="REVISAR",
-            conteo=conteo,
+            lote=lote,
         )
         creados += 1
     return creados
@@ -288,7 +302,7 @@ def _persistir_ff(
     *,
     periodo_id: int,
     resultado: ResultadoWiilog,
-    conteo: dict[str, int],
+    lote: _Lote,
 ) -> int:
     if resultado.ff is None:
         return 0
@@ -314,7 +328,7 @@ def _persistir_ff(
             },
             critico=str(fila["severidad"]) == "critico",
             gravedad=str(fila["severidad"]).upper(),
-            conteo=conteo,
+            lote=lote,
         )
         creados += 1
     return creados
@@ -325,7 +339,7 @@ def _persistir_flete(
     *,
     periodo_id: int,
     resultado: ResultadoWiilog,
-    conteo: dict[str, int],
+    lote: _Lote,
 ) -> int:
     if resultado.flete is None:
         return 0
@@ -354,7 +368,7 @@ def _persistir_flete(
             },
             critico=str(fila["severidad"]) == "critico",
             gravedad=str(fila["severidad"]).upper(),
-            conteo=conteo,
+            lote=lote,
         )
         creados += 1
     return creados
@@ -369,6 +383,7 @@ def ejecutar_y_persistir_wiilog(
     fuente_wallet_id: int,
     ordenes_contenido: bytes,
     wallet_contenido: bytes,
+    usuario_id: int,
     params: dict[str, Any] | None = None,
     catalogo: dict[str, Any] | None = None,
 ) -> EjecucionWiilog:
@@ -409,42 +424,55 @@ def ejecutar_y_persistir_wiilog(
         catalogo=catalogo_comun,
     )
 
-    conteo: dict[str, int] = {}
+    lote = _Lote(carga_wallet_id=carga_wallet.id, nuevos=[], conteo={})
     creados = _persistir_chequeos(
         session,
         periodo_id=periodo_id,
         resultado=resultado,
-        conteo=conteo,
+        lote=lote,
     )
     if not resultado.bloqueado:
         creados += _persistir_movimientos(
             session,
             periodo_id=periodo_id,
             resultado=resultado,
-            conteo=conteo,
+            lote=lote,
         )
         creados += _persistir_ff(
             session,
             periodo_id=periodo_id,
             resultado=resultado,
-            conteo=conteo,
+            lote=lote,
         )
         creados += _persistir_flete(
             session,
             periodo_id=periodo_id,
             resultado=resultado,
-            conteo=conteo,
+            lote=lote,
         )
 
-    session.flush()
+    claves = [h.clave for h in lote.nuevos]
+    if len(claves) != len(set(claves)):
+        raise RuntimeError("Dos hallazgos de Wiilog quedaron con la misma clave; revisa el motor.")
+    # Si C0 bloquea solo se sincronizan los chequeos C0: lo demás no se evaluó y no se resuelve.
+    alcance = f"{ALCANCE_WIILOG}WIILOG_C0_" if resultado.bloqueado else ALCANCE_WIILOG
+    sincronizacion = sincronizar_hallazgos_motor(
+        session,
+        periodo_id=periodo_id,
+        motor_slug=MOTOR_SLUG,
+        alcance_clave=alcance,
+        hallazgos=lote.nuevos,
+        usuario_id=usuario_id,
+    )
     return EjecucionWiilog(
         carga_ordenes_id=carga_ordenes.id,
         carga_wallet_id=carga_wallet.id,
         bloqueado=resultado.bloqueado,
         c0=_resultado_c0(resultado.chequeos),
         hallazgos_creados=creados,
-        hallazgos_por_gravedad=conteo,
+        hallazgos_por_gravedad=lote.conteo,
         resumen=resultado.resumen,
+        sincronizacion=vars(sincronizacion),
     )
 
 
@@ -453,7 +481,9 @@ def listar_hallazgos_wiilog(
     *,
     empresa_id: int,
     periodo_id: int,
+    todas_las_cargas: bool = False,
 ) -> list[Hallazgo]:
+    """Por defecto, los vigentes: los de la última carga de wallet (la sincronización los mueve a ella)."""
     _periodo_abierto_o_cerrado(
         session,
         empresa_id=empresa_id,
@@ -468,7 +498,14 @@ def listar_hallazgos_wiilog(
         )
         .order_by(Hallazgo.id)
     )
-    return list(session.scalars(statement))
+    hallazgos = list(session.scalars(statement))
+    if todas_las_cargas:
+        return hallazgos
+    cargas = [(h.evidencia or {}).get("carga_wallet_id") for h in hallazgos]
+    ultima = max((c for c in cargas if c), default=None)
+    if ultima is None:
+        return hallazgos
+    return [h for h, carga in zip(hallazgos, cargas) if carga == ultima]
 
 
 def _periodo_abierto_o_cerrado(

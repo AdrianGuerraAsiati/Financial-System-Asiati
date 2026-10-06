@@ -79,3 +79,25 @@ def test_shell_has_cut_off_line_in_c0_panel() -> None:
 
     assert response.status_code == 200
     assert 'id="wallets-c0-corte"' in response.text
+
+
+
+def test_wallets_javascript_categorizes_review_movements_from_closed_lists() -> None:
+    response = TestClient(app).get("/static/wallets.js")
+
+    assert response.status_code == 200
+    assert "/api/v1/dimensiones" in response.text
+    assert "movimientos.categorizar" in response.text
+    assert "categorizacion" in response.text
+    assert "Guardar y resolver" in response.text
+    assert "TEXTO NUEVO DE DROPI" in response.text
+    assert "escala al coordinador" in response.text
+    assert '" · SISTEMA"' in response.text
+    assert 'value="WALLET" disabled' in response.text
+
+
+def test_inbox_shows_current_findings_and_history_toggle() -> None:
+    response = TestClient(app).get("/")
+
+    assert "Muestra los hallazgos vigentes" in response.text
+    assert "Mostrar historial" in response.text

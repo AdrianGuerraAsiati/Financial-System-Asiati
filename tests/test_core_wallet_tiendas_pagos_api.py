@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.cargas import Carga
+from app.core.dimensiones import cargar_valores_iniciales
 from app.core.empresas import Empresa
 from app.core.fuentes import Fuente
 from app.core.periodos import Periodo
@@ -53,6 +54,7 @@ def _contexto(monkeypatch: pytest.MonkeyPatch, *, cerrado: bool = False) -> dict
         session.commit()
         ctx = {
             "empresa_id": empresa.id,
+            "empresa_nombre": nombre,
             "periodo_id": periodo.id,
             "otro_periodo_id": otro_periodo.id,
             "fuente_wallet_id": fuente_wallet.id,
@@ -353,3 +355,85 @@ def test_empresa_no_asignada_no_existe_para_el_conciliador(monkeypatch) -> None:
     assert conciliar.status_code == 404
     assert ver.status_code == 404
     assert catalogo.status_code == 404
+
+
+
+# ------------------------------------------------------------------ clave estable al reconciliar (decisión 0008)
+
+TRANSFER = ("22-09-2026 10:00", "SALIDA", 1000, None, "SALIDA POR TRANSFERENCIA DE WALLET AL USUARIO alguien@gmail.com")
+CATEGORIZACION_BASE = {
+    "ingreso_egreso": "EGRESO", "unidad_negocio": "TIENDAS", "categoria": "PROVEEDURIA",
+    "fijo_variable": "VARIABLE", "modalidad": "WALLET", "tercero": "alguien",
+}
+
+
+def _categorizacion(ctx: dict) -> dict:
+    return {**CATEGORIZACION_BASE, "empresa": ctx["empresa_nombre"]}
+
+
+def _sembrar_listas(ctx: dict) -> None:
+    with Session(engine()) as session:
+        cargar_valores_iniciales(session, {
+            "ingreso_egreso": ["EGRESO"], "unidad_negocio": ["TIENDAS"], "categoria": ["PROVEEDURIA"],
+            "empresa": [ctx["empresa_nombre"]], "fijo_variable": ["VARIABLE"],
+        })
+        session.commit()
+
+
+def _revisar(client, ctx, **params):
+    return [h for h in _hallazgos(client, ctx, **params).json() if h["codigo_regla"] == "TIENDA_MOVIMIENTO_REVISAR"]
+
+
+def test_reconciliar_con_otro_archivo_conserva_estado_y_categorizacion(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    _sembrar_listas(ctx)
+    client = _conciliador(ctx)
+    assert _conciliar_tienda(client, ctx, wallet_bytes=_wallet(TRANSFER)).status_code == 201
+    [h] = _revisar(client, ctx)
+    observado = client.post(
+        f"/api/v1/hallazgos/{h['id']}/observar",
+        json={"observacion": "Pago a proveedor.", "resolver": False, "categorizacion": _categorizacion(ctx)},
+    )
+    assert observado.status_code == 200, observado.text
+
+    # Archivo nuevo de la misma wallet: un movimiento más al final, el mismo movimiento por revisar.
+    segunda = _conciliar_tienda(
+        client, ctx, wallet_bytes=_wallet(TRANSFER, gan_ds(2, 1.0, "23-09-2026 10:00"))
+    )
+
+    assert segunda.status_code == 201, segunda.text
+    assert segunda.json()["sincronizacion"]["actualizados"] >= 1
+    [despues] = _revisar(client, ctx)
+    assert despues["id"] == h["id"]
+    assert despues["estado"] == "en_gestion"
+    assert despues["evidencia"]["categorizacion"]["categoria"] == "PROVEEDURIA"
+    assert despues["evidencia"]["carga_wallet_id"] == segunda.json()["cargas"]["wallet_id"]
+
+
+def test_lo_que_ya_no_aparece_queda_resuelto_por_el_sistema_y_sale_de_la_bandeja(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    client = _conciliador(ctx)
+    _conciliar_tienda(client, ctx, wallet_bytes=_wallet(TRANSFER))
+    [h] = _revisar(client, ctx)
+
+    segunda = _conciliar_tienda(client, ctx, wallet_bytes=_wallet(gan_ds(3, 1.0, "23-09-2026 10:00")))
+
+    assert segunda.json()["sincronizacion"]["resueltos_por_sistema"] >= 1
+    assert _revisar(client, ctx) == []
+    [historial] = [x for x in _revisar(client, ctx, todas_las_cargas="true") if x["id"] == h["id"]]
+    assert historial["estado"] == "resuelto" and historial["resuelto_por_sistema"] is True
+
+
+def test_c0_bloqueado_no_resuelve_los_demas_hallazgos(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    client = _conciliador(ctx)
+    _conciliar_tienda(client, ctx, wallet_bytes=_wallet(TRANSFER))
+    roto = wallet([gan_ds(1, 50000), gan_ds(2, 50000)], 1_000_000)
+    roto.loc[1, "MONTO PREVIO"] += 50
+
+    respuesta = _conciliar_tienda(client, ctx, wallet_bytes=_xlsx(roto))
+
+    assert respuesta.json()["bloqueado"] is True
+    assert respuesta.json()["sincronizacion"]["resueltos_por_sistema"] == 0
+    todos = _revisar(client, ctx, todas_las_cargas="true")
+    assert todos and all(h["estado"] == "detectado" for h in todos)
