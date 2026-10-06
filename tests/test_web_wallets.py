@@ -50,3 +50,32 @@ def test_wallets_styles_keep_text_labels_when_printed() -> None:
     assert response.status_code == 200
     assert "@media print" in response.text
     assert "#vista-wallets .wallet-pill" in response.text
+
+
+def test_wallets_javascript_formats_c0_and_explains_breaks() -> None:
+    response = TestClient(app).get("/static/wallets.js")
+
+    assert response.status_code == 200
+    assert "formatearDecimal(" in response.text
+    assert '"-$ "' in response.text
+    assert "El saldo no cuadra en " in response.text
+    assert (
+        "El archivo puede estar incompleto: descárgalo de nuevo de Dropi "
+        "y vuelve a conciliar."
+    ) in response.text
+
+
+def test_wallets_javascript_labels_and_defaults() -> None:
+    response = TestClient(app).get("/static/wallets.js")
+
+    assert response.status_code == 200
+    assert 'CRITICO: "CRÍTICO"' in response.text
+    assert "preseleccionarUnica(" in response.text
+    assert "corte_ordenes_usado" in response.text
+
+
+def test_shell_has_cut_off_line_in_c0_panel() -> None:
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 200
+    assert 'id="wallets-c0-corte"' in response.text
