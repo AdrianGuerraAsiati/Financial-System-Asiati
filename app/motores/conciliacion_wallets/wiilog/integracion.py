@@ -90,10 +90,12 @@ def _resolver_identificador_wallet(
     return valor
 
 
-def cargar_parametros_wiilog(
+def resolver_identificador_wallet(
+    valor: object,
     *,
     wallet_principal_email: str | None = None,
-) -> dict[str, Any]:
+) -> object:
+    """Resuelve el identificador privado de Wiilog únicamente en runtime."""
     identificador = (
         wallet_principal_email
         if wallet_principal_email is not None
@@ -104,11 +106,20 @@ def cargar_parametros_wiilog(
             "Falta WIILOG_WALLET_PRINCIPAL_EMAIL. "
             "Configura el identificador de la wallet principal fuera de Git."
         )
-
-    parametros = json.loads(PARAMS_PATH.read_text(encoding="utf-8"))
     return _resolver_identificador_wallet(
-        parametros,
+        valor,
         wallet_principal_email=identificador,
+    )
+
+
+def cargar_parametros_wiilog(
+    *,
+    wallet_principal_email: str | None = None,
+) -> dict[str, Any]:
+    parametros = json.loads(PARAMS_PATH.read_text(encoding="utf-8"))
+    return resolver_identificador_wallet(
+        parametros,
+        wallet_principal_email=wallet_principal_email,
     )
 
 
