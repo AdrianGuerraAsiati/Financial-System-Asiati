@@ -6,8 +6,9 @@ COPY pyproject.toml ./
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
-RUN mkdir -p ./docs/motores/conciliacion_wallets
+RUN mkdir -p ./docs/motores/conciliacion_wallets ./docs/nucleo
 COPY docs/motores/conciliacion_wallets/*.json ./docs/motores/conciliacion_wallets/
+COPY docs/nucleo/dimensiones_iniciales.json ./docs/nucleo/
 
 RUN pip install --no-cache-dir .
 

@@ -519,6 +519,27 @@ jobs:
           echo "Compras enlazado a ASIATI (empresa_id=$ASIATI_ID)."
           REMOTE
 
+      - name: Seed categorization dimensions
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_TARGET="${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}"
+
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -i /tmp/lightsail.pem \
+            "$SSH_TARGET" \
+            "sudo bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/financial-system
+          DC=(docker compose --env-file .env.production -f compose.production.yml)
+
+          "${DC[@]}" run --rm -T api \
+            python -m app.core.dimensiones \
+            --archivo docs/nucleo/dimensiones_iniciales.json </dev/null
+          REMOTE
+
       - name: Refresh Compras snapshot from local Excel
         shell: bash
         run: |
