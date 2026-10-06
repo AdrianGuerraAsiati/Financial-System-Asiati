@@ -288,7 +288,7 @@
     {
       "codigo": "TRASLADO_WALLET_WIILOG",
       "tipo": "SALIDA",
-      "empieza_con": "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO WIILOGWALLET@WIILOG.COM.CO",
+      "empieza_con": "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO {{WIILOG_WALLET_PRINCIPAL_EMAIL}}",
       "contiene": null,
       "ingreso_egreso": "TRASLADO",
       "unidad_negocio": "FF",

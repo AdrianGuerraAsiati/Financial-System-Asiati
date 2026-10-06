@@ -22,7 +22,7 @@
     "proveedor@asiati.com.co",
     "pagos@asiati.com.co",
     "coordinacionmiijo@gmail.com",
-    "wiilogwallet@wiilog.com.co"
+    "{{WIILOG_WALLET_PRINCIPAL_EMAIL}}"
   ],
   "nota_wallets_propias": "Wallets del grupo que se concilian: una transferencia entre ellas es TRASLADO y se empareja. cuentas_destino_grupo (29-sep, Juan Felipe): son del grupo pero son cuentas destino; su movimiento no es traslado automático, el conciliador lo categoriza.",
   "wallets": [
