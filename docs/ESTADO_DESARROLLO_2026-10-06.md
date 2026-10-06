@@ -16,6 +16,9 @@ Cambios recientes relevantes:
 - #118: el deploy deja visible el error real de SSH en `Wait for SSH`.
 - #119: catálogo de conceptos v2 y evidencia completa para movimientos que requieren categorización manual.
 - #120: clave estable de hallazgos, resolución/reapertura por el sistema y preservación de categorización humana.
+- #121: listas administrables de las dimensiones de categorización, permiso `dimensiones.gestionar` y pantalla Parámetros.
+- #122: categorización manual de Wallets conectada de punta a punta, sincronización por clave estable y bandeja de vigentes.
+- #123: empaquetado y siembra idempotente de las listas iniciales de dimensiones durante el deploy de desarrollo.
 
 El entorno de desarrollo continúa en AWS Lightsail con HTTPS y despliegue automático después de CI verde.
 
@@ -32,15 +35,15 @@ La decisión de categorización manual quedó formalizada en
 - tercero es el único texto libre;
 - la categorización no se puede perder al reconciliar de nuevo.
 
-#119 deja la evidencia y el catálogo listos. #120 agrega la infraestructura de núcleo para conservar el trabajo humano,
-pero los motores todavía deben conectarse a `sincronizar_hallazgos_motor()`.
+#119-#122 completan el flujo de categorización manual: evidencia y catálogo, persistencia por clave estable, listas
+administrables y formulario de las 7 dimensiones. Wiilog, Tiendas y Pagos ya sincronizan hallazgos vigentes sin perder
+estado, observaciones, escalamiento ni categorización.
 
 ### Próximo bloque de Wallets
 
-1. Listas administrables de dimensiones y permiso `dimensiones.gestionar`.
-2. Conectar Wiilog, Tiendas y Pagos a la sincronización por clave estable.
-3. Pantalla de categorización manual.
-4. Ejecutar y firmar el gate formal de aceptación operacional.
+1. Resumen en tabla con indicador de avance e investigar el tiempo observado de conciliación (40–56 s).
+2. Corte/cierre de período con el margen operativo acordado.
+3. Ejecutar y firmar el gate formal de aceptación operacional.
 
 El protocolo de aceptación está en
 `docs/motores/conciliacion_wallets/ACEPTACION_OPERATIVA.md`.
@@ -62,13 +65,11 @@ No usar el Excel de Compras como sustituto de una fuente de Cartera.
 
 ## Cartera
 
-#101 continúa abierto como draft. Porta transporte/ETA y alertas heredadas, pero no está listo para merge:
+#101 fue cerrado sin merge por obsoleto. Su contenido queda como referencia histórica, pero no debe rebasarse como
+bloque: estaba muy divergido y conserva umbrales heredados 50/35/30 % sin validar.
 
-- la fuente real sigue sin validarse;
-- los umbrales heredados 50/35/30 % requieren aprobación de negocio;
-- la rama está fuertemente divergida de `main` y sus checks corresponden a una base antigua.
-
-No reactivar ese merge hasta validar fuente, contratos y umbrales, y luego rebasar contra `main`.
+Cuando Cartera retome, partir de `main` vigente, identificar/validar la fuente real y reaplicar únicamente las piezas de
+transporte/ETA y alertas que negocio confirme.
 
 ## Gate operativo
 
