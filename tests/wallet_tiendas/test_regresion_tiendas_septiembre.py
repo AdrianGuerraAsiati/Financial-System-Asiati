@@ -4,6 +4,7 @@ Los archivos viven en fixtures/ y NO se suben a git. Si no están, el test se sa
 Las cifras esperadas están en docs/motores/conciliacion_wallets/WALLETS_TIENDAS_Y_PAGOS.md §6.
 """
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -12,6 +13,7 @@ import pytest
 from app.motores.conciliacion_wallets.pagos import conciliar_wallet_pagos
 from app.motores.conciliacion_wallets.plataforma.hallazgos import hallazgos_tienda
 from app.motores.conciliacion_wallets.tiendas import conciliar_wallet_tienda
+from app.motores.conciliacion_wallets.wiilog.integracion import resolver_identificador_wallet
 
 RAIZ = Path(__file__).resolve().parents[2]
 DOCS = RAIZ / "docs/motores/conciliacion_wallets"
@@ -20,11 +22,14 @@ ORDENES = RAIZ / "fixtures/wallet_wiilog/2026-09/ordenes_sept_20260928_144134.xl
 MENPROS = FIX / "wallet_menpros_20260929.xlsx"
 PROVEEDURIA = FIX / "wallet_proveeduria_asiati_20260929.xlsx"
 PAGOS = FIX / "wallet_pagos_asiati_20260929.xlsx"
+WIILOG_RUNTIME_EMAIL = os.getenv("WIILOG_WALLET_PRINCIPAL_EMAIL", "").strip()
 
 pytestmark = [
     pytest.mark.fixtures_reales,
     pytest.mark.skipif(not all(p.exists() for p in (ORDENES, MENPROS, PROVEEDURIA, PAGOS)),
                        reason="Faltan los archivos reales de septiembre en fixtures/"),
+    pytest.mark.skipif(not WIILOG_RUNTIME_EMAIL,
+                       reason="Falta WIILOG_WALLET_PRINCIPAL_EMAIL para resolver el baseline privado"),
 ]
 
 
@@ -32,12 +37,19 @@ def _json(nombre):
     return json.loads((DOCS / nombre).read_text(encoding="utf-8"))
 
 
+def _json_runtime(nombre):
+    return resolver_identificador_wallet(
+        _json(nombre),
+        wallet_principal_email=WIILOG_RUNTIME_EMAIL,
+    )
+
+
 @pytest.fixture(scope="module")
 def entorno():
-    params = _json("parametros_wallet_tienda.json")
+    params = _json_runtime("parametros_wallet_tienda.json")
     return {
         "params": params,
-        "catalogo": _json("catalogo_conceptos_wallets.json"),
+        "catalogo": _json_runtime("catalogo_conceptos_wallets.json"),
         "tarifas": _json("parametros_wallet_wiilog.json")["fulfillment"]["tarifas_por_bodega"],
         "ordenes": pd.read_excel(ORDENES),
         "tiendas": {t["nombre"]: t for t in params["tiendas"]},
@@ -101,7 +113,7 @@ def test_proveeduria_fulfillment(proveeduria):
 
 
 def test_pagos(entorno):
-    p = _json("parametros_wallet_pagos.json")
+    p = _json_runtime("parametros_wallet_pagos.json")
     r = conciliar_wallet_pagos(pd.read_excel(PAGOS), p, entorno["catalogo"], p["wallets"][0], "2026-09-01", "2026-09-30")
     assert r.chequeos[0].estado == "EN_ORDEN"
     assert r.resumen["sin_concepto"] == 0
