@@ -1,5 +1,19 @@
 # AI Handoff — Plataforma Financiera ASIATI
 
+> ## Actualización operativa · 6-oct-2026
+>
+> El estado vigente está en `docs/ESTADO_DESARROLLO_2026-10-06.md`.
+>
+> Desde la foto anterior, Wallets pasó la regresión real de septiembre y se fusionaron los ajustes operativos
+> (#113-#117), el diagnóstico SSH del deploy (#118), el catálogo v2 para categorización manual (#119) y la
+> clave estable de hallazgos del núcleo (#120). La decisión de categorización quedó formalizada en el ADR 0008.
+>
+> La aceptación operacional formal de Motor 01 sigue usando
+> `docs/motores/conciliacion_wallets/ACEPTACION_OPERATIVA.md`; no confundir regresión técnica verde con firma
+> funcional completa. Cartera #101 continúa draft y bloqueada por fuente/validación de negocio.
+>
+> Esta actualización manda sobre las fotografías anteriores para estado operativo.
+>
 > ## Actualización operativa · 30-sep-2026
 >
 > Para el estado vigente de PRs, AWS, Google, Compras, Cartera y Wallets, leer primero
@@ -13,7 +27,7 @@
 > abierto es #91 y permanece en draft por una decisión de contrato de categorización.
 >
 
-**Última actualización:** 29 de septiembre de 2026  
+**Última actualización:** 6 de octubre de 2026  
 **Repositorio:** `AdrianGuerraAsiati/Financial-System-Asiati`
 
 ---
