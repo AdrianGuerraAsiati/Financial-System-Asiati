@@ -1,6 +1,8 @@
 """Punto de entrada del motor para la wallet de Wiilog. Python puro: DataFrames y un dict de parámetros.
 
-    resultado = conciliar_wallet_wiilog(ordenes_crudo, wallet_crudo, params, periodo_inicio, periodo_fin)
+    resultado = conciliar_wallet_wiilog(ordenes_crudo, wallet_crudo, params, periodo_inicio, periodo_fin, catalogo=catalogo)
+
+`catalogo` es el catálogo común de conceptos: de ahí salen ingreso/egreso, unidad y categoría de cada movimiento.
 
 El núcleo (FastAPI + Postgres) se encarga de guardar cargas, movimientos, resultados y hallazgos.
 Este módulo no sabe nada de base de datos.
@@ -27,14 +29,16 @@ class ResultadoWiilog:
     resumen: dict = field(default_factory=dict)
 
 
-def conciliar_wallet_wiilog(ordenes_crudo, wallet_crudo, params, periodo_inicio, periodo_fin) -> ResultadoWiilog:
+def conciliar_wallet_wiilog(
+    ordenes_crudo, wallet_crudo, params, periodo_inicio, periodo_fin, catalogo: dict | None = None
+) -> ResultadoWiilog:
     wallet = carga.leer_wallet(wallet_crudo, params)
     chequeos = movimientos.validar_integridad(wallet, periodo_inicio, periodo_fin)
     if any(c.estado == "BLOQUEADO" for c in chequeos):
         return ResultadoWiilog(bloqueado=True, chequeos=chequeos)
 
     ordenes = carga.leer_ordenes(ordenes_crudo, params)
-    mov = movimientos.clasificar(wallet, params)
+    mov = movimientos.clasificar(wallet, params, catalogo)
     mov = movimientos.emparejar_cruces(mov, params)
     corte = mov["fecha"].max()
 

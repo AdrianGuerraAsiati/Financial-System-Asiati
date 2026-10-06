@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "fecha": "2026-09-29",
+  "version": 2,
+  "fecha": "2026-10-06",
   "descripcion": "Catálogo de conceptos de wallets Dropi. Una fila por texto de Dropi. La primera regla que empareja gana (se evalúan en este orden). Texto normalizado: mayúsculas, sin tildes, espacios colapsados.",
   "reglas_de_dimension": {
     "empresa": "Sale de la wallet (fuente), no del concepto: cada wallet declara su empresa en sus parámetros. Mientras no esté confirmada, queda null (por confirmar).",
@@ -16,7 +16,7 @@
       "empieza_con": "ENTRADA POR GANANCIA EN LA ORDEN COMO DROPSHIPPER",
       "contiene": null,
       "ingreso_egreso": "INGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "DROPSHIPPING",
       "requiere_revision": false,
       "origen": "tabla JF"
@@ -38,7 +38,7 @@
       "empieza_con": "ENTRADA POR CAMBIO DE ESTATUS",
       "contiene": null,
       "ingreso_egreso": "INGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "INDEMNIZACION",
       "requiere_revision": false,
       "origen": "tabla JF"
@@ -49,7 +49,7 @@
       "empieza_con": "ENTRADA POR INDEMNIZACION",
       "contiene": null,
       "ingreso_egreso": "INGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "INDEMNIZACION",
       "requiere_revision": false,
       "origen": "tabla JF"
@@ -60,7 +60,7 @@
       "empieza_con": "DEVOLUCION DE DINERO POR GARANTIA",
       "contiene": null,
       "ingreso_egreso": "INGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "INDEMNIZACION",
       "requiere_revision": true,
       "origen": "nuevo: propuesta"
@@ -126,7 +126,7 @@
       "empieza_con": "PAGO POR GANANCIA FLETE DE MARCA BLANCA",
       "contiene": null,
       "ingreso_egreso": "INGRESO",
-      "unidad_negocio": "UM",
+      "unidad_negocio": "FF",
       "categoria": "COMISIONES",
       "requiere_revision": false,
       "origen": "tabla JF"
@@ -203,7 +203,7 @@
       "empieza_con": "ENVIO DE SMS EN LA CAMPANA",
       "contiene": null,
       "ingreso_egreso": "EGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "PAUTA",
       "requiere_revision": false,
       "origen": "tabla JF"
@@ -236,7 +236,7 @@
       "empieza_con": "SALIDA DE COBRO DE DEVOLUCION POR ENTREGA NO EFECTIVA",
       "contiene": null,
       "ingreso_egreso": "EGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "FLETE",
       "requiere_revision": false,
       "origen": "tabla JF"
@@ -247,7 +247,7 @@
       "empieza_con": "SALIDA POR COBRO DE FLETE INICIAL",
       "contiene": null,
       "ingreso_egreso": "EGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "FLETE",
       "requiere_revision": false,
       "origen": "tabla JF"
@@ -280,9 +280,9 @@
       "empieza_con": "SALIDA POR PETICION DE RETIRO DE SALDO EN CARTERA",
       "contiene": null,
       "ingreso_egreso": "EGRESO",
-      "unidad_negocio": "PROVEEDURIA",
+      "unidad_negocio": null,
       "categoria": "RETIRO",
-      "requiere_revision": false,
+      "requiere_revision": true,
       "origen": "tabla JF"
     },
     {
@@ -313,7 +313,7 @@
       "empieza_con": "SALIDA POR RECARGA DE TARJETA DE CREDITO",
       "contiene": null,
       "ingreso_egreso": "EGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "RETIRO A TC",
       "requiere_revision": false,
       "origen": "tabla JF"
@@ -324,7 +324,7 @@
       "empieza_con": "SERVICIO DE DISPERSION DE RECURSOS",
       "contiene": null,
       "ingreso_egreso": "EGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "GASTOS FINANCIEROS",
       "requiere_revision": false,
       "origen": "nuevo: comisión de la recarga de tarjeta"
@@ -357,7 +357,7 @@
       "empieza_con": "SALIDA POR CORRECCION DE ESTADO DE GUIA COMO DROPSHIPPER",
       "contiene": null,
       "ingreso_egreso": "EGRESO",
-      "unidad_negocio": "DROPSHIPPING",
+      "unidad_negocio": "TIENDAS",
       "categoria": "DROPSHIPPING",
       "requiere_revision": false,
       "origen": "nuevo: reverso de una ganancia"

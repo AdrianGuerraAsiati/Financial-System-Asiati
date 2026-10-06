@@ -156,6 +156,22 @@
     }
   ],
   "nota_conceptos": "Se evalúan en orden: el primero que empareja gana. Texto normalizado: mayúsculas, sin tildes, espacios colapsados. Match por 'empieza con' y 'contiene', nunca por igualdad: la descripción trae ID de orden, guía y correos al final.",
+  "concepto_catalogo_comun": {
+    "FF_GUIA_GENERADA": "FF_MARCA_BLANCA",
+    "FF_CIERRE": "FF_MARCA_BLANCA",
+    "FF_OTRO_USUARIO": "FF_OTRO_USUARIO",
+    "FF_CORRECCION": "REVERSO_FF_RECIBIDO",
+    "FLETE_MB": "FLETE_MARCA_BLANCA",
+    "CRUCE_RECARGA_IN": "CRUCE_RECARGA_IN",
+    "CRUCE_DESCUENTO_IN": "CRUCE_DESCUENTO_IN",
+    "CRUCE_RETIRO_OUT": "CRUCE_RETIRO_OUT",
+    "TRANSFERENCIA_RECIBIDA": "RETIRO_ADMIN_EN_USER",
+    "RECARGA_RECIBIDA": "RECARGA_RECIBIDA",
+    "TRASLADO_WALLET_WIILOG": "TRASLADO_WALLET_WIILOG",
+    "TRANSFERENCIA_ENVIADA": "TRANSFERENCIA_SUPER_ADMIN",
+    "RETIRO_BANCARIO": "RETIRO_SALDO"
+  },
+  "nota_concepto_catalogo_comun": "Decisión 6-oct (Juan Felipe): ingreso/egreso, unidad de negocio y categoría de cada movimiento salen del catálogo común (catalogo_conceptos_wallets.json), en la fila del mismo texto de Dropi. SIN_CONCEPTO queda vacío. No cambia FF, flete ni cifras: solo la propuesta de categoría.",
   "cruces_neto_cero": {
     "descripcion": "Dropi usa la wallet de Wiilog como puente para cubrir saldos negativos de usuarios: entra y sale el mismo valor en minutos. Se emparejan y no son ingreso ni egreso de Wiilog.",
     "emparejar": [
