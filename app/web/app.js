@@ -37,6 +37,8 @@ const vistaInicio = document.querySelector("#vista-inicio");
 const vistaCartera = document.querySelector("#vista-cartera");
 const vistaCompras = document.querySelector("#vista-compras");
 const vistaWallets = document.querySelector("#vista-wallets");
+const navParametros = document.querySelector("#nav-parametros");
+const vistaParametros = document.querySelector("#vista-parametros");
 const inicioSubtitulo = document.querySelector("#inicio-subtitulo");
 const inicioActualizado = document.querySelector("#inicio-actualizado");
 const inicioModulos = document.querySelector("#inicio-modulos");
@@ -126,16 +128,19 @@ function mostrarModulo(modulo) {
   const cartera = modulo === "cartera";
   const compras = modulo === "compras";
   const wallets = modulo === "wallets";
+  const parametros = modulo === "parametros";
 
   vistaInicio.hidden = !inicio;
   vistaCartera.hidden = !cartera;
   vistaCompras.hidden = !compras;
   vistaWallets.hidden = !wallets;
+  vistaParametros.hidden = !parametros;
 
   navInicio.classList.toggle("active", inicio);
   navCartera.classList.toggle("active", cartera);
   navCompras.classList.toggle("active", compras);
   navWallets.classList.toggle("active", wallets);
+  navParametros.classList.toggle("active", parametros);
 
   if (inicio) {
     cargarDashboardPrincipal();
@@ -145,6 +150,8 @@ function mostrarModulo(modulo) {
     cargarComprasTodo();
   } else if (wallets && window.cargarWalletsTodo) {
     window.cargarWalletsTodo();
+  } else if (parametros && window.cargarParametrosTodo) {
+    window.cargarParametrosTodo();
   }
 }
 
@@ -238,6 +245,7 @@ function mostrarApp(sesion) {
   navCartera.hidden = !puedeVerCartera;
   navCompras.hidden = !puedeVerCompras;
   navWallets.hidden = !puedeVerWallets;
+  navParametros.hidden = !sesion.permisos?.["dimensiones.gestionar"];
 
   mostrarModulo("inicio");
   iniciarMonitorDashboard();
@@ -1791,6 +1799,7 @@ navInicio.addEventListener("click", () => mostrarModulo("inicio"));
 navCartera.addEventListener("click", () => mostrarModulo("cartera"));
 navCompras.addEventListener("click", () => mostrarModulo("compras"));
 navWallets.addEventListener("click", () => mostrarModulo("wallets"));
+navParametros.addEventListener("click", () => mostrarModulo("parametros"));
 document.querySelector("#inicio-actualizar").addEventListener("click", cargarDashboardPrincipal);
 document.querySelector("#compras-refrescar-fuente").addEventListener("click", () => cargarComprasTodo(true));
 document.querySelector("#compras-cargar-kpis").addEventListener("click", cargarComprasKpis);

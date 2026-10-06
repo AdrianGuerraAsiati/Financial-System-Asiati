@@ -55,6 +55,17 @@ def _otro_usuario(_: int) -> int:
     return crear_usuario_prueba(ROL_CONCILIACION)[0]
 
 
+def _valor_dimension() -> int:
+    from app.core.dimensiones import DimensionValor
+
+    with Session(engine()) as session:
+        valor = DimensionValor(dimension="categoria", valor=f"Permiso {email_unico()}",
+                               valor_normalizado=f"PERMISO {email_unico().upper()}")
+        session.add(valor)
+        session.commit()
+        return valor.id
+
+
 def _hallazgo(empresa_id: int, estado: str = "detectado") -> int:
     return crear_hallazgo(crear_periodo(empresa_id), estado=estado)
 
@@ -111,6 +122,19 @@ ENDPOINTS = {
             f"/api/v1/hallazgos/{_hallazgo(e)}/observar",
             {"observacion": "Transferencia a proveedor", "resolver": False},
         ),
+    ),
+    "listar_dimensiones": Endpoint(
+        "GET", "parametros.ver", lambda e: ("/api/v1/dimensiones?dimension=categoria", None)
+    ),
+    "crear_dimension": Endpoint(
+        "POST",
+        "dimensiones.gestionar",
+        lambda e: ("/api/v1/dimensiones", {"dimension": "categoria", "valor": f"Prueba {email_unico()}"}),
+    ),
+    "actualizar_dimension": Endpoint(
+        "PATCH",
+        "dimensiones.gestionar",
+        lambda e: (f"/api/v1/dimensiones/{_valor_dimension()}", {"activo": False}),
     ),
     "responder_escalado": Endpoint(
         "POST",

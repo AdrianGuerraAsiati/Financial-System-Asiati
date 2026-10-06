@@ -48,6 +48,7 @@ Los códigos de rol siguen la convención de la migración `0009_create_usuarios
 | `empresas.gestionar` | Crear empresas y habilitar procesos por empresa | Sí | — | — | — | — |
 | `parametros.editar` | Crear una versión nueva de parámetros de un motor | Sí | — | — | — | — |
 | `parametros.ver` | Ver parámetros y su historial de versiones | Sí | Sí | Asig. | Leer | — |
+| `dimensiones.gestionar` | Agregar, renombrar, desactivar y activar valores de las listas de categorización (globales; nunca se borran) | Sí | Sí | — | — | — |
 | `cargas.subir` | Subir archivos (wallet, órdenes, extractos) | Sí | — | Asig. | — | — |
 | `cargas.eliminar` | Borrar una carga de un período abierto | Sí | — | Asig. | — | — |
 | `conciliacion.ejecutar` | Correr la conciliación de un período y fuente | Sí | — | Asig. | — | — |
@@ -89,6 +90,7 @@ detectado → en_gestion → escalado → en_gestion → resuelto → cerrado
 
 - `escalar` exige una pregunta escrita. Queda el autor, la fecha y la pregunta.
 - `observar` (permiso `hallazgos.gestionar`) deja una observación escrita (mensaje `NOTA`) y pasa el hallazgo a `en_gestion`, o a `resuelto` si se marca resolver. No aplica a hallazgos escalados: esos los decide el coordinador.
+- `observar` puede traer `categorizacion` (además exige `movimientos.categorizar`): las 7 dimensiones validadas contra las listas activas; se guarda en `evidencia.categorizacion` y en la auditoría. Ver `docs/nucleo/DIMENSIONES.md`.
 - El coordinador ve una bandeja "Casos escalados" con los de sus empresas.
 - La respuesta del coordinador queda en el hilo del hallazgo y el caso vuelve al conciliador, o el coordinador lo resuelve directamente.
 - Todo el hilo queda en auditoría.
@@ -187,7 +189,10 @@ GET    /api/v1/supervision/conciliaciones     supervision.ver
 GET    /api/v1/supervision/ingresos           supervision.ver
 GET    /api/v1/supervision/acciones           supervision.ver
 POST   /api/v1/hallazgos/{id}/escalar         hallazgos.escalar     {pregunta}
-POST   /api/v1/hallazgos/{id}/observar        hallazgos.gestionar   {observacion, resolver: bool}
+POST   /api/v1/hallazgos/{id}/observar        hallazgos.gestionar   {observacion, resolver: bool, categorizacion?}
+GET    /api/v1/dimensiones                    parametros.ver        ?dimension=&incluir_inactivos=
+POST   /api/v1/dimensiones                    dimensiones.gestionar {dimension, valor}
+PATCH  /api/v1/dimensiones/{id}               dimensiones.gestionar {valor?, activo?}
 POST   /api/v1/hallazgos/{id}/responder       hallazgos.responder_escalado {respuesta, resolver: bool}
 GET    /api/v1/hallazgos?estado=escalado      conciliacion.ver
 GET    /api/v1/sistema/salud | /sistema/errores | POST /sistema/cargas/{id}/reprocesar   sistema.*
