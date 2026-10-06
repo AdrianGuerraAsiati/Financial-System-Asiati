@@ -275,7 +275,7 @@ def test_wiilog_review_movement_evidence_has_dropi_text_and_common_catalog() -> 
             "fuente_wallet_id": str(fuente_wallet_id),
         },
         files={
-            "ordenes": ("ordenes.xlsx", ordenes, xlsx),
+            "ordenes": ("ordenes.xlsx", _ordenes_bytes(), xlsx),
             "wallet": ("wallet.xlsx", wallet, xlsx),
         },
     )
@@ -364,7 +364,7 @@ def test_wiilog_reuses_the_same_orders_report_with_a_new_wallet() -> None:
             "fuente_wallet_id": str(fuente_wallet_id),
         },
         files={
-            "ordenes": ("ordenes.xlsx", _ordenes_bytes(), xlsx),
+            "ordenes": ("ordenes.xlsx", ordenes, xlsx),
             "wallet": ("wallet_nueva.xlsx", _xlsx_bytes(filas), xlsx),
         },
     )
