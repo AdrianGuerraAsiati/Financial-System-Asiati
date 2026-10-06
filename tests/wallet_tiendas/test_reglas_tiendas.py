@@ -9,12 +9,23 @@ from app.motores.conciliacion_wallets.catalogo import categorizar, clasificar_co
 from app.motores.conciliacion_wallets.pagos import conciliar_wallet_pagos
 from app.motores.conciliacion_wallets.tiendas import conciliar_wallet_tienda
 from app.motores.conciliacion_wallets.wiilog import carga
+from app.motores.conciliacion_wallets.wiilog.integracion import resolver_identificador_wallet
 
 RAIZ = Path(__file__).resolve().parents[2]
 DOCS = RAIZ / "docs/motores/conciliacion_wallets"
-PARAMS = json.loads((DOCS / "parametros_wallet_tienda.json").read_text(encoding="utf-8"))
-PAGOS = json.loads((DOCS / "parametros_wallet_pagos.json").read_text(encoding="utf-8"))
-CATALOGO = json.loads((DOCS / "catalogo_conceptos_wallets.json").read_text(encoding="utf-8"))
+WIILOG_TEST_EMAIL = "wallet-principal@wiilog.test"
+
+
+def _config_test(nombre: str) -> dict:
+    return resolver_identificador_wallet(
+        json.loads((DOCS / nombre).read_text(encoding="utf-8")),
+        wallet_principal_email=WIILOG_TEST_EMAIL,
+    )
+
+
+PARAMS = _config_test("parametros_wallet_tienda.json")
+PAGOS = _config_test("parametros_wallet_pagos.json")
+CATALOGO = _config_test("catalogo_conceptos_wallets.json")
 TARIFAS = {"WIILOG BOGOTA": 2500, "WIILOG BOGOTA 2.0": None}
 
 DS = {"usuario_email": "tienda@x.co", "nombre": "Tienda", "rol": "DROPSHIPPER", "empresa": None}
@@ -70,7 +81,7 @@ def correr(ordenes, movs, tienda=DS, **kw):
     ("SALIDA", "RET. ADMIN: TIQUETE ANGEL", "RET_ADMIN_OTRO"),
     ("ENTRADA", "ENTRADA POR RETIRO ADMIN EN USER X@Y.CO: SALDO NEGATIVO", "CRUCE_DESCUENTO_IN"),
     ("ENTRADA", "ENTRADA POR RETIRO ADMIN EN USER X@Y.CO: TIQUETE", "RETIRO_ADMIN_EN_USER"),
-    ("SALIDA", "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO WIILOGWALLET@WIILOG.COM.CO", "TRASLADO_WALLET_WIILOG"),
+    ("SALIDA", f"SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO {WIILOG_TEST_EMAIL}", "TRASLADO_WALLET_WIILOG"),
     ("SALIDA", "SALIDA POR RECARGA DE SALDO EN CARTERA AL USUARIO OTRO@X.CO", "TRANSFERENCIA_SUPER_ADMIN"),
     ("SALIDA", "TEXTO QUE DROPI INVENTO MANANA", "SIN_CONCEPTO"),
 ])
