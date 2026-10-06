@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auditoria import Auditoria
 from app.core.dimensiones import DimensionValor, cargar_valores_iniciales
+from app.core.empresas import Empresa
 from app.core.hallazgos import Hallazgo
 from app.core.usuarios import ROL_CONCILIACION, ROL_COORDINACION_FINANCIERA, ROL_TI
 from tests.apoyo_auth import (
@@ -125,7 +126,9 @@ def test_carga_inicial_es_idempotente() -> None:
 
 def _contexto_categorizacion() -> dict:
     sufijo = uuid.uuid4().hex[:6].upper()
-    empresa_nombre = f"EMPRESA {sufijo}"
+    empresa_id = crear_empresa(f"EMPRESA {sufijo}")
+    with Session(engine()) as session:
+        empresa_nombre = session.get(Empresa, empresa_id).nombre
     otra_empresa = f"OTRA EMPRESA {sufijo}"
     valores = {
         "ingreso_egreso": ["EGRESO"],
@@ -135,7 +138,6 @@ def _contexto_categorizacion() -> dict:
         "fijo_variable": ["VARIABLE"],
     }
     _sembrar(**valores)
-    empresa_id = crear_empresa(empresa_nombre)
     hallazgo_id = crear_hallazgo(crear_periodo(empresa_id))
     client = cliente_con_rol(ROL_CONCILIACION, empresas=(empresa_id,))[0]
     categorizacion = {
