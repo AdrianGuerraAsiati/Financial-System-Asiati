@@ -13,7 +13,7 @@ from app.motores.conciliacion_wallets.wiilog.integracion import resolver_identif
 
 RAIZ = Path(__file__).resolve().parents[2]
 DOCS = RAIZ / "docs/motores/conciliacion_wallets"
-WIILOG_TEST_EMAIL = "wallet-principal@wiilog.test"
+WIILOG_TEST_EMAIL = "WALLET-PRINCIPAL@WIILOG.TEST"
 
 
 def _config_test(nombre: str) -> dict:
