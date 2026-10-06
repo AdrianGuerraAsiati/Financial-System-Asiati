@@ -29,6 +29,15 @@ PARAMS_PATH = (
 )
 
 
+MENSAJE_CONFIGURACION_FALTANTE = (
+    "Falta configurar la wallet principal de Wiilog. Pide a TI que la defina."
+)
+
+
+class ConfiguracionWiilogFaltanteError(RuntimeError):
+    """Falta el identificador de la wallet principal; se detecta antes de registrar cargas."""
+
+
 @dataclass(frozen=True)
 class EjecucionWiilog:
     carga_ordenes_id: int
@@ -36,6 +45,7 @@ class EjecucionWiilog:
     bloqueado: bool
     c0: dict[str, Any]
     hallazgos_creados: int
+    hallazgos_por_gravedad: dict[str, int]
     resumen: dict[str, Any]
 
 
@@ -102,9 +112,9 @@ def resolver_identificador_wallet(
         else os.getenv("WIILOG_WALLET_PRINCIPAL_EMAIL", "")
     ).strip()
     if not identificador:
-        raise RuntimeError(
-            "Falta WIILOG_WALLET_PRINCIPAL_EMAIL. "
-            "Configura el identificador de la wallet principal fuera de Git."
+        raise ConfiguracionWiilogFaltanteError(
+            f"{MENSAJE_CONFIGURACION_FALTANTE} "
+            "Variable: WIILOG_WALLET_PRINCIPAL_EMAIL, fuera de Git."
         )
     return _resolver_identificador_wallet(
         valor,
@@ -163,9 +173,11 @@ def _registrar(
     evidencia: dict[str, Any],
     critico: bool,
     gravedad: str,
+    conteo: dict[str, int],
 ) -> Hallazgo:
     # La gravedad va en la evidencia para la bandeja (PANTALLA_WALLETS.md §2.2); no cambia qué es hallazgo.
     evidencia = {"wallet": "WIILOG", "gravedad": gravedad, **evidencia}
+    conteo[gravedad] = conteo.get(gravedad, 0) + 1
     return registrar_hallazgo_motor(
         session,
         periodo_id=periodo_id,
@@ -188,6 +200,7 @@ def _persistir_chequeos(
     *,
     periodo_id: int,
     resultado: ResultadoWiilog,
+    conteo: dict[str, int],
 ) -> int:
     creados = 0
     for chequeo in resultado.chequeos:
@@ -204,6 +217,7 @@ def _persistir_chequeos(
             },
             critico=chequeo.estado == "BLOQUEADO",
             gravedad="CRITICO" if chequeo.estado == "BLOQUEADO" else "INFORMATIVO",
+            conteo=conteo,
         )
         creados += 1
     return creados
@@ -214,6 +228,7 @@ def _persistir_movimientos(
     *,
     periodo_id: int,
     resultado: ResultadoWiilog,
+    conteo: dict[str, int],
 ) -> int:
     if resultado.movimientos is None:
         return 0
@@ -242,6 +257,7 @@ def _persistir_movimientos(
             },
             critico=False,
             gravedad="REVISAR",
+            conteo=conteo,
         )
         creados += 1
     return creados
@@ -252,6 +268,7 @@ def _persistir_ff(
     *,
     periodo_id: int,
     resultado: ResultadoWiilog,
+    conteo: dict[str, int],
 ) -> int:
     if resultado.ff is None:
         return 0
@@ -277,6 +294,7 @@ def _persistir_ff(
             },
             critico=str(fila["severidad"]) == "critico",
             gravedad=str(fila["severidad"]).upper(),
+            conteo=conteo,
         )
         creados += 1
     return creados
@@ -287,6 +305,7 @@ def _persistir_flete(
     *,
     periodo_id: int,
     resultado: ResultadoWiilog,
+    conteo: dict[str, int],
 ) -> int:
     if resultado.flete is None:
         return 0
@@ -315,6 +334,7 @@ def _persistir_flete(
             },
             critico=str(fila["severidad"]) == "critico",
             gravedad=str(fila["severidad"]).upper(),
+            conteo=conteo,
         )
         creados += 1
     return creados
@@ -336,6 +356,8 @@ def ejecutar_y_persistir_wiilog(
         empresa_id=empresa_id,
         periodo_id=periodo_id,
     )
+    # Antes de registrar cargas: si falta configuración no debe quedar nada guardado.
+    configuracion = params or cargar_parametros_wiilog()
 
     carga_ordenes = registrar_carga(
         session,
@@ -355,7 +377,6 @@ def ejecutar_y_persistir_wiilog(
 
     ordenes = _leer_excel(ordenes_contenido, "órdenes")
     wallet = _leer_excel(wallet_contenido, "wallet")
-    configuracion = params or cargar_parametros_wiilog()
 
     resultado = conciliar_wallet_wiilog(
         ordenes,
@@ -365,26 +386,31 @@ def ejecutar_y_persistir_wiilog(
         periodo.fecha_fin,
     )
 
+    conteo: dict[str, int] = {}
     creados = _persistir_chequeos(
         session,
         periodo_id=periodo_id,
         resultado=resultado,
+        conteo=conteo,
     )
     if not resultado.bloqueado:
         creados += _persistir_movimientos(
             session,
             periodo_id=periodo_id,
             resultado=resultado,
+            conteo=conteo,
         )
         creados += _persistir_ff(
             session,
             periodo_id=periodo_id,
             resultado=resultado,
+            conteo=conteo,
         )
         creados += _persistir_flete(
             session,
             periodo_id=periodo_id,
             resultado=resultado,
+            conteo=conteo,
         )
 
     session.flush()
@@ -394,6 +420,7 @@ def ejecutar_y_persistir_wiilog(
         bloqueado=resultado.bloqueado,
         c0=_resultado_c0(resultado.chequeos),
         hallazgos_creados=creados,
+        hallazgos_por_gravedad=conteo,
         resumen=resultado.resumen,
     )
 
