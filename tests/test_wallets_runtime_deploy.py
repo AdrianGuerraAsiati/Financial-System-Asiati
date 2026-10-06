@@ -30,3 +30,17 @@ def test_local_compose_passes_wiilog_identifier_from_env_file() -> None:
         "WIILOG_WALLET_PRINCIPAL_EMAIL: ${WIILOG_WALLET_PRINCIPAL_EMAIL:-}"
         in contenido
     )
+
+
+def test_production_image_includes_category_dimension_seed_json() -> None:
+    contenido = DOCKERFILE.read_text(encoding="utf-8")
+
+    assert "COPY docs/nucleo/dimensiones_iniciales.json ./docs/nucleo/" in contenido
+
+
+def test_development_deploy_seeds_category_dimensions_idempotently() -> None:
+    contenido = DEPLOY.read_text(encoding="utf-8")
+
+    assert "- name: Seed categorization dimensions" in contenido
+    assert "python -m app.core.dimensiones" in contenido
+    assert "--archivo docs/nucleo/dimensiones_iniciales.json" in contenido
