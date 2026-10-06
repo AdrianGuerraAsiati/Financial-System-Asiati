@@ -101,3 +101,11 @@ def test_inbox_shows_current_findings_and_history_toggle() -> None:
 
     assert "Muestra los hallazgos vigentes" in response.text
     assert "Mostrar historial" in response.text
+
+
+
+def test_resolved_finding_says_it_is_read_only_and_role_message_stays_for_roles() -> None:
+    response = TestClient(app).get("/static/wallets.js")
+
+    assert "Este hallazgo ya está resuelto. Solo se puede consultar." in response.text
+    assert "Tu rol tiene acceso de lectura para este hallazgo." in response.text

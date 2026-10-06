@@ -9,6 +9,7 @@ from app.core.cargas.errors import ContextoCargaInvalidoError
 from app.core.periodos.errors import PeriodoCerradoError
 from app.core.session import obtener_session
 
+from ..cargas import CargaDuplicadaError, ConciliacionRepetidaError
 from ..plataforma.api import hallazgo_json
 from .integracion import (
     MENSAJE_CONFIGURACION_FALTANTE,
@@ -76,6 +77,9 @@ def conciliar_wiilog(
             status_code=503,
             detail=MENSAJE_CONFIGURACION_FALTANTE,
         ) from exc
+    except (CargaDuplicadaError, ConciliacionRepetidaError) as exc:
+        session.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ContextoCargaInvalidoError as exc:
         session.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -95,6 +99,8 @@ def conciliar_wiilog(
         "cargas": {
             "ordenes_id": ejecucion.carga_ordenes_id,
             "wallet_id": ejecucion.carga_wallet_id,
+            "ordenes_reutilizadas": ejecucion.ordenes_reutilizadas,
+            "wallet_reutilizada": ejecucion.wallet_reutilizada,
         },
         "hallazgos_creados": ejecucion.hallazgos_creados,
         "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,

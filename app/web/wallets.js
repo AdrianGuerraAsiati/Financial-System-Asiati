@@ -595,6 +595,14 @@
     const gestionar = puede("hallazgos.gestionar") && estadoDe(h) !== "escalado" && estadoDe(h) !== "resuelto";
     const escalar = puede("hallazgos.escalar") && estadoDe(h) !== "escalado" && estadoDe(h) !== "resuelto";
     const responder = puede("hallazgos.responder_escalado") && estadoDe(h) === "escalado";
+    // Un hallazgo resuelto o cerrado no admite acciones para nadie: no es por el rol.
+    if (estadoDe(h) === "resuelto" || estadoDe(h) === "cerrado") {
+      const texto = estadoDe(h) === "cerrado"
+        ? "Este hallazgo está cerrado. Solo se puede consultar."
+        : "Este hallazgo ya está resuelto. Solo se puede consultar.";
+      acciones.innerHTML = '<p class="notice compact">' + texto + "</p>";
+      return;
+    }
     if (!gestionar && !escalar && !responder) {
       acciones.innerHTML = '<p class="notice compact">Tu rol tiene acceso de lectura para este hallazgo.</p>';
       return;
