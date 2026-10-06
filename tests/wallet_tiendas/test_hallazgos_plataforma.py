@@ -132,3 +132,24 @@ def test_pagos_guarda_c0_y_movimientos_por_revisar():
     assert (c0["entradas"], c0["salidas"], c0["saldo_final"]) == ("3675392.00", "3675392.00", "0.00")
     codigos = {h.codigo for h in hallazgos_pagos(r)}
     assert codigos <= {"PAGOS_C0_COBERTURA", "PAGOS_MOVIMIENTO_REVISAR"}
+
+
+
+def test_revisar_lleva_texto_de_dropi_entrada_salida_y_monto():
+    texto = "SALIDA POR TRANSFERENCIA DE WALLET AL USUARIO alguien@gmail.com"
+    movs = [gan_ds(1, 50000), ("22-09-2026 10:00", "SALIDA", 1000, None, texto)]
+    [h] = _por_codigo(hallazgos_tienda(correr([orden(1, "ENTREGADO")], movs)))["TIENDA_MOVIMIENTO_REVISAR"]
+    assert h.evidencia["texto_dropi"] == texto
+    assert h.evidencia["entrada_salida"] == "SALIDA"
+    assert h.evidencia["monto"] == "-1000.00"
+    assert h.evidencia["texto_nuevo"] is False
+    assert h.evidencia["ingreso_egreso"] == "EGRESO"
+
+
+def test_texto_nuevo_de_dropi_llega_a_revisar_con_campos_vacios():
+    movs = [gan_ds(1, 50000), ("22-09-2026 10:00", "ENTRADA", 700, None, "ENTRADA POR UN CONCEPTO QUE DROPI ACABA DE CREAR")]
+    [h] = _por_codigo(hallazgos_tienda(correr([orden(1, "ENTREGADO")], movs)))["TIENDA_MOVIMIENTO_REVISAR"]
+    assert h.evidencia["texto_nuevo"] is True
+    assert h.evidencia["concepto"] == "SIN_CONCEPTO"
+    assert (h.evidencia["ingreso_egreso"], h.evidencia["unidad_negocio"], h.evidencia["categoria"]) == (None, None, None)
+    assert h.evidencia["entrada_salida"] == "ENTRADA"

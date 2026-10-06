@@ -235,3 +235,55 @@ def test_wiilog_without_principal_wallet_config_answers_clearly_and_registers_no
             select(func.count()).select_from(Carga).where(Carga.empresa_id == contexto[0])
         )
     assert cargas == 0
+
+
+def test_wiilog_review_movement_evidence_has_dropi_text_and_common_catalog() -> None:
+    empresa_id, periodo_id, fuente_ordenes_id, fuente_wallet_id = _contexto()
+    client = cliente_superadmin()
+    texto = "ENTRADA POR RETIRO ADMIN EN USER cliente@x.test"
+    wallet = _xlsx_bytes(
+        [
+            {
+                "ID": 1, "FECHA": "10-09-2030 10:00", "TIPO": "ENTRADA", "MONTO": 2500, "MONTO PREVIO": 0,
+                "ORDEN ID": 1, "NUMERO DE GUIA": "G1",
+                "DESCRIPCIÓN": (
+                    "PAGO POR GANANCIA COMISION FULFILLMENT DE MARCA BLANCA. "
+                    "ORDEN ID *1* GUIA: *G1* CONCEPTO: GUIA_GENERADA"
+                ),
+                "USUARIO QUE REALIZA EL MOVIMIENTO": "", "CUENTA": None, "CONCEPTO DE RETIRO": None,
+            },
+            {
+                "ID": 2, "FECHA": "11-09-2030 10:00", "TIPO": "ENTRADA", "MONTO": 7000, "MONTO PREVIO": 2500,
+                "ORDEN ID": None, "NUMERO DE GUIA": None, "DESCRIPCIÓN": texto,
+                "USUARIO QUE REALIZA EL MOVIMIENTO": "", "CUENTA": None, "CONCEPTO DE RETIRO": None,
+            },
+        ]
+    )
+    xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    response = client.post(
+        "/api/v1/wallets/wiilog/conciliar",
+        data={
+            "empresa_id": str(empresa_id),
+            "periodo_id": str(periodo_id),
+            "fuente_ordenes_id": str(fuente_ordenes_id),
+            "fuente_wallet_id": str(fuente_wallet_id),
+        },
+        files={
+            "ordenes": ("ordenes.xlsx", _ordenes_bytes(), xlsx),
+            "wallet": ("wallet.xlsx", wallet, xlsx),
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    items = client.get(
+        "/api/v1/wallets/wiilog/hallazgos",
+        params={"empresa_id": empresa_id, "periodo_id": periodo_id},
+    ).json()
+    [revisar] = [i for i in items if i["codigo_regla"] == "WIILOG_MOVIMIENTO_REVISAR"]
+    evidencia = revisar["evidencia"]
+    assert evidencia["tipo"] == "REVISAR_MOVIMIENTO"
+    assert evidencia["texto_dropi"] == texto
+    assert evidencia["entrada_salida"] == "ENTRADA"
+    assert evidencia["monto"] == "7000.00"
+    assert evidencia["texto_nuevo"] is False
+    assert (evidencia["ingreso_egreso"], evidencia["unidad_negocio"], evidencia["categoria"]) == ("INGRESO", None, None)

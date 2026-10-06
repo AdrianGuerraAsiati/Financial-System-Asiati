@@ -112,7 +112,11 @@ def hallazgos_movimientos(prefijo: str, mov: pd.DataFrame) -> list[HallazgoNuevo
                 "mov_id": int(f.mov_id),
                 "fecha": _fecha(f.fecha),
                 "concepto": _texto(f.concepto),
-                "ingreso_egreso": _texto(f.ingreso_egreso),
+                "texto_dropi": _texto(f.descripcion),
+                "entrada_salida": _texto(f.tipo),
+                # Texto que el catálogo no reconoce: llega sin propuesta y el conciliador lo categoriza.
+                "texto_nuevo": f.concepto == "SIN_CONCEPTO",
+                "ingreso_egreso": None if f.concepto == "SIN_CONCEPTO" else _texto(f.ingreso_egreso),
                 "unidad_negocio": _texto(f.unidad_negocio),
                 "categoria": _texto(f.categoria),
                 "tercero": _texto(f.tercero),
