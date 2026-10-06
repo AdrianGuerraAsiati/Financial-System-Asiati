@@ -68,21 +68,21 @@ No elijas en silencio.
 - `/release <versión>` — prepara una versión: changelog, número, tag y release.
 - `/revisar-spec` — compara el código contra la SPEC y lista diferencias, sin tocar código.
 
-## Estado actual · 30-sep-2026
+## Estado actual · 6-oct-2026
 
-Antes de iniciar trabajo, leer `docs/ESTADO_DESARROLLO_2026-09-30.md`.
+Antes de iniciar trabajo, leer `docs/ESTADO_DESARROLLO_2026-10-06.md`.
 
 Resumen vigente:
 
-- desarrollo desplegado en AWS Lightsail;
-- Compras funciona temporalmente con **S3 privado -> copia operacional local -> snapshot PostgreSQL**, no con Google Sheets directo;
-- snapshot de Compras de desarrollo válido: 2.260 líneas;
-- Google Sheets queda pendiente de acceso administrativo de Google Cloud;
-- #89 de wallets tienda/pagos está fusionado;
-- #86 de sanitización de Wallets está fusionado y los identificadores reales se inyectan por runtime;
-- #91 de movimientos/categorización es el único PR funcional abierto y sigue en draft por una decisión de contrato;
-- Cartera sigue sin fuente real identificada; no usar el Excel de Compras como sustituto.
-- Cartera core ya incluye resúmenes descriptivos (#97), agrupación por OC sin colapsar composición (#98) y diagnóstico de negociaciones heredadas (#99).
+- desarrollo compartido desplegado en AWS Lightsail con Amazon Cognito para credenciales;
+- Wallets reproduce la línea base real de septiembre para las cinco wallets validadas;
+- #116 eliminó el identificador privado de Wiilog del código versionado y lo resuelve solo en runtime;
+- #117 dejó la pantalla de Wallets con estado/gravedad reales, C0 formateado, corte visible y errores de configuración claros;
+- #119 aprobó el catálogo v2 y el contrato de categorización manual de siete dimensiones (ADR 0008);
+- #120 agregó la clave estable de hallazgos y el ciclo de resolución/reapertura por el sistema; falta conectarlo desde los motores;
+- el siguiente bloque de Wallets es listas administrables de dimensiones, conexión de la sincronización y pantalla de categorización manual;
+- la aceptación operacional formal sigue el gate de `docs/motores/conciliacion_wallets/ACEPTACION_OPERATIVA.md`;
+- #101 de Cartera permanece draft: no fusionar antes de fuente real, validación funcional y actualización contra `main`;
+- Compras continúa en desarrollo con S3 privado -> copia operacional local -> snapshot PostgreSQL.
 
-No asumir que las secciones históricas de `Ai_Handoff.md` sobre autenticación Google o fuente viva describen el entorno desplegado actual; la actualización del 30-sep al inicio de ese archivo y el reporte anterior mandan para estado operativo.
-
+Las fotografías anteriores son historia. Para decisiones formales mandan los ADR de `docs/decisiones/`.
