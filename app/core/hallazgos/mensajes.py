@@ -9,6 +9,8 @@ from app.core.db import Base
 TIPO_PREGUNTA = "PREGUNTA"
 TIPO_RESPUESTA = "RESPUESTA"
 TIPO_NOTA = "NOTA"
+# Nota automática de la sincronización de hallazgos; la firma quien ejecutó la conciliación.
+TIPO_SISTEMA = "SISTEMA"
 
 
 class HallazgoMensaje(Base):
@@ -17,7 +19,7 @@ class HallazgoMensaje(Base):
     __tablename__ = "hallazgo_mensajes"
     __table_args__ = (
         CheckConstraint(
-            "tipo IN ('PREGUNTA', 'RESPUESTA', 'NOTA')",
+            "tipo IN ('PREGUNTA', 'RESPUESTA', 'NOTA', 'SISTEMA')",
             name="ck_hallazgo_mensajes_tipo",
         ),
     )

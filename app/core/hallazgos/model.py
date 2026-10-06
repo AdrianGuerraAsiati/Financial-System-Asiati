@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,6 +13,14 @@ class Hallazgo(Base):
         CheckConstraint(
             "estado IN ('detectado', 'en_gestion', 'escalado', 'resuelto', 'cerrado')",
             name="ck_hallazgos_estado",
+        ),
+        Index(
+            "uq_hallazgos_periodo_motor_clave",
+            "periodo_id",
+            "motor_slug",
+            "clave",
+            unique=True,
+            postgresql_where=text("clave IS NOT NULL"),
         ),
     )
 
@@ -47,3 +55,12 @@ class Hallazgo(Base):
     codigo_regla: Mapped[str | None] = mapped_column(String(120), nullable=True)
     descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
     evidencia: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    # Identifica el mismo problema entre cargas (p. ej. wallet + regla + mov_id). Ver sincronizacion.py.
+    clave: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    # True solo si lo resolvió la sincronización porque el problema ya no aparece en la carga nueva.
+    resuelto_por_sistema: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )

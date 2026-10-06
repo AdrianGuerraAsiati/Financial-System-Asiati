@@ -56,6 +56,8 @@ def _hallazgo_json(hallazgo: Hallazgo, empresa_id: int) -> dict[str, object]:
         "critico": hallazgo.critico,
         "resuelto": hallazgo.resuelto,
         "estado": hallazgo.estado,
+        "resuelto_por_sistema": hallazgo.resuelto_por_sistema,
+        "clave": hallazgo.clave,
         "evidencia": hallazgo.evidencia,
     }
 
