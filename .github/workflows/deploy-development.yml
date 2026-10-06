@@ -160,7 +160,7 @@ jobs:
               -o StrictHostKeyChecking=accept-new \
               -i /tmp/lightsail.pem \
               "${{ steps.ssh.outputs.username }}@${{ steps.ssh.outputs.host }}" \
-              "echo ready" >/dev/null 2>&1; then
+              "echo ready" >/dev/null; then
               exit 0
             fi
             sleep 5
