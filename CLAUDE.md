@@ -79,10 +79,12 @@ Resumen vigente:
 - #116 eliminó el identificador privado de Wiilog del código versionado y lo resuelve solo en runtime;
 - #117 dejó la pantalla de Wallets con estado/gravedad reales, C0 formateado, corte visible y errores de configuración claros;
 - #119 aprobó el catálogo v2 y el contrato de categorización manual de siete dimensiones (ADR 0008);
-- #120 agregó la clave estable de hallazgos y el ciclo de resolución/reapertura por el sistema; falta conectarlo desde los motores;
-- el siguiente bloque de Wallets es listas administrables de dimensiones, conexión de la sincronización y pantalla de categorización manual;
-- la aceptación operacional formal sigue el gate de `docs/motores/conciliacion_wallets/ACEPTACION_OPERATIVA.md`;
-- #101 de Cartera permanece draft: no fusionar antes de fuente real, validación funcional y actualización contra `main`;
+- #120 agregó la clave estable de hallazgos y el ciclo de resolución/reapertura por el sistema;
+- #121 agregó listas administrables de dimensiones y la pantalla Parámetros;
+- #122 conectó la categorización manual y la sincronización por clave estable de punta a punta en Wallets;
+- #123 garantiza que las listas iniciales se empaqueten y se siembren idempotentemente en desarrollo;
+- siguiente en Wallets: resumen/indicador de avance y rendimiento, luego corte/cierre de período y aceptación operacional formal;
+- #101 de Cartera fue cerrado sin merge por obsoleto; al retomar, reconstruir desde `main` con fuente y umbrales validados;
 - Compras continúa en desarrollo con S3 privado -> copia operacional local -> snapshot PostgreSQL.
 
 Las fotografías anteriores son historia. Para decisiones formales mandan los ADR de `docs/decisiones/`.
