@@ -11,11 +11,11 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.cargas import calcular_hash_contenido, registrar_carga
 from app.core.hallazgos import Hallazgo, HallazgoMotorNuevo, sincronizar_hallazgos_motor
 from app.core.periodos import Periodo
 from app.core.periodos.errors import PeriodoCerradoError
 
+from ..cargas import MENSAJE_CONCILIACION_REPETIDA, ConciliacionRepetidaError, carga_reutilizable
 from .motor import ResultadoWiilog, conciliar_wallet_wiilog
 from .normalizar import pesos
 
@@ -44,6 +44,8 @@ class ConfiguracionWiilogFaltanteError(RuntimeError):
 class EjecucionWiilog:
     carga_ordenes_id: int
     carga_wallet_id: int
+    ordenes_reutilizadas: bool
+    wallet_reutilizada: bool
     bloqueado: bool
     c0: dict[str, Any]
     hallazgos_creados: int
@@ -396,21 +398,17 @@ def ejecutar_y_persistir_wiilog(
     configuracion = params or cargar_parametros_wiilog()
     catalogo_comun = catalogo or cargar_catalogo_comun()
 
-    carga_ordenes = registrar_carga(
-        session,
-        empresa_id=empresa_id,
-        fuente_id=fuente_ordenes_id,
-        periodo_id=periodo_id,
-        contenido_hash=calcular_hash_contenido(ordenes_contenido),
+    # Igual que Tiendas: el mismo reporte de órdenes se reutiliza en la misma empresa, período y fuente.
+    carga_ordenes, ordenes_reutilizadas = carga_reutilizable(
+        session, empresa_id=empresa_id, periodo_id=periodo_id, fuente_id=fuente_ordenes_id,
+        contenido=ordenes_contenido, que="reporte de órdenes",
     )
-    carga_wallet = registrar_carga(
-        session,
-        empresa_id=empresa_id,
-        fuente_id=fuente_wallet_id,
-        periodo_id=periodo_id,
-        contenido_hash=calcular_hash_contenido(wallet_contenido),
+    carga_wallet, wallet_reutilizada = carga_reutilizable(
+        session, empresa_id=empresa_id, periodo_id=periodo_id, fuente_id=fuente_wallet_id,
+        contenido=wallet_contenido, que="archivo de wallet",
     )
-    session.flush()
+    if ordenes_reutilizadas and wallet_reutilizada:
+        raise ConciliacionRepetidaError(MENSAJE_CONCILIACION_REPETIDA)
 
     ordenes = _leer_excel(ordenes_contenido, "órdenes")
     wallet = _leer_excel(wallet_contenido, "wallet")
@@ -467,6 +465,8 @@ def ejecutar_y_persistir_wiilog(
     return EjecucionWiilog(
         carga_ordenes_id=carga_ordenes.id,
         carga_wallet_id=carga_wallet.id,
+        ordenes_reutilizadas=ordenes_reutilizadas,
+        wallet_reutilizada=wallet_reutilizada,
         bloqueado=resultado.bloqueado,
         c0=_resultado_c0(resultado.chequeos),
         hallazgos_creados=creados,

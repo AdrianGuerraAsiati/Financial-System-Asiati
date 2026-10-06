@@ -27,6 +27,7 @@ from app.core.periodos import Periodo
 from app.core.periodos.errors import PeriodoCerradoError
 
 from ..pagos import conciliar_wallet_pagos
+from ..cargas import CargaDuplicadaError, carga_reutilizable
 from ..tiendas import conciliar_wallet_tienda
 from ..wiilog.integracion import cargar_parametros_wiilog, resolver_identificador_wallet
 from .hallazgos import HallazgoNuevo, hallazgos_pagos, hallazgos_tienda, resultado_c0
@@ -40,10 +41,6 @@ _CORTE_EN_NOMBRE = re.compile(r"(\d{8})_(\d{6})")
 
 class WalletNoConfiguradaError(ValueError):
     """La tienda o wallet no está en los parámetros, o es de otra empresa."""
-
-
-class CargaDuplicadaError(ValueError):
-    """El archivo ya se cargó en la empresa y no se puede reutilizar aquí."""
 
 
 @dataclass(frozen=True)
@@ -198,20 +195,9 @@ def _corte_usado(resumen: dict | None, texto: str | None, nombre_archivo: str | 
 def _carga_de_ordenes(
     session: Session, *, empresa_id: int, periodo_id: int, fuente_id: int, contenido: bytes
 ) -> tuple[Carga, bool]:
-    hash_ = calcular_hash_contenido(contenido)
-    existente = session.scalar(
-        select(Carga).where(Carga.empresa_id == empresa_id, Carga.contenido_hash == hash_)
-    )
-    if existente is None:
-        carga = registrar_carga(
-            session, empresa_id=empresa_id, fuente_id=fuente_id, periodo_id=periodo_id, contenido_hash=hash_
-        )
-        return carga, False
-    if existente.periodo_id == periodo_id and existente.fuente_id == fuente_id:
-        return existente, True
-    raise CargaDuplicadaError(
-        "Este reporte de órdenes ya se cargó en la empresa para otro período o con otra fuente. "
-        "Usa el reporte del período que estás conciliando."
+    return carga_reutilizable(
+        session, empresa_id=empresa_id, periodo_id=periodo_id, fuente_id=fuente_id, contenido=contenido,
+        que="reporte de órdenes",
     )
 
 
