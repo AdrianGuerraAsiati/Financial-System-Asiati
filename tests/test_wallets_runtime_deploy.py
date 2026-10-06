@@ -21,3 +21,12 @@ def test_development_deploy_retires_legacy_demo_company() -> None:
     assert "python -m app.core.normalizar_empresas_dev </dev/null" in contenido
     assert 'set_env COMPRAS_SHEETS_EMPRESA_ID "$ASIATI_ID"' in contenido
     assert "set_env COMPRAS_SHEETS_EMPRESA_ID 1" not in contenido
+
+
+def test_local_compose_passes_wiilog_identifier_from_env_file() -> None:
+    contenido = Path("docker-compose.yml").read_text(encoding="utf-8")
+
+    assert (
+        "WIILOG_WALLET_PRINCIPAL_EMAIL: ${WIILOG_WALLET_PRINCIPAL_EMAIL:-}"
+        in contenido
+    )
