@@ -180,7 +180,13 @@ def test_wiilog_vertical_slice_persists_findings_and_rejects_duplicate_loads() -
     assert duplicate.json()["detail"] == "Estos archivos ya se conciliaron para este período."
 
 
-def _conciliar(client, contexto: tuple[int, int, int, int]):
+def _conciliar(
+    client,
+    contexto: tuple[int, int, int, int],
+    *,
+    ordenes_bytes: bytes | None = None,
+    wallet_bytes: bytes | None = None,
+):
     empresa_id, periodo_id, fuente_ordenes_id, fuente_wallet_id = contexto
     xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     return client.post(
@@ -192,8 +198,8 @@ def _conciliar(client, contexto: tuple[int, int, int, int]):
             "fuente_wallet_id": str(fuente_wallet_id),
         },
         files={
-            "ordenes": ("ordenes.xlsx", _ordenes_bytes(), xlsx),
-            "wallet": ("wallet.xlsx", _wallet_bytes(), xlsx),
+            "ordenes": ("ordenes.xlsx", ordenes_bytes or _ordenes_bytes(), xlsx),
+            "wallet": ("wallet.xlsx", wallet_bytes or _wallet_bytes(), xlsx),
         },
     )
 
@@ -269,7 +275,7 @@ def test_wiilog_review_movement_evidence_has_dropi_text_and_common_catalog() -> 
             "fuente_wallet_id": str(fuente_wallet_id),
         },
         files={
-            "ordenes": ("ordenes.xlsx", _ordenes_bytes(), xlsx),
+            "ordenes": ("ordenes.xlsx", ordenes, xlsx),
             "wallet": ("wallet.xlsx", wallet, xlsx),
         },
     )
@@ -340,7 +346,10 @@ def test_wiilog_reuses_the_same_orders_report_with_a_new_wallet() -> None:
     contexto = _contexto()
     empresa_id, periodo_id, fuente_ordenes_id, fuente_wallet_id = contexto
     client = cliente_superadmin()
-    primera = _conciliar(client, contexto)
+    # Reutilización significa el mismo archivo físico (mismos bytes/hash), no otro XLSX
+    # regenerado a partir de las mismas filas, cuya metadata interna puede cambiar.
+    ordenes = _ordenes_bytes()
+    primera = _conciliar(client, contexto, ordenes_bytes=ordenes)
     assert primera.status_code == 201
     filas = pd.read_excel(io.BytesIO(_wallet_bytes())).to_dict("records")
     filas.append({**filas[0], "ID": 2, "FECHA": "11-09-2030 10:00", "MONTO PREVIO": 2500})
