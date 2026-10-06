@@ -80,6 +80,7 @@ def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet]) -> dict[s
         },
         "hallazgos_creados": ejecucion.hallazgos_creados,
         "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,
+        "sincronizacion": ejecucion.sincronizacion,
         "resumen": ejecucion.resumen,
         "corte_ordenes_usado": ejecucion.corte_ordenes_usado,
     }
@@ -95,6 +96,8 @@ def hallazgo_json(hallazgo: Hallazgo) -> dict[str, object]:
         "critico": hallazgo.critico,
         "resuelto": hallazgo.resuelto,
         "estado": hallazgo.estado,
+        "resuelto_por_sistema": hallazgo.resuelto_por_sistema,
+        "clave": hallazgo.clave,
         "evidencia": evidencia,
     }
 
@@ -122,7 +125,7 @@ def consultar_catalogo(
 @router.post("/tiendas/conciliar", status_code=201)
 def conciliar_tienda(
     empresa_id: int = Form(...),
-    _acceso: Acceso = Depends(ejecutar_conciliacion),
+    acceso: Acceso = Depends(ejecutar_conciliacion),
     periodo_id: int = Form(...),
     tienda: str = Form(...),
     fuente_wallet_id: int = Form(...),
@@ -145,6 +148,7 @@ def conciliar_tienda(
             fuente_ordenes_id=fuente_ordenes_id,
             wallet_contenido=wallet_contenido,
             ordenes_contenido=ordenes_contenido,
+            usuario_id=acceso.usuario.id,
             nombre_ordenes=ordenes.filename,
             corte=corte_ordenes,
         ),
@@ -173,7 +177,7 @@ def consultar_hallazgos_tiendas(
 @router.post("/pagos/conciliar", status_code=201)
 def conciliar_pagos(
     empresa_id: int = Form(...),
-    _acceso: Acceso = Depends(ejecutar_conciliacion),
+    acceso: Acceso = Depends(ejecutar_conciliacion),
     periodo_id: int = Form(...),
     wallet_pagos: str = Form(...),
     fuente_wallet_id: int = Form(...),
@@ -190,6 +194,7 @@ def conciliar_pagos(
             wallet_email=wallet_pagos,
             fuente_wallet_id=fuente_wallet_id,
             wallet_contenido=wallet_contenido,
+            usuario_id=acceso.usuario.id,
         ),
     )
 

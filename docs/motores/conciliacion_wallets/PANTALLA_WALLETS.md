@@ -122,7 +122,8 @@ qué es hallazgo ni la severidad; solo la escribe. Para los viejos, la pantalla 
 - **Cruce entre wallets** (`catalogo.cruzar_entre_wallets`, FF Proveeduría ↔ Wiilog): necesita varias wallets en la
   misma ejecución. Los endpoints concilian una wallet a la vez. Se propone después, cuando exista la entidad de
   ejecución del PR A.
-- **Categorizar movimientos** (cambiar categoría): depende de la tabla de movimientos del PR C.
+- **Categorizar movimientos:** ya no espera la tabla de movimientos. Se guarda en `evidencia.categorizacion` del
+  hallazgo REVISAR (ver §3 y `docs/nucleo/DIMENSIONES.md`).
 
 ---
 
@@ -140,6 +141,13 @@ negocio, categoría, empresa, tercero, modalidad y fijo/variable. Aplica a Wiilo
   "Texto nuevo de Dropi" (`evidencia.texto_nuevo`).
 - La categorización no se pierde al volver a conciliar la misma wallet y período (lo garantiza la clave estable
   de hallazgos del núcleo; ver `docs/decisiones/0008-categorizacion-manual-wallets.md`).
+
+**En la pantalla.** Las filas REVISAR muestran fecha y número del movimiento, entrada o salida, monto, texto de Dropi,
+tercero y la propuesta del motor, o la categoría elegida si ya se categorizó; un texto nuevo de Dropi lleva la marca
+"TEXTO NUEVO DE DROPI". El detalle trae el formulario de las 7 dimensiones precargado (propuesta o categorización
+previa): ingreso/egreso, unidad, categoría y fijo/variable como listas cerradas; empresa (la de la wallet) y modalidad
+WALLET visibles y no editables; tercero editable; observación obligatoria; botones "Guardar" (queda en gestión),
+"Guardar y resolver" y "Escalar".
 
 La evidencia de cada movimiento por revisar trae, además, el texto de Dropi (`texto_dropi`), entrada o salida
 (`entrada_salida`), el monto en pesos (`monto`) y la propuesta del motor (`ingreso_egreso`, `unidad_negocio`,
@@ -239,8 +247,11 @@ con nombres de ejemplo y sin datos reales. No se sube.
 1. **Hash de cargas único por empresa.** Menpros y Recompra Menpros (ambas ORIGEN VITAL) usan el mismo reporte de
    órdenes. Decisión 30-sep: el motor **reutiliza la carga de órdenes** si el mismo hash ya existe en la misma
    empresa **y el mismo período**. En otro período sigue siendo 409. El núcleo no cambia.
-2. **Reconciliar con una wallet nueva** crea otra tanda de hallazgos. Decisión: la bandeja muestra por defecto solo
-   los de la **última carga de wallet** (`evidencia.carga_wallet_id`) y deja ver los anteriores, hasta el PR A.
+2. **Reconciliar con una wallet nueva** ya no crea otra tanda (decisión 0008, 6-oct): cada hallazgo tiene clave
+   estable (wallet + regla + `mov_id` u `orden_id`) y se actualiza conservando estado, observaciones, escalamiento y
+   categorización. Lo que ya no aparece queda "resuelto por el sistema". La bandeja muestra los **vigentes**; el
+   historial (casilla "Mostrar historial") incluye lo resuelto por el sistema y los hallazgos anteriores a la clave.
+   Wiilog no reutiliza el reporte de órdenes: para reconciliar se cargan las dos exportaciones nuevas.
 3. **C0 y resumen no persistidos:** se guardan en `sessionStorage` con el aviso "Resumen de la última conciliación de
    esta sesión", hasta el PR B.
 4. **Cruce entre wallets:** después del PR A de Adrian.

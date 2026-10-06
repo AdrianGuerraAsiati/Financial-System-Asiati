@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.core.cargas import Carga, calcular_hash_contenido, registrar_carga
 from app.core.empresas import Empresa
-from app.core.hallazgos import Hallazgo, registrar_hallazgo_motor
+from app.core.hallazgos import Hallazgo, HallazgoMotorNuevo, sincronizar_hallazgos_motor
 from app.core.periodos import Periodo
 from app.core.periodos.errors import PeriodoCerradoError
 
@@ -56,6 +56,7 @@ class EjecucionWallet:
     hallazgos_creados: int
     hallazgos_por_gravedad: dict[str, int]
     resumen: dict[str, Any]
+    sincronizacion: dict[str, int]
     corte_ordenes_usado: dict[str, str] | None = None
 
 
@@ -231,38 +232,62 @@ def _carga_de_wallet(
 # ------------------------------------------------------------------ hallazgos
 
 
+def clave_estable(alcance: str, h: HallazgoNuevo) -> str:
+    """wallet + regla + mov_id u orden_id (decisión 0008). Sin id: uno por wallet (C0, agrupados)."""
+    identificador = h.evidencia.get("mov_id")
+    if identificador is None:
+        identificador = h.evidencia.get("orden_id")
+    return f"{alcance}{h.codigo}|{identificador if identificador is not None else '-'}"
+
+
 def _persistir(
     session: Session,
     *,
     periodo_id: int,
     wallet: dict,
     tipo_wallet: str,
+    prefijo: str,
     carga_wallet_id: int,
     hallazgos: list[HallazgoNuevo],
-) -> dict[str, int]:
+    bloqueado: bool,
+    usuario_id: int,
+) -> tuple[dict[str, int], dict[str, int]]:
     conteo: dict[str, int] = {}
+    alcance = f"{prefijo}|{wallet['usuario_email'].lower()}|"
+    nuevos: list[HallazgoMotorNuevo] = []
     for h in hallazgos:
-        registrar_hallazgo_motor(
-            session,
-            periodo_id=periodo_id,
-            motor_slug=MOTOR_SLUG,
-            codigo_regla=h.codigo,
-            descripcion=h.descripcion,
-            evidencia=_json(
-                {
-                    "wallet": wallet["usuario_email"],
-                    "wallet_nombre": wallet.get("nombre"),
-                    "tipo_wallet": tipo_wallet,
-                    "gravedad": h.gravedad,
-                    "carga_wallet_id": carga_wallet_id,
-                    **h.evidencia,
-                }
-            ),
-            critico=h.critico,
+        nuevos.append(
+            HallazgoMotorNuevo(
+                clave=clave_estable(alcance, h),
+                codigo_regla=h.codigo,
+                descripcion=h.descripcion,
+                evidencia=_json(
+                    {
+                        "wallet": wallet["usuario_email"],
+                        "wallet_nombre": wallet.get("nombre"),
+                        "tipo_wallet": tipo_wallet,
+                        "gravedad": h.gravedad,
+                        "carga_wallet_id": carga_wallet_id,
+                        **h.evidencia,
+                    }
+                ),
+                critico=h.critico,
+            )
         )
         conteo[h.gravedad] = conteo.get(h.gravedad, 0) + 1
-    session.flush()
-    return conteo
+    claves = [n.clave for n in nuevos]
+    if len(claves) != len(set(claves)):
+        raise RuntimeError("Dos hallazgos de la wallet quedaron con la misma clave; revisa el motor.")
+    # Si C0 bloquea solo se sincronizan los chequeos C0: lo demás no se evaluó y no se resuelve.
+    resultado = sincronizar_hallazgos_motor(
+        session,
+        periodo_id=periodo_id,
+        motor_slug=MOTOR_SLUG,
+        alcance_clave=f"{alcance}{prefijo}_C0_" if bloqueado else alcance,
+        hallazgos=nuevos,
+        usuario_id=usuario_id,
+    )
+    return conteo, vars(resultado)
 
 
 def ejecutar_y_persistir_tienda(
@@ -275,6 +300,7 @@ def ejecutar_y_persistir_tienda(
     fuente_ordenes_id: int,
     wallet_contenido: bytes,
     ordenes_contenido: bytes,
+    usuario_id: int,
     nombre_ordenes: str | None = None,
     corte: str | None = None,
 ) -> EjecucionWallet:
@@ -305,13 +331,16 @@ def ejecutar_y_persistir_tienda(
         corte_ordenes=corte_reporte,
     )
     hallazgos = hallazgos_tienda(resultado)
-    conteo = _persistir(
+    conteo, sincronizacion = _persistir(
         session,
         periodo_id=periodo_id,
         wallet=tienda,
         tipo_wallet=TIPO_TIENDA,
+        prefijo="TIENDA",
         carga_wallet_id=carga_wallet.id,
         hallazgos=hallazgos,
+        bloqueado=resultado.bloqueado,
+        usuario_id=usuario_id,
     )
     return EjecucionWallet(
         carga_wallet_id=carga_wallet.id,
@@ -322,6 +351,7 @@ def ejecutar_y_persistir_tienda(
         hallazgos_creados=len(hallazgos),
         hallazgos_por_gravedad=conteo,
         resumen=_json(resultado.resumen),
+        sincronizacion=sincronizacion,
         corte_ordenes_usado=_corte_usado(resultado.resumen, corte, nombre_ordenes),
     )
 
@@ -334,6 +364,7 @@ def ejecutar_y_persistir_pagos(
     wallet_email: str,
     fuente_wallet_id: int,
     wallet_contenido: bytes,
+    usuario_id: int,
 ) -> EjecucionWallet:
     periodo = _periodo_abierto(session, empresa_id=empresa_id, periodo_id=periodo_id)
     params = resolver_identificador_wallet(cargar_parametros_pagos())
@@ -352,13 +383,16 @@ def ejecutar_y_persistir_pagos(
         periodo.fecha_fin,
     )
     hallazgos = hallazgos_pagos(resultado)
-    conteo = _persistir(
+    conteo, sincronizacion = _persistir(
         session,
         periodo_id=periodo_id,
         wallet=wallet,
         tipo_wallet=TIPO_PAGOS,
+        prefijo="PAGOS",
         carga_wallet_id=carga_wallet.id,
         hallazgos=hallazgos,
+        bloqueado=resultado.bloqueado,
+        usuario_id=usuario_id,
     )
     return EjecucionWallet(
         carga_wallet_id=carga_wallet.id,
@@ -369,6 +403,7 @@ def ejecutar_y_persistir_pagos(
         hallazgos_creados=len(hallazgos),
         hallazgos_por_gravedad=conteo,
         resumen=_json(resultado.resumen),
+        sincronizacion=sincronizacion,
     )
 
 

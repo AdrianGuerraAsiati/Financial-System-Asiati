@@ -287,3 +287,49 @@ def test_wiilog_review_movement_evidence_has_dropi_text_and_common_catalog() -> 
     assert evidencia["monto"] == "7000.00"
     assert evidencia["texto_nuevo"] is False
     assert (evidencia["ingreso_egreso"], evidencia["unidad_negocio"], evidencia["categoria"]) == ("INGRESO", None, None)
+
+
+
+def test_wiilog_reconciling_with_a_new_file_keeps_state_and_same_finding() -> None:
+    contexto = _contexto()
+    empresa_id, periodo_id, fuente_ordenes_id, fuente_wallet_id = contexto
+    client = cliente_superadmin()
+    assert _conciliar(client, contexto).status_code == 201
+    params = {"empresa_id": empresa_id, "periodo_id": periodo_id}
+    no_cobrado = next(
+        h for h in client.get("/api/v1/wallets/wiilog/hallazgos", params=params).json()
+        if h["codigo_regla"] == "WIILOG_FF_NO_COBRADO"
+    )
+    client.post(
+        f"/api/v1/hallazgos/{no_cobrado['id']}/observar",
+        json={"observacion": "Se reclama a la bodega.", "resolver": False},
+    )
+    # Exportaciones nuevas de Dropi: un movimiento y una orden más; el problema de la orden 2 sigue.
+    filas = pd.read_excel(io.BytesIO(_wallet_bytes())).to_dict("records")
+    filas.append({**filas[0], "ID": 2, "FECHA": "11-09-2030 10:00", "MONTO PREVIO": 2500})
+    ordenes = pd.read_excel(io.BytesIO(_ordenes_bytes())).to_dict("records")
+    ordenes.append({**ordenes[1], "ID": 3, "NÚMERO GUIA": "G3"})
+    xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    segunda = client.post(
+        "/api/v1/wallets/wiilog/conciliar",
+        data={
+            "empresa_id": str(empresa_id),
+            "periodo_id": str(periodo_id),
+            "fuente_ordenes_id": str(fuente_ordenes_id),
+            "fuente_wallet_id": str(fuente_wallet_id),
+        },
+        files={
+            "ordenes": ("ordenes_2.xlsx", _xlsx_bytes(ordenes), xlsx),
+            "wallet": ("wallet_2.xlsx", _xlsx_bytes(filas), xlsx),
+        },
+    )
+
+    assert segunda.status_code == 201, segunda.text
+    despues = next(
+        h for h in client.get("/api/v1/wallets/wiilog/hallazgos", params=params).json()
+        if h["codigo_regla"] == "WIILOG_FF_NO_COBRADO" and h["evidencia"]["orden_id"] == "2"
+    )
+    assert despues["id"] == no_cobrado["id"]
+    assert despues["estado"] == "en_gestion"
+    assert despues["evidencia"]["carga_wallet_id"] == segunda.json()["cargas"]["wallet_id"]
