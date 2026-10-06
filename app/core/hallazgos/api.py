@@ -3,6 +3,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencias import Acceso, requiere
+from app.core.dimensiones.service import DimensionError, validar_categorizacion
+from app.core.empresas import Empresa
+from app.core.permisos import RecursoNoVisibleError, SinPermisoError, verificar_acceso
 from app.core.hallazgos.casos import (
     empresa_del_hallazgo,
     escalar_hallazgo,
@@ -38,6 +41,8 @@ class EscalarEntrada(BaseModel):
 class ObservarEntrada(BaseModel):
     observacion: str | None = None
     resolver: bool = False
+    # Las 7 dimensiones (decisión 0008). Opcional: sin ella, observar funciona como antes.
+    categorizacion: dict[str, str | None] | None = None
 
 
 class ResponderEntrada(BaseModel):
@@ -156,6 +161,28 @@ def observar(
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
     hallazgo = session.get(Hallazgo, hallazgo_id)
+    categorizacion = None
+    if datos.categorizacion is not None:
+        empresa_id = empresa_del_hallazgo(session, hallazgo_id)
+        try:
+            verificar_acceso(
+                acceso.usuario.rol,
+                "movimientos.categorizar",
+                empresa_id=empresa_id,
+                asignadas=acceso.empresas_visibles or frozenset(),
+            )
+        except (SinPermisoError, RecursoNoVisibleError) as exc:
+            raise HTTPException(status_code=403, detail="Tu rol no puede categorizar movimientos.") from exc
+        empresa = session.get(Empresa, empresa_id)
+        try:
+            categorizacion = validar_categorizacion(
+                session,
+                datos.categorizacion,
+                usuario_id=acceso.usuario.id,
+                empresa_esperada=empresa.nombre,
+            )
+        except DimensionError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     _ejecutar_caso(
         session,
         lambda: observar_hallazgo(
@@ -165,6 +192,7 @@ def observar(
             observacion=datos.observacion,
             resolver=datos.resolver,
             ip=acceso.ip,
+            categorizacion=categorizacion,
         ),
     )
     return _hallazgo_json(hallazgo, empresa_del_hallazgo(session, hallazgo_id))

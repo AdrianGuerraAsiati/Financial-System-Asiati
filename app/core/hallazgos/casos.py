@@ -156,15 +156,22 @@ def observar_hallazgo(
     observacion: str | None,
     resolver: bool,
     ip: str | None,
+    categorizacion: dict | None = None,
 ) -> Hallazgo:
+    """`categorizacion` ya viene validada contra las listas (dimensiones.validar_categorizacion)."""
     nuevo_estado = transicion_observar(hallazgo.estado, observacion, resolver=resolver)
     periodo = _exigir_periodo_abierto(session, hallazgo)
     texto = observacion.strip()
     antes = {"estado": hallazgo.estado, "resuelto": hallazgo.resuelto}
+    if categorizacion is not None:
+        antes["categorizacion"] = (hallazgo.evidencia or {}).get("categorizacion")
 
     hallazgo.estado = nuevo_estado
     if resolver:
         hallazgo.resuelto = True
+    if categorizacion is not None:
+        # Dato estructurado junto a la evidencia del motor; la sincronización por clave lo conserva.
+        hallazgo.evidencia = {**(hallazgo.evidencia or {}), "categorizacion": categorizacion}
     session.add(
         HallazgoMensaje(
             hallazgo_id=hallazgo.id,
@@ -185,6 +192,7 @@ def observar_hallazgo(
             "estado": nuevo_estado,
             "resuelto": hallazgo.resuelto,
             "observacion": texto,
+            **({"categorizacion": categorizacion} if categorizacion is not None else {}),
         },
         ip=ip,
     )

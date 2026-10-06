@@ -39,6 +39,8 @@ PERMISOS: dict[str, dict[str, Alcance]] = {
     "empresas.gestionar": {_SA: _TODAS},
     "parametros.editar": {_SA: _TODAS},
     "parametros.ver": {_SA: _TODAS, _CO: _TODAS, _CN: _ASIG, ROL_TI: _TODAS},
+    # Listas de categorización (decisión 0008): globales, las administra el coordinador.
+    "dimensiones.gestionar": {_SA: _TODAS, _CO: _TODAS},
     "cargas.subir": {_SA: _TODAS, _CN: _ASIG},
     "cargas.eliminar": {_SA: _TODAS, _CN: _ASIG},
     "conciliacion.ejecutar": {_SA: _TODAS, _CN: _ASIG},

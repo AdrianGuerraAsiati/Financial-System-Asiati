@@ -156,6 +156,10 @@
         <span class="nav-icon" aria-hidden="true">◫</span>
         <span class="nav-label">Wallets</span>
       </button>
+      <button class="nav-item" data-view="parametros" id="nav-parametros" hidden>
+        <span class="nav-icon" aria-hidden="true">⚙</span>
+        <span class="nav-label">Parámetros</span>
+      </button>
 
       <div class="sidebar-section-label sidebar-section-label-spaced">Próximamente</div>
       <button class="nav-item" disabled>
@@ -810,6 +814,47 @@
         </section>
       </div>
 
+      <div id="vista-parametros" class="module-view" hidden>
+        <section class="intro">
+          <div>
+            <p class="eyebrow">Configuración · Categorización</p>
+            <h2>Parámetros</h2>
+            <p>Listas que usa el conciliador para categorizar movimientos. Aplican a todas las empresas. Los valores no se borran: se desactivan.</p>
+          </div>
+          <div id="estado-parametros" class="status" role="status">Listo</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Lista</h3>
+              <p>Elige la lista que vas a revisar. Cada cambio queda en auditoría.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label>Lista
+              <select id="parametros-dimension">
+                <option value="categoria">Categoría (concepto)</option>
+                <option value="unidad_negocio">Unidad de negocio</option>
+                <option value="ingreso_egreso">Ingreso/egreso</option>
+                <option value="fijo_variable">Fijo/variable</option>
+                <option value="empresa">Empresa</option>
+              </select>
+            </label>
+          </div>
+          <form id="parametros-form" class="form-grid">
+            <label>Nuevo valor
+              <input id="parametros-nuevo" maxlength="120" required placeholder="Escribe el valor y agrégalo">
+            </label>
+            <button type="submit">Agregar</button>
+          </form>
+          <table>
+            <thead><tr><th>Valor</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="parametros-body"><tr><td colspan="3" class="empty">Cargando…</td></tr></tbody>
+          </table>
+        </section>
+      </div>
+
       <div id="vista-wallets" class="module-view" hidden>
         <section class="intro">
           <div>
@@ -957,5 +1002,6 @@
 
   <script src="/static/app.js" defer></script>
   <script src="/static/wallets.js" defer></script>
+  <script src="/static/parametros.js" defer></script>
 </body>
 </html>
