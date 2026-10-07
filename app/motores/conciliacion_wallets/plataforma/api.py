@@ -12,6 +12,7 @@ from app.core.hallazgos import Hallazgo
 from app.core.periodos.errors import PeriodoCerradoError
 from app.core.session import obtener_session
 
+from ..cargas import ConciliacionRepetidaError
 from ..wiilog.integracion import (
     MENSAJE_CONFIGURACION_FALTANTE,
     ConfiguracionWiilogFaltanteError,
@@ -54,7 +55,7 @@ def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet]) -> dict[s
                 "Usa una exportación nueva o consulta la conciliación existente."
             ),
         ) from exc
-    except (CargaDuplicadaError, PeriodoCerradoError) as exc:
+    except (CargaDuplicadaError, ConciliacionRepetidaError, PeriodoCerradoError) as exc:
         session.rollback()
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ConfiguracionWiilogFaltanteError as exc:
@@ -77,6 +78,7 @@ def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet]) -> dict[s
             "wallet_id": ejecucion.carga_wallet_id,
             "ordenes_id": ejecucion.carga_ordenes_id,
             "ordenes_reutilizadas": ejecucion.ordenes_reutilizadas,
+            "wallet_reutilizada": ejecucion.wallet_reutilizada,
         },
         "hallazgos_creados": ejecucion.hallazgos_creados,
         "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,

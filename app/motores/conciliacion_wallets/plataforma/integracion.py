@@ -27,7 +27,13 @@ from app.core.periodos import Periodo
 from app.core.periodos.errors import PeriodoCerradoError
 
 from ..pagos import conciliar_wallet_pagos
-from ..cargas import CargaDuplicadaError, carga_reutilizable
+from ..cargas import (
+    MENSAJE_CONCILIACION_REPETIDA,
+    CargaDuplicadaError,
+    ConciliacionRepetidaError,
+    carga_reutilizable,
+)
+from ..reconciliation_model import TiendaReconciliation
 from ..tiendas import conciliar_wallet_tienda
 from ..wiilog.integracion import cargar_parametros_wiilog, resolver_identificador_wallet
 from .hallazgos import HallazgoNuevo, hallazgos_pagos, hallazgos_tienda, resultado_c0
@@ -54,6 +60,7 @@ class EjecucionWallet:
     hallazgos_por_gravedad: dict[str, int]
     resumen: dict[str, Any]
     sincronizacion: dict[str, int]
+    wallet_reutilizada: bool = False
     corte_ordenes_usado: dict[str, str] | None = None
 
 
@@ -99,7 +106,16 @@ def periodo_de_empresa(session: Session, *, empresa_id: int, periodo_id: int) ->
 
 
 def _periodo_abierto(session: Session, *, empresa_id: int, periodo_id: int) -> Periodo:
-    periodo = periodo_de_empresa(session, empresa_id=empresa_id, periodo_id=periodo_id)
+    # Serializa conciliaciones del mismo período hasta el commit. Así dos solicitudes
+    # simultáneas no pueden registrar dos veces la misma pareja de archivos.
+    periodo = session.scalar(
+        select(Periodo)
+        .where(Periodo.id == periodo_id, Periodo.empresa_id == empresa_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if periodo is None:
+        raise ValueError("El período no pertenece a la empresa indicada.")
     if periodo.cerrado:
         raise PeriodoCerradoError(
             "El período está cerrado. Reábrelo antes de ejecutar la conciliación."
@@ -237,26 +253,28 @@ def _persistir(
     hallazgos: list[HallazgoNuevo],
     bloqueado: bool,
     usuario_id: int,
+    conciliacion_id: int | None = None,
 ) -> tuple[dict[str, int], dict[str, int]]:
     conteo: dict[str, int] = {}
     alcance = f"{prefijo}|{wallet['usuario_email'].lower()}|"
     nuevos: list[HallazgoMotorNuevo] = []
     for h in hallazgos:
+        evidencia = {
+            "wallet": wallet["usuario_email"],
+            "wallet_nombre": wallet.get("nombre"),
+            "tipo_wallet": tipo_wallet,
+            "gravedad": h.gravedad,
+            "carga_wallet_id": carga_wallet_id,
+            **h.evidencia,
+        }
+        if conciliacion_id is not None:
+            evidencia["conciliacion_id"] = conciliacion_id
         nuevos.append(
             HallazgoMotorNuevo(
                 clave=clave_estable(alcance, h),
                 codigo_regla=h.codigo,
                 descripcion=h.descripcion,
-                evidencia=_json(
-                    {
-                        "wallet": wallet["usuario_email"],
-                        "wallet_nombre": wallet.get("nombre"),
-                        "tipo_wallet": tipo_wallet,
-                        "gravedad": h.gravedad,
-                        "carga_wallet_id": carga_wallet_id,
-                        **h.evidencia,
-                    }
-                ),
+                evidencia=_json(evidencia),
                 critico=h.critico,
             )
         )
@@ -301,9 +319,23 @@ def ejecutar_y_persistir_tienda(
     carga_ordenes, reutilizada = _carga_de_ordenes(
         session, empresa_id=empresa_id, periodo_id=periodo_id, fuente_id=fuente_ordenes_id, contenido=ordenes_contenido
     )
-    carga_wallet = _carga_de_wallet(
-        session, empresa_id=empresa_id, periodo_id=periodo_id, fuente_id=fuente_wallet_id, contenido=wallet_contenido
+    carga_wallet, wallet_reutilizada = carga_reutilizable(
+        session,
+        empresa_id=empresa_id,
+        periodo_id=periodo_id,
+        fuente_id=fuente_wallet_id,
+        contenido=wallet_contenido,
+        que="archivo de wallet",
     )
+    previa = session.scalar(
+        select(TiendaReconciliation.id).where(
+            TiendaReconciliation.periodo_id == periodo_id,
+            TiendaReconciliation.carga_ordenes_id == carga_ordenes.id,
+            TiendaReconciliation.carga_wallet_id == carga_wallet.id,
+        )
+    )
+    if previa is not None:
+        raise ConciliacionRepetidaError(MENSAJE_CONCILIACION_REPETIDA)
 
     resultado = conciliar_wallet_tienda(
         _leer_excel(ordenes_contenido, "órdenes"),
@@ -317,6 +349,15 @@ def ejecutar_y_persistir_tienda(
         corte_ordenes=corte_reporte,
     )
     hallazgos = hallazgos_tienda(resultado)
+    conciliacion = TiendaReconciliation(
+        periodo_id=periodo_id,
+        wallet_email=tienda["usuario_email"].strip().lower(),
+        carga_ordenes_id=carga_ordenes.id,
+        carga_wallet_id=carga_wallet.id,
+        usuario_id=usuario_id,
+    )
+    session.add(conciliacion)
+    session.flush()
     conteo, sincronizacion = _persistir(
         session,
         periodo_id=periodo_id,
@@ -324,6 +365,7 @@ def ejecutar_y_persistir_tienda(
         tipo_wallet=TIPO_TIENDA,
         prefijo="TIENDA",
         carga_wallet_id=carga_wallet.id,
+        conciliacion_id=conciliacion.id,
         hallazgos=hallazgos,
         bloqueado=resultado.bloqueado,
         usuario_id=usuario_id,
@@ -332,6 +374,7 @@ def ejecutar_y_persistir_tienda(
         carga_wallet_id=carga_wallet.id,
         carga_ordenes_id=carga_ordenes.id,
         ordenes_reutilizadas=reutilizada,
+        wallet_reutilizada=wallet_reutilizada,
         bloqueado=resultado.bloqueado,
         c0=_json(resultado_c0(resultado.chequeos)),
         hallazgos_creados=len(hallazgos),
@@ -402,7 +445,7 @@ def listar_hallazgos_wallet(
     wallet: str | None = None,
     todas_las_cargas: bool = False,
 ) -> list[Hallazgo]:
-    """Hallazgos de tiendas (TIENDA) o pagos (PAGOS); por defecto solo los de la última carga de cada wallet."""
+    """Hallazgos vigentes. Tiendas sigue la última ejecución; Pagos, la última carga de cada wallet."""
     periodo_de_empresa(session, empresa_id=empresa_id, periodo_id=periodo_id)
     hallazgos = list(
         session.scalars(
@@ -419,6 +462,41 @@ def listar_hallazgos_wallet(
         hallazgos = [h for h in hallazgos if (h.evidencia or {}).get("wallet") == wallet.strip().lower()]
     if todas_las_cargas:
         return hallazgos
+
+    if prefijo == "TIENDA":
+        ejecuciones = list(
+            session.scalars(
+                select(TiendaReconciliation)
+                .where(TiendaReconciliation.periodo_id == periodo_id)
+                .order_by(TiendaReconciliation.id)
+            )
+        )
+        ultima_ejecucion = {e.wallet_email.strip().lower(): e.id for e in ejecuciones}
+        vigentes: list[Hallazgo] = []
+        legacy: list[Hallazgo] = []
+        for h in hallazgos:
+            evidencia = h.evidencia or {}
+            email = str(evidencia.get("wallet") or "").strip().lower()
+            if email in ultima_ejecucion:
+                if evidencia.get("conciliacion_id") == ultima_ejecucion[email]:
+                    vigentes.append(h)
+            else:
+                legacy.append(h)
+
+        # Antes de 0020 no existía una entidad de ejecución. Se conserva el
+        # comportamiento anterior solo para wallets que aún no tengan una ejecución trazable.
+        ultima_legacy: dict[str, int] = {}
+        for h in legacy:
+            ev = h.evidencia or {}
+            email = str(ev.get("wallet") or "").strip().lower()
+            ultima_legacy[email] = max(ultima_legacy.get(email, 0), ev.get("carga_wallet_id") or 0)
+        vigentes.extend(
+            h for h in legacy
+            if (h.evidencia or {}).get("carga_wallet_id")
+            == ultima_legacy[str((h.evidencia or {}).get("wallet") or "").strip().lower()]
+        )
+        return sorted(vigentes, key=lambda h: h.id)
+
     ultima: dict[str, int] = {}
     for h in hallazgos:
         ev = h.evidencia or {}
