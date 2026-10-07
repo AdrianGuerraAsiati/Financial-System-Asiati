@@ -13,6 +13,7 @@ from app.core.auth import model as auth_model  # noqa: F401
 from app.motores.compras_supply_chain import model as compras_model  # noqa: F401
 from app.motores.cartera_ocs import snapshot_model as cartera_snapshot_model  # noqa: F401
 from app.integrations.google_sheets import model as google_sheets_model  # noqa: F401
+from app.motores.conciliacion_wallets import reconciliation_model  # noqa: F401
 
 config = context.config
 
