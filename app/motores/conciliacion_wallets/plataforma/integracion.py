@@ -250,10 +250,10 @@ def _persistir(
     tipo_wallet: str,
     prefijo: str,
     carga_wallet_id: int,
-    conciliacion_id: int | None = None,
     hallazgos: list[HallazgoNuevo],
     bloqueado: bool,
     usuario_id: int,
+    conciliacion_id: int | None = None,
 ) -> tuple[dict[str, int], dict[str, int]]:
     conteo: dict[str, int] = {}
     alcance = f"{prefijo}|{wallet['usuario_email'].lower()}|"
