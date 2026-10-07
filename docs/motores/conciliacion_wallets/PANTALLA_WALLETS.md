@@ -261,7 +261,11 @@ con nombres de ejemplo y sin datos reales. No se sube.
    No se reconstruyen parejas históricas: antes de esta migración no se guardaban. Los períodos sin ejecución
    registrada conservan la consulta anterior hasta la primera reconciliación, que registra la pareja incluso
    si ambos archivos ya existían. Desde entonces repetir esa pareja devuelve 409.
-   Tiendas conserva su criterio anterior: reutiliza órdenes, pero rechaza una wallet repetida.
+   Tiendas aplica el mismo criterio desde `0020_tienda_reconciliations`: reutiliza órdenes y wallet por empresa,
+   período, fuente y hash; una pareja nueva de archivos conocidos sí se ejecuta y solo una pareja ya registrada
+   devuelve 409. La bandeja de cada tienda sigue su última ejecución, no el ID de la carga, para que reutilizar una
+   wallet antigua no oculte hallazgos vigentes. Los períodos anteriores conservan el criterio por carga hasta que
+   esa tienda tenga su primera ejecución trazable.
 3. **C0 y resumen no persistidos:** se guardan en `sessionStorage` con el aviso "Resumen de la última conciliación de
    esta sesión", hasta el PR B.
 4. **Cruce entre wallets:** después del PR A de Adrian.
