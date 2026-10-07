@@ -38,3 +38,17 @@ Un período cerrado no se sincroniza.
 - No cambia la política de cierre: `resuelto` sigue siendo la columna que mira.
 - No cambia los endpoints de escalar, observar ni responder.
 - No crea la tabla de movimientos.
+
+
+## Hallazgos anteriores a la clave (migración 0021)
+
+Decisión de Juan Felipe Parra (6-oct-2026). Al migrar, los hallazgos del motor de wallets **sin clave** quedan
+CERRADOS con la nota automática `SISTEMA` "Reemplazado por el hallazgo con clave estable.". No se borra nada.
+
+- Se hace una sola vez en `alembic upgrade head`, igual en local y en el servidor de desarrollo.
+- **No** se cierran los que tienen trabajo de una persona (mensajes o `evidencia.categorizacion`). Se listan para
+  decidir con: `python -m app.core.hallazgos.sin_clave` (solo lectura).
+- Esa nota no tiene autor: `hallazgo_mensajes.usuario_id` acepta vacío **solo** en mensajes `SISTEMA`
+  (`ck_hallazgo_mensajes_usuario`).
+- Cada cierre queda en auditoría (`hallazgo.cerrar_sin_clave`, con el estado anterior).
+- El downgrade restaura solo los hallazgos y notas creados por esta migración; no elimina otros mensajes `SISTEMA`.
