@@ -22,6 +22,10 @@ class HallazgoMensaje(Base):
             "tipo IN ('PREGUNTA', 'RESPUESTA', 'NOTA', 'SISTEMA')",
             name="ck_hallazgo_mensajes_tipo",
         ),
+        CheckConstraint(
+            "usuario_id IS NOT NULL OR tipo = 'SISTEMA'",
+            name="ck_hallazgo_mensajes_usuario",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -30,9 +34,10 @@ class HallazgoMensaje(Base):
         nullable=False,
         index=True,
     )
-    usuario_id: Mapped[int] = mapped_column(
+    # Vacío solo en notas SISTEMA sin actor humano (por ejemplo, una migración de datos).
+    usuario_id: Mapped[int | None] = mapped_column(
         ForeignKey("usuarios.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     tipo: Mapped[str] = mapped_column(String(16), nullable=False)
     texto: Mapped[str] = mapped_column(Text, nullable=False)
