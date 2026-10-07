@@ -198,7 +198,83 @@ def test_wallet_repetida_es_duplicada(monkeypatch) -> None:
     respuesta = _conciliar_tienda(client, ctx, wallet_bytes=archivo)
 
     assert respuesta.status_code == 409
-    assert "ya fue cargado" in respuesta.json()["detail"]
+    assert respuesta.json()["detail"] == "Estos archivos ya se conciliaron para este período."
+
+
+def test_misma_wallet_con_reporte_de_ordenes_nuevo_se_reconcilia(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    client = _conciliador(ctx)
+    archivo = _wallet()
+    primera = _conciliar_tienda(client, ctx, wallet_bytes=archivo)
+    ordenes_nuevas = _xlsx(pd.DataFrame([
+        orden(1, "ENTREGADO"),
+        orden(2, "ENTREGADO", entregado="10/09/2026"),
+        orden(3, "ENTREGADO"),
+    ]))
+
+    segunda = _conciliar_tienda(client, ctx, wallet_bytes=archivo, ordenes=ordenes_nuevas)
+
+    assert segunda.status_code == 201, segunda.text
+    cargas = segunda.json()["cargas"]
+    assert cargas["wallet_reutilizada"] is True
+    assert cargas["wallet_id"] == primera.json()["cargas"]["wallet_id"]
+    assert cargas["ordenes_reutilizadas"] is False
+
+
+def test_pareja_nueva_de_archivos_reutilizados_se_concilia_y_luego_es_409(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    client = _conciliador(ctx)
+    wallet_a = _wallet()
+    wallet_b = _wallet(gan_ds(2, 50000, "21-09-2026 04:00"))
+    ordenes_a = ORDENES
+    ordenes_b = _xlsx(pd.DataFrame([
+        orden(1, "ENTREGADO"),
+        orden(2, "ENTREGADO", entregado="10/09/2026"),
+        orden(3, "ENTREGADO"),
+    ]))
+
+    assert _conciliar_tienda(client, ctx, wallet_bytes=wallet_a, ordenes=ordenes_a).status_code == 201
+    assert _conciliar_tienda(client, ctx, wallet_bytes=wallet_b, ordenes=ordenes_b).status_code == 201
+
+    cruzada = _conciliar_tienda(client, ctx, wallet_bytes=wallet_b, ordenes=ordenes_a)
+    assert cruzada.status_code == 201, cruzada.text
+    assert cruzada.json()["cargas"]["wallet_reutilizada"] is True
+    assert cruzada.json()["cargas"]["ordenes_reutilizadas"] is True
+
+    repetida = _conciliar_tienda(client, ctx, wallet_bytes=wallet_b, ordenes=ordenes_a)
+    assert repetida.status_code == 409
+    assert repetida.json()["detail"] == "Estos archivos ya se conciliaron para este período."
+
+
+def test_bandeja_de_tienda_sigue_ultima_ejecucion_al_reutilizar_wallet_antigua(monkeypatch) -> None:
+    ctx = _contexto(monkeypatch)
+    client = _conciliador(ctx)
+    wallet_a = _wallet()
+    wallet_b = _wallet(gan_ds(2, 50000, "21-09-2026 04:00"))
+    ordenes_b = _xlsx(pd.DataFrame([
+        orden(1, "ENTREGADO"),
+        orden(2, "ENTREGADO", entregado="10/09/2026"),
+        orden(3, "ENTREGADO"),
+    ]))
+    ordenes_c = _xlsx(pd.DataFrame([
+        orden(1, "ENTREGADO"),
+        orden(2, "ENTREGADO", entregado="10/09/2026"),
+        orden(4, "ENTREGADO"),
+    ]))
+
+    primera = _conciliar_tienda(client, ctx, wallet_bytes=wallet_a)
+    assert primera.status_code == 201, primera.text
+    segunda = _conciliar_tienda(client, ctx, wallet_bytes=wallet_b, ordenes=ordenes_b)
+    assert segunda.status_code == 201, segunda.text
+    tercera = _conciliar_tienda(client, ctx, wallet_bytes=wallet_a, ordenes=ordenes_c)
+    assert tercera.status_code == 201, tercera.text
+    assert tercera.json()["cargas"]["wallet_reutilizada"] is True
+    assert tercera.json()["cargas"]["wallet_id"] == primera.json()["cargas"]["wallet_id"]
+
+    vigentes = _hallazgos(client, ctx).json()
+    assert vigentes
+    assert {h["evidencia"]["carga_wallet_id"] for h in vigentes} == {primera.json()["cargas"]["wallet_id"]}
+    assert len({h["evidencia"]["conciliacion_id"] for h in vigentes}) == 1
 
 
 def test_periodo_cerrado_no_se_concilia(monkeypatch) -> None:
