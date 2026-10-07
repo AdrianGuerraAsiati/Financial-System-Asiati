@@ -16,6 +16,7 @@ from app.core.periodos import Periodo
 from app.core.periodos.errors import PeriodoCerradoError
 
 from ..cargas import MENSAJE_CONCILIACION_REPETIDA, ConciliacionRepetidaError, carga_reutilizable
+from ..reconciliation_model import WiilogReconciliation
 from .motor import ResultadoWiilog, conciliar_wallet_wiilog
 from .normalizar import pesos
 
@@ -170,7 +171,12 @@ def _periodo_abierto(
     empresa_id: int,
     periodo_id: int,
 ) -> Periodo:
-    periodo = session.get(Periodo, periodo_id)
+    # Serializa las conciliaciones del período hasta el commit: el ID de ejecución
+    # debe representar el mismo orden que la sincronización de los hallazgos.
+    periodo = session.scalar(
+        select(Periodo).where(Periodo.id == periodo_id, Periodo.empresa_id == empresa_id)
+        .with_for_update().execution_options(populate_existing=True)
+    )
     if periodo is None or periodo.empresa_id != empresa_id:
         raise ValueError("El período no pertenece a la empresa indicada.")
     if periodo.cerrado:
@@ -188,6 +194,7 @@ class _Lote:
     """Hallazgos de una carga, con su clave estable (decisión 0008): se sincronizan al final."""
 
     carga_wallet_id: int
+    conciliacion_id: int
     nuevos: list[HallazgoMotorNuevo]
     conteo: dict[str, int]
 
@@ -204,7 +211,10 @@ def _registrar(
     lote: _Lote,
 ) -> None:
     # La gravedad va en la evidencia para la bandeja (PANTALLA_WALLETS.md §2.2); no cambia qué es hallazgo.
-    evidencia = {"wallet": "WIILOG", "gravedad": gravedad, "carga_wallet_id": lote.carga_wallet_id, **evidencia}
+    evidencia = {
+        **evidencia, "wallet": "WIILOG", "gravedad": gravedad,
+        "carga_wallet_id": lote.carga_wallet_id, "conciliacion_id": lote.conciliacion_id,
+    }
     lote.conteo[gravedad] = lote.conteo.get(gravedad, 0) + 1
     identificador = evidencia.get("orden_id") or evidencia.get("mov_id") or "-"
     lote.nuevos.append(
@@ -407,7 +417,14 @@ def ejecutar_y_persistir_wiilog(
         session, empresa_id=empresa_id, periodo_id=periodo_id, fuente_id=fuente_wallet_id,
         contenido=wallet_contenido, que="archivo de wallet",
     )
-    if ordenes_reutilizadas and wallet_reutilizada:
+    previous = session.scalar(
+        select(WiilogReconciliation.id).where(
+            WiilogReconciliation.periodo_id == periodo_id,
+            WiilogReconciliation.carga_ordenes_id == carga_ordenes.id,
+            WiilogReconciliation.carga_wallet_id == carga_wallet.id,
+        )
+    )
+    if previous is not None:
         raise ConciliacionRepetidaError(MENSAJE_CONCILIACION_REPETIDA)
 
     ordenes = _leer_excel(ordenes_contenido, "órdenes")
@@ -422,7 +439,17 @@ def ejecutar_y_persistir_wiilog(
         catalogo=catalogo_comun,
     )
 
-    lote = _Lote(carga_wallet_id=carga_wallet.id, nuevos=[], conteo={})
+    # También se guarda si el motor no produce hallazgos o C0 bloquea.
+    # El endpoint confirma cargas, ejecución y hallazgos en una sola transacción.
+    reconciliation = WiilogReconciliation(
+        periodo_id=periodo_id, carga_ordenes_id=carga_ordenes.id,
+        carga_wallet_id=carga_wallet.id, usuario_id=usuario_id,
+    )
+    session.add(reconciliation)
+    session.flush()
+    lote = _Lote(
+        carga_wallet_id=carga_wallet.id, conciliacion_id=reconciliation.id, nuevos=[], conteo={},
+    )
     creados = _persistir_chequeos(
         session,
         periodo_id=periodo_id,
@@ -483,7 +510,7 @@ def listar_hallazgos_wiilog(
     periodo_id: int,
     todas_las_cargas: bool = False,
 ) -> list[Hallazgo]:
-    """Por defecto, los vigentes: los de la última carga de wallet (la sincronización los mueve a ella)."""
+    """Por defecto, los de la última ejecución, aunque reutilice una carga antigua."""
     _periodo_abierto_o_cerrado(
         session,
         empresa_id=empresa_id,
@@ -501,6 +528,15 @@ def listar_hallazgos_wiilog(
     hallazgos = list(session.scalars(statement))
     if todas_las_cargas:
         return hallazgos
+    latest = session.scalar(
+        select(WiilogReconciliation.id)
+        .where(WiilogReconciliation.periodo_id == periodo_id)
+        .order_by(WiilogReconciliation.id.desc()).limit(1)
+    )
+    if latest is not None:
+        return [h for h in hallazgos if (h.evidencia or {}).get("conciliacion_id") == latest]
+    # Períodos anteriores a la migración: conservar la vista hasta su primera
+    # ejecución trazable, sin inventar parejas a partir de archivos sueltos.
     cargas = [(h.evidencia or {}).get("carga_wallet_id") for h in hallazgos]
     ultima = max((c for c in cargas if c), default=None)
     if ultima is None:

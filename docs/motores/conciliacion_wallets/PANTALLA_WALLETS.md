@@ -251,7 +251,17 @@ con nombres de ejemplo y sin datos reales. No se sube.
    estable (wallet + regla + `mov_id` u `orden_id`) y se actualiza conservando estado, observaciones, escalamiento y
    categorización. Lo que ya no aparece queda "resuelto por el sistema". La bandeja muestra los **vigentes**; el
    historial (casilla "Mostrar historial") incluye lo resuelto por el sistema y los hallazgos anteriores a la clave.
-   Wiilog no reutiliza el reporte de órdenes: para reconciliar se cargan las dos exportaciones nuevas.
+   Wiilog reutiliza órdenes y wallet por empresa, período, fuente y hash (decisión 6-oct, PR #126).
+   El 409 de conciliación repetida corresponde a la **pareja** de cargas ya ejecutada, no a la existencia
+   individual de ambos archivos. Una combinación nueva de archivos conocidos sí se concilia.
+   Desde la migración `0019_wiilog_reconciliations`, cada ejecución guarda su pareja, usuario y fecha, aun sin
+   hallazgos o con C0 bloqueado. La bandeja selecciona por ejecución, no por el mayor ID de wallet; por eso
+   reutilizar una carga antigua no oculta los hallazgos vigentes y un resultado sin hallazgos deja la bandeja vacía.
+   Las ejecuciones del mismo período se serializan y se confirman junto con cargas y hallazgos.
+   No se reconstruyen parejas históricas: antes de esta migración no se guardaban. Los períodos sin ejecución
+   registrada conservan la consulta anterior hasta la primera reconciliación, que registra la pareja incluso
+   si ambos archivos ya existían. Desde entonces repetir esa pareja devuelve 409.
+   Tiendas conserva su criterio anterior: reutiliza órdenes, pero rechaza una wallet repetida.
 3. **C0 y resumen no persistidos:** se guardan en `sessionStorage` con el aviso "Resumen de la última conciliación de
    esta sesión", hasta el PR B.
 4. **Cruce entre wallets:** después del PR A de Adrian.
