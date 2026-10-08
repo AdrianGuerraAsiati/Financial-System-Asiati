@@ -462,7 +462,8 @@ logoutButton.addEventListener("click", async () => {
       throw new Error("No se pudo cerrar la sesión.");
     }
     window.ASIATI_SESION = null;
-    mostrarLogin();
+    // Recargar limpia datos financieros de la sesión anterior de la memoria/DOM.
+    window.location.replace("/");
   } catch (_) {
     logoutError.textContent = "No se pudo cerrar la sesión. Intenta de nuevo.";
     logoutError.hidden = false;
