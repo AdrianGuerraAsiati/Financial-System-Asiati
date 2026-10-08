@@ -29,7 +29,7 @@ def test_logout_control_calls_backend_and_does_not_fake_success() -> None:
     assert "if (!response.ok)" in script
     assert "logoutError.hidden = false;" in script
     assert "window.ASIATI_SESION = null;" in script
-    assert "mostrarLogin();" in script
+    assert 'window.location.replace("/");' in script
 
 
 def test_logout_control_has_responsive_styles() -> None:
