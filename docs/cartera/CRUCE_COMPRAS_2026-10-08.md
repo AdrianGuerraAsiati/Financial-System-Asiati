@@ -8,19 +8,21 @@ match textual en identidad contable, deuda, cobro o aplicación de pagos.
 - Fuentes: CARTERA V1 (`FC`, `PROYECCIONES`) y
   `INFORME COMPRAS 2024-2026` (`INFORME CLIENTES (CO)`,
   `INFORME CLIENTES (EC)`, `INFORME CLIENTES (CL)`).
-- FC: 447 filas con OC identificable, 135 OCs. Todas tienen correspondencia
-  de OC+SKU en Compras y las 447 coinciden estrictamente también en DDP crudo,
-  cliente, documento y estado.
-- PROYECCIONES: 567 filas con OC identificable, 197 OCs. Todas tienen
-  correspondencia de OC+SKU y estado en Compras. En 525 coincide además
-  el DDP crudo; en otras 42 el DDP crudo es nulo en Proyecciones, aunque su
-  línea tiene importe en Compras.
-- Total: 1.014 filas con OC identificable, 322 OCs distintas sin sumar
-  dos veces las OCs comunes, 972 matches estrictos de atributos e importe
-  y 42 pendientes de evidencia monetaria.
-- La lectura excluyó las filas con OC vacía o `N/A`; no se considera una llave
-  maestra. Las vistas incluyen filas de muestras y registros sin OC que
-  requieren análisis separado.
+- Población operativa de ambas vistas: **1.037 filas** (453 FC + 584
+  PROYECCIONES). De ellas, **23 no tienen OC utilizable** y **11 tienen OC
+  pero SKU vacío o `N/A`**. Se mantienen para revisión, sin join automático.
+- Hay **1.003 filas con OC y SKU utilizables**: **442 en FC** y **561 en
+  PROYECCIONES**. Todas tienen al menos una candidata descriptiva en Compras.
+- Sobre esas 1.003 filas, **957** coinciden en OC, SKU, cliente, documento,
+  estado, descripción y DDP **numérico observado** (438 FC, 519 PROYECCIONES).
+  **46** tienen DDP original no disponible (4 FC, 42 PROYECCIONES). No
+  surgieron diferencias monetarias numéricas en las restantes líneas con llave.
+- Si se incluye un SKU vacío o `N/A` como una cadena literal, aparecen
+  1.014 líneas con OC y candidatas por `OC+SKU`. **Ese conteo grueso
+  no equivale a un match de identidad de línea** y por eso el módulo las
+  clasifica explícitamente como `CLAVE_INCOMPLETA`.
+- Las OCs distintas con texto utilizable totalizan 322 entre ambas vistas.
+  OC+SKU no constituye identificador maestro y puede repetirse.
 - OC+SKU puede repetirse para líneas distintas: existen combinaciones
   multiplicadas en la fuente. El resultado `COINCIDE` de una búsqueda
   simple de OC+SKU NO es suficiente para asociar una obligación.
@@ -44,7 +46,7 @@ Estados:
 1. **No tratar Compras como fuente oficial financiera de Cartera por
    esta coincidencia histórica**. La comparación sirve para evaluación
    de cobertura y procedencia, no para establecer saldo.
-2. Las 42 filas con DDP original nulo no se rellenan silenciosamente.
+2. Las 46 filas con DDP original sin evidencia no se rellenan silenciosamente.
    En Proyecciones hay además una columna distinta `VALOR OCI` que puede
    incluir correcciones del catálogo `Parametros`. Se necesita revisión
    de granularidad antes de agregar valores.
