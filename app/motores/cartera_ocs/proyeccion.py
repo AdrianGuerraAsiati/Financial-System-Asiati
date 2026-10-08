@@ -75,6 +75,12 @@ def normalizar_fila_proyeccion(
     if fecha is None or monto <= Decimal("0"):
         return None
 
+    # PROYECCIONES expone la columna O como "VALOR OCI" (valor corregido).
+    # Fuentes antiguas pueden conservar "VALOR OCI (DDP)".
+    valor_oc_crudo = fila.get("VALOR OCI")
+    if valor_oc_crudo is None or not str(valor_oc_crudo).strip():
+        valor_oc_crudo = fila.get("VALOR OCI (DDP)")
+
     contacto = str(fila.get("CLIENTE") or "").strip()
     cliente = str(fila.get("NOMBRE") or "").strip() or contacto or "Sin cliente"
     pais = str(fila.get("PAIS ORIGEN") or "").strip() or "Sin país"
@@ -90,7 +96,7 @@ def normalizar_fila_proyeccion(
         estado=str(fila.get("ESTADO") or "").strip(),
         documento_transporte=str(fila.get("DOCUMENTO DE TRANSPORTE") or "").strip(),
         dias=parsear_numero_cartera(fila.get("DIAS")),
-        valor_oc=parsear_numero_cartera(fila.get("VALOR OCI (DDP)")),
+        valor_oc=parsear_numero_cartera(valor_oc_crudo),
         comercial=comercial,
         fecha=fecha,
         monto=monto,
