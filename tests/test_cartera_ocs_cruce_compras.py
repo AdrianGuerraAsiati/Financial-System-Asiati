@@ -20,7 +20,9 @@ def linea(**cambios):
 
 
 def compra(**cambios):
-    return linea(fuente="INFORME CLIENTES (CO)", fila=99, pais="CO", **cambios)
+    datos = dict(fuente="INFORME CLIENTES (CO)", fila=99, pais="CO")
+    datos.update(cambios)
+    return linea(**datos)
 
 
 def test_coincidencia_por_atributos_y_ddp_con_procedencia():
