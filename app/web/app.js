@@ -14,6 +14,7 @@ const authResetSend = document.querySelector("#auth-reset-send");
 const appShell = document.querySelector("#app-shell");
 const usuarioNombre = document.querySelector("#usuario-nombre");
 const logoutButton = document.querySelector("#logout");
+const logoutError = document.querySelector("#logout-error");
 const empresaInput = document.querySelector("#empresa-id");
 const estado = document.querySelector("#estado-global");
 const operacionesBody = document.querySelector("#operaciones-body");
@@ -447,10 +448,26 @@ resetForm.addEventListener("submit", async (event) => {
 });
 
 logoutButton.addEventListener("click", async () => {
+  if (logoutButton.disabled) return;
+  logoutButton.disabled = true;
+  logoutError.hidden = true;
+  logoutError.textContent = "";
+
   try {
-    await fetch("/api/v1/auth/logout", {method: "POST"});
-  } finally {
+    const response = await fetch("/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    if (!response.ok) {
+      throw new Error("No se pudo cerrar la sesión.");
+    }
+    window.ASIATI_SESION = null;
     mostrarLogin();
+  } catch (_) {
+    logoutError.textContent = "No se pudo cerrar la sesión. Intenta de nuevo.";
+    logoutError.hidden = false;
+  } finally {
+    logoutButton.disabled = false;
   }
 });
 
