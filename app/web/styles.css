@@ -911,6 +911,8 @@ summary:focus-visible {
 
 .session-controls {
   gap: .7rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .empresa-control {
