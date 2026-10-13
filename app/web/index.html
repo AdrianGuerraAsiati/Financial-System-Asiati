@@ -133,7 +133,11 @@
         <select id="empresa-id"></select>
       </label>
       <span id="usuario-nombre" class="usuario-nombre"></span>
-      <button id="logout" class="secondary-button" type="button">Salir</button>
+      <button id="logout" class="secondary-button logout-button" type="button" title="Cerrar sesión">
+        <span class="logout-symbol" aria-hidden="true">⎋</span>
+        <span>Cerrar sesión</span>
+      </button>
+      <span id="logout-error" class="session-error" role="alert" hidden></span>
     </div>
   </header>
 

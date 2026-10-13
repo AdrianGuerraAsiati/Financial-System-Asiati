@@ -911,6 +911,8 @@ summary:focus-visible {
 
 .session-controls {
   gap: .7rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .empresa-control {
@@ -941,6 +943,38 @@ summary:focus-visible {
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  flex-shrink: 0;
+  min-height: 2.35rem;
+  border-color: #b9cfe2;
+  background: #eff6fc;
+  color: #17547b;
+  font-size: .8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.logout-button:hover:not(:disabled) {
+  border-color: #8eb5d2;
+  background: #e2f0fa;
+}
+
+.logout-symbol {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.session-error {
+  flex-basis: 100%;
+  color: #b42318;
+  font-size: .75rem;
+  text-align: right;
 }
 
 /* App shell ---------------------------------------------------------------- */
@@ -1908,6 +1942,15 @@ summary {
     width: 100%;
     max-width: none;
     padding-left: 0;
+  }
+
+  .logout-button {
+    margin-left: auto;
+  }
+
+  .session-error {
+    order: 4;
+    text-align: left;
   }
 
   .intro,
