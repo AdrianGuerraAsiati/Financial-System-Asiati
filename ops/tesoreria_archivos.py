@@ -51,6 +51,10 @@ def _listar_documentos(raiz: Path) -> list[tuple[str, Path]]:
             if (Path(actual) / directorio).is_symlink():
                 raise ValueError("Los directorios enlazados están prohibidos.")
         for archivo in archivos:
+            # Temporales de escritura atómica: nunca fueron referenciados por la DB.
+            # Se ignoran, pues solo los nombres definitivos tienen SHA verificable.
+            if archivo.startswith(".carga-"):
+                continue
             ruta = Path(actual) / archivo
             if ruta.is_symlink() or not ruta.is_file():
                 raise ValueError("Tipo de documento no permitido.")
