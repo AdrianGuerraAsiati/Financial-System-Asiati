@@ -7,6 +7,7 @@ x-app-environment: &app-environment
   SESION_DURACION_HORAS: ${SESION_DURACION_HORAS:-8}
   SESSION_COOKIE_SECURE: "false"
   CARTERA_COMPROBANTES_DIR: /data/comprobantes
+  TESORERIA_DOCUMENTOS_DIR: /data/tesoreria
   CARTERA_COMPROBANTES_MAX_BYTES: ${CARTERA_COMPROBANTES_MAX_BYTES:-10485760}
   CARTERA_COMPROBANTES_MIME_TYPES: ${CARTERA_COMPROBANTES_MIME_TYPES:-application/pdf,image/jpeg,image/png}
   CARTERA_SHEETS_EMPRESA_ID: ${CARTERA_SHEETS_EMPRESA_ID:-}
@@ -72,6 +73,7 @@ services:
       <<: *app-environment
     volumes:
       - comprobantes_data:/data/comprobantes
+      - tesoreria_data:/data/tesoreria
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -90,3 +92,4 @@ services:
 volumes:
   postgres_data:
   comprobantes_data:
+  tesoreria_data:

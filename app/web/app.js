@@ -33,10 +33,12 @@ const navInicio = document.querySelector("#nav-inicio");
 const navCartera = document.querySelector("#nav-cartera");
 const navCompras = document.querySelector("#nav-compras");
 const navWallets = document.querySelector("#nav-wallets");
+const navTesoreria = document.querySelector("#nav-tesoreria");
 const vistaInicio = document.querySelector("#vista-inicio");
 const vistaCartera = document.querySelector("#vista-cartera");
 const vistaCompras = document.querySelector("#vista-compras");
 const vistaWallets = document.querySelector("#vista-wallets");
+const vistaTesoreria = document.querySelector("#vista-tesoreria");
 const navParametros = document.querySelector("#nav-parametros");
 const vistaParametros = document.querySelector("#vista-parametros");
 const inicioSubtitulo = document.querySelector("#inicio-subtitulo");
@@ -105,6 +107,8 @@ empresaInput.addEventListener("change", () => {
     cargarComprasTodo();
   } else if (moduloActivo === "wallets" && window.cargarWalletsTodo) {
     window.cargarWalletsTodo();
+  } else if (moduloActivo === "tesoreria" && window.cargarTesoreriaTodo) {
+    window.cargarTesoreriaTodo();
   }
 });
 
@@ -128,18 +132,21 @@ function mostrarModulo(modulo) {
   const cartera = modulo === "cartera";
   const compras = modulo === "compras";
   const wallets = modulo === "wallets";
+  const tesoreria = modulo === "tesoreria";
   const parametros = modulo === "parametros";
 
   vistaInicio.hidden = !inicio;
   vistaCartera.hidden = !cartera;
   vistaCompras.hidden = !compras;
   vistaWallets.hidden = !wallets;
+  vistaTesoreria.hidden = !tesoreria;
   vistaParametros.hidden = !parametros;
 
   navInicio.classList.toggle("active", inicio);
   navCartera.classList.toggle("active", cartera);
   navCompras.classList.toggle("active", compras);
   navWallets.classList.toggle("active", wallets);
+  navTesoreria.classList.toggle("active", tesoreria);
   navParametros.classList.toggle("active", parametros);
 
   if (inicio) {
@@ -150,6 +157,8 @@ function mostrarModulo(modulo) {
     cargarComprasTodo();
   } else if (wallets && window.cargarWalletsTodo) {
     window.cargarWalletsTodo();
+  } else if (tesoreria && window.cargarTesoreriaTodo) {
+    window.cargarTesoreriaTodo();
   } else if (parametros && window.cargarParametrosTodo) {
     window.cargarParametrosTodo();
   }
@@ -245,6 +254,9 @@ function mostrarApp(sesion) {
   navCartera.hidden = !puedeVerCartera;
   navCompras.hidden = !puedeVerCompras;
   navWallets.hidden = !puedeVerWallets;
+  navTesoreria.hidden = !sesion.permisos?.["tesoreria.ver"];
+  window.tesoreriaPuedeEditar = Boolean(sesion.permisos?.["tesoreria.facturas.gestionar"]);
+  window.tesoreriaPuedePagar = Boolean(sesion.permisos?.["tesoreria.pagos.registrar"]);
   navParametros.hidden = !sesion.permisos?.["dimensiones.gestionar"];
 
   mostrarModulo("inicio");
@@ -1799,6 +1811,7 @@ navInicio.addEventListener("click", () => mostrarModulo("inicio"));
 navCartera.addEventListener("click", () => mostrarModulo("cartera"));
 navCompras.addEventListener("click", () => mostrarModulo("compras"));
 navWallets.addEventListener("click", () => mostrarModulo("wallets"));
+navTesoreria.addEventListener("click", () => mostrarModulo("tesoreria"));
 navParametros.addEventListener("click", () => mostrarModulo("parametros"));
 document.querySelector("#inicio-actualizar").addEventListener("click", cargarDashboardPrincipal);
 document.querySelector("#compras-refrescar-fuente").addEventListener("click", () => cargarComprasTodo(true));
