@@ -18,7 +18,7 @@ class LectorFake:
                 "ESTADO": "En tránsito",
                 "DOCUMENTO DE TRANSPORTE": "BL-1",
                 "DIAS": "30",
-                "VALOR OCI (DDP)": "10.000,00",
+                "VALOR OCI": "10.000,00",
                 "FECHA DE PAGO ESPERADA": "2026-10-15",
                 "MONTO ESPERADO": "4.300,00",
                 "COMERCIAL": "Comercial A",
@@ -41,5 +41,6 @@ def test_google_sheets_adapter_normalizes_projection_rows() -> None:
     assert registros[0].cliente == "Cliente Proyección"
     assert registros[0].fecha == date(2026, 10, 15)
     assert registros[0].monto == Decimal("4300.00")
+    assert registros[0].valor_oc == Decimal("10000.00")
     assert registros[0].mes == "2026-10"
     assert registros[0].comercial == "COMERCIAL A"

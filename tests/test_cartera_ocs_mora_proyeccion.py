@@ -89,3 +89,51 @@ def test_proyeccion_descarta_filas_sin_fecha_o_sin_monto_positivo() -> None:
             "MONTO ESPERADO": 0,
         }
     ) is None
+
+
+def test_proyeccion_lee_valor_oci_calculado_de_la_hoja_real() -> None:
+    registro = normalizar_fila_proyeccion(
+        {
+            "NUMERO OC": "OC-SINTETICA",
+            "NOMBRE": "Cliente Sintetico",
+            "FECHA DE PAGO ESPERADA": "2026-10-15",
+            "MONTO ESPERADO": "700,00",
+            "VALOR OCI": "1.000,00",
+            "VALOR OCI (DDP)": "900,00",
+        }
+    )
+
+    assert registro is not None
+    # El valor corregido prevalece sobre el DDP original importado.
+    assert registro.valor_oc == Decimal("1000.00")
+    assert registro.monto == Decimal("700.00")
+
+
+def test_proyeccion_acepta_encabezado_legacy_si_valor_oci_esta_vacio() -> None:
+    registro = normalizar_fila_proyeccion(
+        {
+            "NOMBRE": "Cliente Sintetico",
+            "FECHA DE PAGO ESPERADA": "2026-10-15",
+            "MONTO ESPERADO": "600,00",
+            "VALOR OCI": "",
+            "VALOR OCI (DDP)": "1.200,00",
+        }
+    )
+
+    assert registro is not None
+    assert registro.valor_oc == Decimal("1200.00")
+
+
+def test_proyeccion_no_sustituye_cero_calculado_con_ddp_original() -> None:
+    registro = normalizar_fila_proyeccion(
+        {
+            "NOMBRE": "Cliente Sintetico",
+            "FECHA DE PAGO ESPERADA": "2026-10-15",
+            "MONTO ESPERADO": "600,00",
+            "VALOR OCI": 0,
+            "VALOR OCI (DDP)": "1.200,00",
+        }
+    )
+
+    assert registro is not None
+    assert registro.valor_oc == Decimal("0")
