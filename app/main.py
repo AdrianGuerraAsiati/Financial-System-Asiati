@@ -13,6 +13,7 @@ from app.core.supervision.api import router as supervision_router
 from app.core.usuarios.api import router as usuarios_router
 from app.motores.cartera_ocs.api import router as cartera_router
 from app.motores.tesoreria.api import router as tesoreria_router
+from app.motores.recaudos.api import router as recaudos_router
 from app.motores.tesoreria.tablero import router as tesoreria_tablero_router
 from app.motores.tesoreria.edicion import router as tesoreria_edicion_router
 from app.motores.compras_supply_chain.api import router as compras_router
