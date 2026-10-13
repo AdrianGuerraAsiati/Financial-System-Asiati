@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "ID": "ExpireDevTesoreriaDocumentBackupsAfter45Days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "dev/tesoreria/backups/"
+      },
+      "Expiration": {
+        "Days": 45
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+      }
+    }
+  ]
+}
