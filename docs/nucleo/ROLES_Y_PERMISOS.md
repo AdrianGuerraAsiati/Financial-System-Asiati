@@ -15,7 +15,7 @@ Hay tres roles activos desde el primer entregable y dos que se crean ya en el mo
 | `super_administrador` | Superadministrador | Juan Felipe | Crea usuarios, asigna roles y empresas, habilita procesos. Puede hacer todo lo que hacen el conciliador y el coordinador. |
 | `coordinacion_financiera` | Coordinador financiero | Supervisor del equipo | Ve el estado de las conciliaciones, los últimos ingresos y las acciones de cada conciliador. Resuelve los casos especiales que le escalan. |
 | `conciliacion` | Conciliador financiero | Operativo | Carga archivos, ejecuta conciliaciones, categoriza movimientos y gestiona hallazgos de las empresas que tiene asignadas. |
-| `analista_tesoreria` | Analista de tesorería | Futuro | Se activa con el bloque de bancos y tesorería. Hoy existe en el modelo, sin permisos. |
+| `analista_tesoreria` | Analista de tesorería | Operativo de Tesorería | Registra facturas de compra y pagos manuales con soporte en empresas asignadas. |
 | `ti` | Soporte técnico | Adrian | Arregla problemas de la plataforma: errores, cargas fallidas, infraestructura. No toma decisiones financieras. |
 
 **Los roles son fijos en el código.** El superadmin asigna roles a usuarios; no crea roles nuevos desde la pantalla. Un rol nuevo (como analista de tesorería) se agrega por código, con su fila en la matriz de la sección 3. Crear roles desde la interfaz es un proyecto en sí mismo y no lo necesitamos para operar.
@@ -55,6 +55,9 @@ Los códigos de rol siguen la convención de la migración `0009_create_usuarios
 | `conciliacion.ver` | Ver resultados, hallazgos y resumen | Sí | Asig. | Asig. | Leer | — |
 | `cartera.ver` | Ver operaciones, mora, proyección y comprobantes | Sí | Asig. | Asig. | Leer | — |
 | `compras.ver` | Ver líneas, estados y catálogos de Compras/Supply Chain | Sí | Asig. | Asig. | Leer | — |
+| `tesoreria.ver` | Ver facturas, pagos y documentos por empresa | Sí | Asig. | — | Leer | Asig. |
+| `tesoreria.facturas.gestionar` | Radicar y editar facturas de compra | Sí | — | — | — | Asig. |
+| `tesoreria.pagos.registrar` | Confirmar pago real y cargar comprobante manual | Sí | — | — | — | Asig. |
 | `cartera.comprobantes.subir` | Radicar comprobantes de pago | Sí | — | Asig. | — | — |
 | `movimientos.categorizar` | Cambiar categoría y escribir observación | Sí | Asig. | Asig. | — | — |
 | `reglas.crear` | Guardar una regla de categorización nueva | Sí | Asig. | Asig. | — | — |
@@ -72,7 +75,7 @@ Los códigos de rol siguen la convención de la migración `0009_create_usuarios
 Notas:
 - **Cerrar período** lo hace el coordinador (supervisa) y el superadmin; el conciliador no cierra su propio trabajo.
 - **TI no modifica datos financieros.** Puede ver resultados para diagnosticar un error y reprocesar lo que falló, siempre dejando rastro en auditoría. Si un arreglo exige cambiar un dato, lo hace un superadmin.
-- **Analista de tesorería** queda sin permisos hasta el bloque de tesorería.
+- **Analista de tesorería** tiene permisos solo para el módulo de Tesorería por empresa. No adquiere permisos de Cartera ni de conciliación.
 - **Cartera:** el mapeo inicial replica el alcance de consulta de conciliación y el patrón operativo de carga. Puede ajustarse cuando negocio defina un rol específico de cartera.
 - **Compras:** `compras.ver` es estrictamente de lectura. El alcance inicial replica otros permisos de consulta y puede ajustarse cuando negocio defina perfiles específicos de Supply Chain.
 
