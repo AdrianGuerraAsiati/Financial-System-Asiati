@@ -45,6 +45,9 @@ if [[ "$db_ready" != "1" ]]; then
   exit 1
 fi
 
+# Construir la imagen NUEVA antes de ejecutar Alembic. Si se migra con la imagen
+# del release anterior, las revisiones añadidas en este commit no se aplican.
+"${DC[@]}" build api
 "${DC[@]}" run --rm api alembic upgrade head
 "${DC[@]}" up -d --build
 
