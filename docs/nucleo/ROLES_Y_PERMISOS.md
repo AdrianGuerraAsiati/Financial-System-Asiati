@@ -56,6 +56,8 @@ Los códigos de rol siguen la convención de la migración `0009_create_usuarios
 | `cartera.ver` | Ver operaciones, mora, proyección y comprobantes | Sí | Asig. | Asig. | Leer | — |
 | `compras.ver` | Ver líneas, estados y catálogos de Compras/Supply Chain | Sí | Asig. | Asig. | Leer | — |
 | `tesoreria.ver` | Ver facturas, pagos y documentos por empresa | Sí | Asig. | — | Leer | Asig. |
+| `recaudos.ver` | Ver ingresos reportados sin afirmar conciliación bancaria | Sí | Asig. | — | Leer | Asig. |
+| `recaudos.registrar` | Captura manual de ingresos reportados, sin aplicar a Cartera | Sí | — | — | — | Asig. |
 | `tesoreria.facturas.gestionar` | Radicar y editar facturas de compra | Sí | — | — | — | Asig. |
 | `tesoreria.pagos.registrar` | Confirmar pago real y cargar comprobante manual | Sí | — | — | — | Asig. |
 | `cartera.comprobantes.subir` | Radicar comprobantes de pago | Sí | — | Asig. | — | — |
