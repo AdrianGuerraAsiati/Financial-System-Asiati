@@ -10,6 +10,76 @@
   const panelDetalle = $("#tesoreria-detalle-panel");
   let catalogos = {};
   let facturaActiva = null;
+  let paginaDesde = 0;
+  let paginaTotal = 0;
+  const paginaLimite = 25;
+  const filtros = $("#tesoreria-filtros");
+
+  function parametrosBandeja() {
+    const params = new URLSearchParams({
+      empresa_id: String(empresaId()),
+      moneda: filtros.elements.namedItem("moneda").value,
+    });
+    ["buscar", "estado", "categoria", "vencimiento_desde", "vencimiento_hasta"].forEach((campo) => {
+      const valor = filtros.elements.namedItem(campo).value.trim();
+      if (valor) params.set(campo, valor);
+    });
+    return params;
+  }
+  function parametrosIndicadores() {
+    const params = new URLSearchParams({
+      empresa_id: String(empresaId()),
+      moneda: filtros.elements.namedItem("moneda").value,
+    });
+    ["pago_desde", "pago_hasta"].forEach((campo) => {
+      const valor = filtros.elements.namedItem(campo).value;
+      if (valor) params.set(campo, valor);
+    });
+    return params;
+  }
+  function pintarIndicadores(info) {
+    const cantidad = (valor) => Number(valor).toLocaleString("es-CO");
+    [
+      ["#tesoreria-kpi-pendiente", info.total_pendiente],
+      ["#tesoreria-kpi-vencido", info.total_vencido],
+      ["#tesoreria-kpi-proximo", info.total_por_vencer_7d],
+      ["#tesoreria-kpi-pagado", info.total_pagado_periodo],
+    ].forEach(([selector, monto]) => {
+      $(selector).textContent = formatearDecimal(monto) + " " + info.moneda;
+    });
+    $("#tesoreria-kpi-vencidas-cantidad").textContent = cantidad(info.cantidad_vencidas) + " facturas vencidas";
+    $("#tesoreria-kpi-proximas-cantidad").textContent = cantidad(info.cantidad_por_vencer_7d) + " facturas en los próximos 7 días";
+    $("#tesoreria-kpi-sinfecha").textContent = cantidad(info.sin_vencimiento);
+    $("#tesoreria-kpi-periodo").textContent = String(info.pago_desde) + " a " + String(info.pago_hasta);
+  }
+  async function descargarExcel() {
+    const boton = $("#tesoreria-exportar");
+    boton.disabled = true;
+    try {
+      const respuesta = await fetch("/api/v1/tesoreria/exportacion-facturas?" + parametrosBandeja(), {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!respuesta.ok) {
+        const error = await respuesta.json().catch(() => ({}));
+        throw new Error(typeof error.detail === "string" ? error.detail : "No fue posible exportar el archivo.");
+      }
+      const blob = await respuesta.blob();
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement("a");
+      enlace.href = url;
+      enlace.download = "Facturas_Tesoreria_" + empresaId() + ".xlsx";
+      document.body.append(enlace);
+      enlace.click();
+      enlace.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      notificar("Exportación Excel preparada con los filtros actuales.");
+    } catch (error) {
+      notificar(error.message, true);
+    } finally {
+      boton.disabled = false;
+    }
+  }
 
   function notificar(texto, error = false) {
     estado.textContent = texto;
@@ -32,27 +102,50 @@
     document.querySelectorAll('#vista-tesoreria [data-catalogo]').forEach((select) => {
       opciones(select, catalogos[select.dataset.catalogo] || []);
     });
+    const categoria = $("#tesoreria-filtro-categoria");
+    const seleccion = categoria.value;
+    categoria.replaceChildren(new Option("Todas", ""));
+    (catalogos.categoria || []).forEach((valor) => categoria.add(new Option(valor, valor)));
+    if ([...categoria.options].some((o) => o.value === seleccion)) categoria.value = seleccion;
+  }
+  async function cargarBandeja() {
+    const parametros = parametrosBandeja();
+    parametros.set("desde", String(paginaDesde));
+    parametros.set("limite", String(paginaLimite));
+    const [pagina, indicadores] = await Promise.all([
+      api("/api/v1/tesoreria/consulta-facturas?" + parametros),
+      api("/api/v1/tesoreria/indicadores?" + parametrosIndicadores()),
+    ]);
+    pintarIndicadores(indicadores);
+    paginaTotal = pagina.total;
+    filas.innerHTML = pagina.items.length ? pagina.items.map((f) => `
+      <tr>
+        <td>${celda(f.numero)}</td><td>${celda(f.proveedor)}</td>
+        <td>${celda(f.fecha_pago_oportuno)}</td>
+        <td>${celda(moneda(f))}</td><td>${celda(formatearDecimal(f.pagado))}</td>
+        <td>${celda(formatearDecimal(f.saldo))}</td>
+        <td>${celda(f.estado)}</td><td>${celda(f.alerta)}</td>
+        <td><button type="button" data-factura="${Number(f.id)}" class="secondary-button">Abrir</button></td>
+      </tr>`).join("") : '<tr><td colspan="9" class="empty">No hay facturas con esos filtros.</td></tr>';
+    const inicio = pagina.total ? paginaDesde + 1 : 0;
+    const fin = paginaDesde + pagina.items.length;
+    $("#tesoreria-pagina-info").textContent = inicio + "–" + fin + " de " + pagina.total + " facturas";
+    $("#tesoreria-anterior").disabled = paginaDesde === 0;
+    $("#tesoreria-siguiente").disabled = fin >= pagina.total;
+    notificar(pagina.total + " facturas encontradas");
   }
   async function cargarTodo() {
     panelDetalle.hidden = true;
     facturaActiva = null;
+    paginaDesde = 0;
     nueva.hidden = !window.tesoreriaPuedeEditar;
     edicion.hidden = !window.tesoreriaPuedeEditar;
     pago.hidden = !window.tesoreriaPuedePagar;
     try {
       await cargarCatalogos();
-      const facturas = await api("/api/v1/tesoreria/facturas?empresa_id=" + empresaId());
-      filas.innerHTML = facturas.length ? facturas.map((f) => `
-        <tr>
-          <td>${celda(f.numero)}</td><td>${celda(f.proveedor)}</td>
-          <td>${celda(f.fecha_pago_oportuno)}</td>
-          <td>${celda(moneda(f))}</td><td>${celda(formatearDecimal(f.saldo))}</td>
-          <td>${celda(f.estado)}${f.alerta ? " · " + celda(f.alerta) : ""}</td>
-          <td><button type="button" data-factura="${Number(f.id)}" class="secondary-button">Abrir</button></td>
-        </tr>`).join("") : '<tr><td colspan="7" class="empty">No hay facturas registradas.</td></tr>';
-      notificar(facturas.length + " facturas consultadas");
+      await cargarBandeja();
     } catch (error) {
-      filas.innerHTML = '<tr><td colspan="7" class="empty">No fue posible consultar las facturas.</td></tr>';
+      filas.innerHTML = '<tr><td colspan="9" class="empty">No fue posible consultar las facturas.</td></tr>';
       notificar(error.message, true);
     }
   }
@@ -159,6 +252,26 @@
       notificar("Pago registrado con su comprobante.");
     } catch (error) { notificar(error.message, true); }
   });
+  filtros.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    paginaDesde = 0;
+    try { await cargarBandeja(); } catch (error) { notificar(error.message, true); }
+  });
+  $("#tesoreria-limpiar").addEventListener("click", () => {
+    filtros.reset();
+    paginaDesde = 0;
+    cargarBandeja().catch((error) => notificar(error.message, true));
+  });
+  $("#tesoreria-anterior").addEventListener("click", () => {
+    paginaDesde = Math.max(0, paginaDesde - paginaLimite);
+    cargarBandeja().catch((error) => notificar(error.message, true));
+  });
+  $("#tesoreria-siguiente").addEventListener("click", () => {
+    if (paginaDesde + paginaLimite >= paginaTotal) return;
+    paginaDesde += paginaLimite;
+    cargarBandeja().catch((error) => notificar(error.message, true));
+  });
+  $("#tesoreria-exportar").addEventListener("click", descargarExcel);
   $("#tesoreria-actualizar").addEventListener("click", cargarTodo);
   window.cargarTesoreriaTodo = cargarTodo;
 })();

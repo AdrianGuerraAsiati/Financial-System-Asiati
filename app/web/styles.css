@@ -2380,3 +2380,57 @@ summary {
     box-shadow: none;
   }
 }
+
+
+/* Tesorería: tablero y bandeja responsiva */
+.tesoreria-metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: .8rem;
+  margin: 1rem 0;
+}
+.tesoreria-metrica {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  padding: 1rem;
+  background: #f5f8fc;
+  border: 1px solid #dce5f1;
+  border-radius: 12px;
+  min-width: 0;
+}
+.tesoreria-metrica span { color: #42617c; font-size: .81rem; font-weight: 650; }
+.tesoreria-metrica strong { color: #143854; font-size: clamp(1.12rem, 2vw, 1.5rem); overflow-wrap: anywhere; }
+.tesoreria-metrica small { color: #567086; font-size: .76rem; }
+.tesoreria-filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+  gap: .85rem;
+  margin: 1rem 0;
+  align-items: end;
+}
+.tesoreria-filtros label { min-width: 0; }
+.tesoreria-filtros input, .tesoreria-filtros select { width: 100%; }
+.tesoreria-acciones {
+  display: flex;
+  align-items: flex-end;
+  gap: .5rem;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+}
+.tesoreria-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: .85rem;
+}
+.tesoreria-paginacion > div { display: flex; gap: .5rem; }
+@media (max-width: 620px) {
+  .tesoreria-metricas { grid-template-columns: 1fr 1fr; }
+  .tesoreria-acciones button { flex: 1 1 auto; }
+}
+@media (max-width: 360px) {
+  .tesoreria-metricas { grid-template-columns: 1fr; }
+}

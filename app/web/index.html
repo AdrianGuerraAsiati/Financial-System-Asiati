@@ -830,6 +830,20 @@
           </div>
           <div id="tesoreria-estado" class="status" role="status">Listo</div>
         </section>
+        <section class="panel tesoreria-tablero" aria-labelledby="tesoreria-resumen-titulo">
+          <div class="panel-heading"><div>
+            <h3 id="tesoreria-resumen-titulo">Resumen de cuentas por pagar</h3>
+            <p>Importes por empresa y moneda, sin convertir divisas. Período de pagos: mes actual por defecto.</p>
+          </div></div>
+          <div class="tesoreria-metricas">
+            <div class="tesoreria-metrica"><span>Pendiente</span><strong id="tesoreria-kpi-pendiente">—</strong><small>Saldo por pagar</small></div>
+            <div class="tesoreria-metrica"><span>Vencido</span><strong id="tesoreria-kpi-vencido">—</strong><small id="tesoreria-kpi-vencidas-cantidad">— facturas vencidas</small></div>
+            <div class="tesoreria-metrica"><span>Por vencer</span><strong id="tesoreria-kpi-proximo">—</strong><small id="tesoreria-kpi-proximas-cantidad">Próximos 7 días calendario</small></div>
+            <div class="tesoreria-metrica"><span>Pagado en el período</span><strong id="tesoreria-kpi-pagado">—</strong><small id="tesoreria-kpi-periodo">Según fecha real del abono</small></div>
+            <div class="tesoreria-metrica"><span>Sin vencimiento</span><strong id="tesoreria-kpi-sinfecha">—</strong><small>Pendientes de validación</small></div>
+          </div>
+          <p class="muted">«Por vencer» es una ventana informativa de 7 días calendario; no modifica estados ni define tolerancias financieras.</p>
+        </section>
         <section class="panel">
           <div class="panel-heading"><div><h3>Nueva factura</h3>
             <p>La fecha oportuna es el vencimiento de la factura. El pago real se registra después.</p></div>
@@ -860,14 +874,48 @@
           </form>
         </section>
         <section class="panel">
-          <div class="panel-heading"><div><h3>Facturas registradas</h3>
-            <p>Últimas 500 de la empresa seleccionada. Selecciona una para ver pagos, editar campos y adjuntar soportes.</p></div>
-            <button id="tesoreria-actualizar" type="button">Actualizar</button>
+          <div class="panel-heading"><div><h3>Bandeja de facturas</h3>
+            <p>Filtra, consulta y exporta sin limitar los resultados a las últimas 500 facturas.</p></div>
+            <button id="tesoreria-actualizar" class="secondary-button" type="button">Actualizar</button>
           </div>
+          <form id="tesoreria-filtros" class="tesoreria-filtros">
+            <label>Moneda
+              <select name="moneda"><option>COP</option><option>USD</option><option>CLP</option></select>
+            </label>
+            <label>Factura, proveedor o descripción
+              <input name="buscar" type="search" maxlength="120" placeholder="Buscar…">
+            </label>
+            <label>Estado
+              <select name="estado">
+                <option value="">Todos</option><option value="PENDIENTE">Pendiente</option>
+                <option value="VENCIDA">Vencida</option><option value="PARCIAL">Parcial</option>
+                <option value="PAGADA">Pagada</option>
+                <option value="PENDIENTE_VALIDACION">Sin vencimiento</option>
+              </select>
+            </label>
+            <label>Categoría
+              <select name="categoria" id="tesoreria-filtro-categoria"><option value="">Todas</option></select>
+            </label>
+            <label>Vencimiento desde<input name="vencimiento_desde" type="date"></label>
+            <label>Vencimiento hasta<input name="vencimiento_hasta" type="date"></label>
+            <label>Pagos desde<input name="pago_desde" type="date"></label>
+            <label>Pagos hasta<input name="pago_hasta" type="date"></label>
+            <div class="tesoreria-acciones">
+              <button type="submit">Aplicar filtros</button>
+              <button id="tesoreria-limpiar" class="secondary-button" type="button">Limpiar</button>
+              <button id="tesoreria-exportar" class="secondary-button" type="button">Exportar Excel</button>
+            </div>
+          </form>
+          <p class="muted">Los filtros afectan la bandeja y el Excel. Los indicadores resumen toda la empresa en la moneda elegida; «pagado» usa las fechas de abono seleccionadas.</p>
           <div class="table-wrap"><table>
-            <thead><tr><th>Factura</th><th>Proveedor</th><th>Vencimiento</th><th>Monto</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
-            <tbody id="tesoreria-filas"><tr><td colspan="7" class="empty">Sin consultar</td></tr></tbody>
+            <thead><tr><th>Factura</th><th>Proveedor</th><th>Vencimiento</th><th>Monto</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Alerta</th><th></th></tr></thead>
+            <tbody id="tesoreria-filas"><tr><td colspan="9" class="empty">Sin consultar</td></tr></tbody>
           </table></div>
+          <div class="tesoreria-paginacion">
+            <span id="tesoreria-pagina-info" aria-live="polite">0 facturas</span>
+            <div><button id="tesoreria-anterior" class="secondary-button" type="button">Anterior</button>
+              <button id="tesoreria-siguiente" class="secondary-button" type="button">Siguiente</button></div>
+          </div>
         </section>
         <section id="tesoreria-detalle-panel" class="panel" hidden>
           <div class="panel-heading"><div><h3 id="tesoreria-detalle-titulo">Detalle de factura</h3>
