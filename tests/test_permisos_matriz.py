@@ -73,8 +73,10 @@ def test_read_only_cells_only_appear_on_read_permissions() -> None:
             assert permiso.endswith(".ver"), permiso
 
 
-def test_treasury_analyst_has_no_permissions_yet() -> None:
-    assert permisos_efectivos(ROL_ANALISTA_TESORERIA) == {}
+def test_treasury_analyst_has_only_treasury_permissions() -> None:
+    assert set(permisos_efectivos(ROL_ANALISTA_TESORERIA)) == {
+        "tesoreria.ver", "tesoreria.facturas.gestionar", "tesoreria.pagos.registrar",
+    }
 
 
 @pytest.mark.parametrize(
