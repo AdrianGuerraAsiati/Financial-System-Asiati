@@ -12,6 +12,7 @@ from app.core.hallazgos.api import router as hallazgos_router
 from app.core.supervision.api import router as supervision_router
 from app.core.usuarios.api import router as usuarios_router
 from app.motores.cartera_ocs.api import router as cartera_router
+from app.motores.tesoreria.api import router as tesoreria_router
 from app.motores.compras_supply_chain.api import router as compras_router
 from app.motores.conciliacion_wallets.plataforma.api import router as wallets_router
 from app.motores.conciliacion_wallets.wiilog.api import router as wiilog_wallet_router
@@ -34,6 +35,7 @@ app.include_router(hallazgos_router, prefix=API_V1)
 app.include_router(catalogos_router, prefix=API_V1)
 app.include_router(dimensiones_router, prefix=API_V1)
 app.include_router(cartera_router, prefix=API_V1)
+app.include_router(tesoreria_router, prefix=API_V1)
 app.include_router(compras_router, prefix=API_V1)
 app.include_router(wiilog_wallet_router, prefix=API_V1)
 app.include_router(wallets_router, prefix=API_V1)
