@@ -1,6 +1,7 @@
 """Almacenamiento privado de facturas y soportes, no servido como estático."""
 import hashlib
 import os
+import tempfile
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
@@ -44,8 +45,32 @@ def guardar(*, empresa_id: int, factura_id: int, contenido: bytes, sha: str,
     nombre = f"pago-{pago_id}-{sha}{sufijo}" if pago_id else f"factura-{sha}{sufijo}"
     ubicacion = Path(str(empresa_id)) / str(factura_id) / nombre
     destino = base() / ubicacion
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_bytes(contenido)
+    destino.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+    # Las copias se respaldan por SHA: no se debe ver un archivo a medio escribir.
+    # Publicación atómica, modo 0600 y fsync antes de que la DB pueda confirmar el registro.
+    if destino.exists() or destino.is_symlink():
+        raise FileExistsError("El documento ya existe en el volumen privado.")
+    temporal = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", prefix=".carga-", dir=destino.parent, delete=False
+        ) as f:
+            temporal = Path(f.name)
+            os.chmod(temporal, 0o600)
+            f.write(contenido)
+            f.flush()
+            os.fsync(f.fileno())
+        # La aplicación genera IDs únicos; reemplazar un archivo existente no está permitido.
+        # os.link crea el nombre final solo si no existe y dentro del mismo filesystem.
+        os.link(temporal, destino, follow_symlinks=False)
+        descriptor = os.open(destino.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        if temporal is not None:
+            temporal.unlink(missing_ok=True)
     return ubicacion.as_posix()
 
 
