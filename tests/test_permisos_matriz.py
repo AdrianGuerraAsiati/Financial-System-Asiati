@@ -76,6 +76,7 @@ def test_read_only_cells_only_appear_on_read_permissions() -> None:
 def test_treasury_analyst_has_only_treasury_permissions() -> None:
     assert set(permisos_efectivos(ROL_ANALISTA_TESORERIA)) == {
         "tesoreria.ver", "tesoreria.facturas.gestionar", "tesoreria.pagos.registrar",
+        "recaudos.ver", "recaudos.registrar",
     }
 
 
