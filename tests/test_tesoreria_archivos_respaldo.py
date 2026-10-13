@@ -104,6 +104,8 @@ def test_guardar_es_atomico_y_no_reemplaza_documentos(tmp_path: Path, monkeypatc
     assert (ruta.stat().st_mode & 0o777) == 0o600
     assert not list(tmp_path.rglob(".carga-*"))
     with pytest.raises(FileExistsError):
+        guardar(empresa_id=10, factura_id=22, contenido=payload, sha=firma, sufijo=".pdf")
+    with pytest.raises(ValueError, match="hash"):
         guardar(empresa_id=10, factura_id=22, contenido=b"cambio", sha=firma, sufijo=".pdf")
     assert ruta.read_bytes() == payload
 
