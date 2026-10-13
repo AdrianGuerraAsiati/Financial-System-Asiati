@@ -1,12 +1,12 @@
 """Ingresos reportados, sin confirmar ni aplicar a Cartera.
 
-Revision ID: 0023_recaudos_ingresos_reportados
+Revision ID: 0023_recaudos_reportados
 Revises: 0022_tesoreria_facturas
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0023_recaudos_ingresos_reportados"
+revision = "0023_recaudos_reportados"
 down_revision = "0022_tesoreria_facturas"
 branch_labels = None
 depends_on = None
