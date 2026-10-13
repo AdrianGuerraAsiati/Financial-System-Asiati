@@ -13,6 +13,7 @@ from app.core.supervision.api import router as supervision_router
 from app.core.usuarios.api import router as usuarios_router
 from app.motores.cartera_ocs.api import router as cartera_router
 from app.motores.tesoreria.api import router as tesoreria_router
+from app.motores.tesoreria.tablero import router as tesoreria_tablero_router
 from app.motores.tesoreria.edicion import router as tesoreria_edicion_router
 from app.motores.compras_supply_chain.api import router as compras_router
 from app.motores.conciliacion_wallets.plataforma.api import router as wallets_router
@@ -38,6 +39,7 @@ app.include_router(dimensiones_router, prefix=API_V1)
 app.include_router(cartera_router, prefix=API_V1)
 app.include_router(tesoreria_router, prefix=API_V1)
 app.include_router(tesoreria_edicion_router, prefix=API_V1)
+app.include_router(tesoreria_tablero_router, prefix=API_V1)
 app.include_router(compras_router, prefix=API_V1)
 app.include_router(wiilog_wallet_router, prefix=API_V1)
 app.include_router(wallets_router, prefix=API_V1)
