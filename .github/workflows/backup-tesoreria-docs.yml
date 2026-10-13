@@ -1,0 +1,92 @@
+name: Backup Tesoreria documents (development)
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: backup-tesoreria-docs-development
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  LIGHTSAIL_INSTANCE: financial-system-asiati-dev
+  LIGHTSAIL_HOST: 3.141.226.208
+  BACKUP_BUCKET: financial-system-asiati-dev-data-890876258895
+  BACKUP_PREFIX: dev/tesoreria/backups
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+
+      - name: AWS credentials by OIDC (no persistent keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::890876258895:role/financial-system-asiati-github-deploy
+          aws-region: us-east-2
+
+      - name: Obtain temporary Lightsail SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          DETAILS="$(aws lightsail get-instance-access-details --region "$AWS_REGION" \
+            --instance-name "$LIGHTSAIL_INSTANCE" --protocol ssh)"
+          USERNAME="$(jq -r '.accessDetails.username // empty' <<<"$DETAILS")"
+          test -n "$USERNAME"
+          echo "USERNAME=$USERNAME" >> "$GITHUB_ENV"
+          jq -r '.accessDetails.privateKey' <<<"$DETAILS" > "$RUNNER_TEMP/tesoreria-ssh.pem"
+          chmod 600 "$RUNNER_TEMP/tesoreria-ssh.pem"
+          ssh-keygen -y -f "$RUNNER_TEMP/tesoreria-ssh.pem" >/dev/null
+
+      - name: Create, verify and upload encrypted document backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          ARCHIVO="$RUNNER_TEMP/tesoreria-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tar.gz"
+          MANIFIESTO="$RUNNER_TEMP/tesoreria-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          trap 'rm -f "$ARCHIVO" "$MANIFIESTO" "$RUNNER_TEMP/tesoreria-ssh.pem"' EXIT
+
+          # stdout remoto: exclusivamente tar.gz. Los mensajes se envían a stderr.
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=12 -i "$RUNNER_TEMP/tesoreria-ssh.pem" \
+            "$USERNAME@$LIGHTSAIL_HOST" "sudo -n bash -s" > "$ARCHIVO" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/financial-system
+          DC=(docker compose --env-file .env.production -f compose.production.yml)
+          CONTENEDOR="$("${DC[@]}" ps -q api)"
+          test -n "$CONTENEDOR"
+          RUTA="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/data/tesoreria"}}{{.Source}}{{end}}{{end}}' "$CONTENEDOR")"
+          test -n "$RUTA" && test -d "$RUTA"
+          python3 ops/tesoreria_archivos.py crear --root "$RUTA"
+          REMOTE
+
+          test -s "$ARCHIVO"
+          HASH="$(sha256sum "$ARCHIVO" | awk '{print $1}')"
+          python3 ops/tesoreria_archivos.py verificar --archive "$ARCHIVO" --sha256 "$HASH"
+          BYTES="$(stat -c%s "$ARCHIVO")"
+          TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          CLAVE="$BACKUP_PREFIX/$TIMESTAMP-run$GITHUB_RUN_ID-attempt$GITHUB_RUN_ATTEMPT"
+          jq -n --arg sha256 "$HASH" --arg commit "$GITHUB_SHA" --arg utc "$TIMESTAMP" \
+            --argjson bytes "$BYTES" \
+            '{schema:1, sha256:$sha256, size_bytes:$bytes, created_utc:$utc, source:"lightsail-development", workflow_commit:$commit}' > "$MANIFIESTO"
+
+          # Nombres únicos, sin borrado; cifrado SSE-S3 explícito.
+          aws s3 cp "$ARCHIVO" "s3://$BACKUP_BUCKET/$CLAVE.tar.gz" \
+            --sse AES256 --metadata "sha256=$HASH" --only-show-errors
+          aws s3 cp "$MANIFIESTO" "s3://$BACKUP_BUCKET/$CLAVE.json" \
+            --sse AES256 --content-type application/json --only-show-errors
+
+          HEAD="$(aws s3api head-object --bucket "$BACKUP_BUCKET" --key "$CLAVE.tar.gz")"
+          test "$(jq -r '.ContentLength' <<<"$HEAD")" = "$BYTES"
+          test "$(jq -r '.Metadata.sha256 // empty' <<<"$HEAD")" = "$HASH"
+          echo "Respaldo publicado en S3; integridad y tamaño verificados."
