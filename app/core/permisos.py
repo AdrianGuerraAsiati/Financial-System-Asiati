@@ -7,6 +7,7 @@ from enum import Enum
 
 from app.core.usuarios.roles import (
     ROL_CONCILIACION,
+    ROL_ANALISTA_TESORERIA,
     ROL_COORDINACION_FINANCIERA,
     ROL_SUPER_ADMINISTRADOR,
     ROL_TI,
@@ -47,6 +48,9 @@ PERMISOS: dict[str, dict[str, Alcance]] = {
     "conciliacion.ver": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG, ROL_TI: _TODAS},
     "cartera.ver": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG, ROL_TI: _TODAS},
     "compras.ver": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG, ROL_TI: _TODAS},
+    "tesoreria.ver": {_SA: _TODAS, _CO: _ASIG, ROL_ANALISTA_TESORERIA: _ASIG, ROL_TI: _TODAS},
+    "tesoreria.facturas.gestionar": {_SA: _TODAS, ROL_ANALISTA_TESORERIA: _ASIG},
+    "tesoreria.pagos.registrar": {_SA: _TODAS, ROL_ANALISTA_TESORERIA: _ASIG},
     "cartera.comprobantes.subir": {_SA: _TODAS, _CN: _ASIG},
     "movimientos.categorizar": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG},
     "reglas.crear": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG},
