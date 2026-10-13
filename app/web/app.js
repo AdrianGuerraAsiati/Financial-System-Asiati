@@ -35,11 +35,13 @@ const navCartera = document.querySelector("#nav-cartera");
 const navCompras = document.querySelector("#nav-compras");
 const navWallets = document.querySelector("#nav-wallets");
 const navTesoreria = document.querySelector("#nav-tesoreria");
+const navRecaudos = document.querySelector("#nav-recaudos");
 const vistaInicio = document.querySelector("#vista-inicio");
 const vistaCartera = document.querySelector("#vista-cartera");
 const vistaCompras = document.querySelector("#vista-compras");
 const vistaWallets = document.querySelector("#vista-wallets");
 const vistaTesoreria = document.querySelector("#vista-tesoreria");
+const vistaRecaudos = document.querySelector("#vista-recaudos");
 const navParametros = document.querySelector("#nav-parametros");
 const vistaParametros = document.querySelector("#vista-parametros");
 const inicioSubtitulo = document.querySelector("#inicio-subtitulo");
@@ -110,6 +112,8 @@ empresaInput.addEventListener("change", () => {
     window.cargarWalletsTodo();
   } else if (moduloActivo === "tesoreria" && window.cargarTesoreriaTodo) {
     window.cargarTesoreriaTodo();
+  } else if (moduloActivo === "recaudos" && window.cargarRecaudosTodo) {
+    window.cargarRecaudosTodo();
   }
 });
 
@@ -134,6 +138,7 @@ function mostrarModulo(modulo) {
   const compras = modulo === "compras";
   const wallets = modulo === "wallets";
   const tesoreria = modulo === "tesoreria";
+  const recaudos = modulo === "recaudos";
   const parametros = modulo === "parametros";
 
   vistaInicio.hidden = !inicio;
@@ -141,6 +146,7 @@ function mostrarModulo(modulo) {
   vistaCompras.hidden = !compras;
   vistaWallets.hidden = !wallets;
   vistaTesoreria.hidden = !tesoreria;
+  vistaRecaudos.hidden = !recaudos;
   vistaParametros.hidden = !parametros;
 
   navInicio.classList.toggle("active", inicio);
@@ -148,6 +154,7 @@ function mostrarModulo(modulo) {
   navCompras.classList.toggle("active", compras);
   navWallets.classList.toggle("active", wallets);
   navTesoreria.classList.toggle("active", tesoreria);
+  navRecaudos.classList.toggle("active", recaudos);
   navParametros.classList.toggle("active", parametros);
 
   if (inicio) {
@@ -160,6 +167,8 @@ function mostrarModulo(modulo) {
     window.cargarWalletsTodo();
   } else if (tesoreria && window.cargarTesoreriaTodo) {
     window.cargarTesoreriaTodo();
+  } else if (recaudos && window.cargarRecaudosTodo) {
+    window.cargarRecaudosTodo();
   } else if (parametros && window.cargarParametrosTodo) {
     window.cargarParametrosTodo();
   }
@@ -256,6 +265,8 @@ function mostrarApp(sesion) {
   navCompras.hidden = !puedeVerCompras;
   navWallets.hidden = !puedeVerWallets;
   navTesoreria.hidden = !sesion.permisos?.["tesoreria.ver"];
+  navRecaudos.hidden = !sesion.permisos?.["recaudos.ver"];
+  window.recaudosPuedeRegistrar = Boolean(sesion.permisos?.["recaudos.registrar"]);
   window.tesoreriaPuedeEditar = Boolean(sesion.permisos?.["tesoreria.facturas.gestionar"]);
   window.tesoreriaPuedePagar = Boolean(sesion.permisos?.["tesoreria.pagos.registrar"]);
   navParametros.hidden = !sesion.permisos?.["dimensiones.gestionar"];
@@ -1830,6 +1841,7 @@ navCartera.addEventListener("click", () => mostrarModulo("cartera"));
 navCompras.addEventListener("click", () => mostrarModulo("compras"));
 navWallets.addEventListener("click", () => mostrarModulo("wallets"));
 navTesoreria.addEventListener("click", () => mostrarModulo("tesoreria"));
+navRecaudos.addEventListener("click", () => mostrarModulo("recaudos"));
 navParametros.addEventListener("click", () => mostrarModulo("parametros"));
 document.querySelector("#inicio-actualizar").addEventListener("click", cargarDashboardPrincipal);
 document.querySelector("#compras-refrescar-fuente").addEventListener("click", () => cargarComprasTodo(true));

@@ -160,6 +160,10 @@
         <span class="nav-icon" aria-hidden="true">◫</span>
         <span class="nav-label">Wallets</span>
       </button>
+      <button class="nav-item" data-view="recaudos" id="nav-recaudos" hidden>
+        <span class="nav-icon" aria-hidden="true">⇩</span>
+        <span class="nav-label">Recaudos</span>
+      </button>
       <button class="nav-item" data-view="tesoreria" id="nav-tesoreria" hidden>
         <span class="nav-icon" aria-hidden="true">▣</span>
         <span class="nav-label">Tesorería</span>
@@ -822,6 +826,61 @@
         </section>
       </div>
 
+      <div id="vista-recaudos" class="module-view" hidden>
+        <section class="intro">
+          <div>
+            <p class="eyebrow">Recaudos · Registro preliminar</p>
+            <h2>Ingresos reportados</h2>
+            <p>Captura referencias de ingresos y consulta su trazabilidad. No confirma movimientos bancarios ni reduce saldos de clientes.</p>
+          </div>
+          <div id="recaudos-estado" class="status" role="status">Listo</div>
+        </section>
+        <section class="panel">
+          <div class="panel-heading"><div><h3>Registro manual</h3>
+            <p>Consigna exactamente los datos recibidos. Cada ingreso queda pendiente de verificación bancaria.</p></div></div>
+          <form id="recaudos-nuevo">
+            <div class="form-grid">
+              <label>Fecha reportada del abono<input type="date" name="fecha_reportada" required></label>
+              <label>Monto reportado<input type="number" name="monto" min="0.01" step="0.01" required></label>
+              <label>Moneda<select name="moneda"><option>COP</option><option>USD</option><option>CLP</option></select></label>
+              <label>Cuenta receptora / identificador bancario<input name="cuenta_receptora" maxlength="200" required></label>
+              <label>Referencia externa del movimiento<input name="referencia_origen" maxlength="120" required></label>
+              <label>Pagador reportado (opcional)<input name="pagador_reportado" maxlength="255"></label>
+              <label class="span-two">Descripción / nota del origen (opcional)<input name="descripcion" maxlength="1000"></label>
+            </div>
+            <p class="muted">La empresa sale de tu sesión. La referencia no puede repetirse dentro de la misma empresa y cuenta. El registro no confirma el abono en el banco ni lo aplica a facturas de clientes.</p>
+            <button type="submit">Guardar ingreso reportado</button>
+          </form>
+          <p id="recaudos-sin-permiso" class="muted" hidden>Tu perfil permite consultar recaudos, pero no registrar ingresos.</p>
+        </section>
+        <section class="panel">
+          <div class="panel-heading"><div><h3>Bandeja de verificación pendiente</h3>
+            <p>Solo registros manuales. Sin conciliación automática ni cobros confirmados.</p></div>
+            <button id="recaudos-actualizar" class="secondary-button" type="button">Actualizar</button>
+          </div>
+          <form id="recaudos-filtros" class="tesoreria-filtros">
+            <label>Referencia, cuenta o pagador<input name="buscar" type="search" maxlength="120" placeholder="Buscar…"></label>
+            <label>Moneda<select name="moneda"><option value="">Todas</option><option>COP</option><option>USD</option><option>CLP</option></select></label>
+            <label>Fecha desde<input name="desde_fecha" type="date"></label>
+            <label>Fecha hasta<input name="hasta_fecha" type="date"></label>
+            <div class="tesoreria-acciones"><button type="submit">Filtrar</button>
+              <button id="recaudos-limpiar" class="secondary-button" type="button">Limpiar filtros</button></div>
+          </form>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Fecha reportada</th><th>Referencia</th><th>Cuenta receptora</th><th>Pagador informado</th><th>Monto reportado</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="recaudos-filas"><tr><td colspan="7" class="empty">Selecciona una empresa para consultar.</td></tr></tbody>
+          </table></div>
+          <div class="tesoreria-paginacion"><span id="recaudos-pagina-info">0 ingresos</span><div>
+            <button type="button" id="recaudos-anterior" class="secondary-button">Anterior</button>
+            <button type="button" id="recaudos-siguiente" class="secondary-button">Siguiente</button>
+          </div></div>
+        </section>
+        <section id="recaudos-detalle-panel" class="panel" hidden>
+          <div class="panel-heading"><div><h3 id="recaudos-detalle-titulo">Detalle del ingreso</h3><p>Información reportada; sin verificación ni aplicación a Cartera.</p></div></div>
+          <dl class="recaudos-detalle" id="recaudos-detalle-contenido"></dl>
+        </section>
+      </div>
+
       <div id="vista-tesoreria" class="module-view" hidden>
         <section class="intro">
           <div><p class="eyebrow">Tesorería · Cuentas por pagar</p>
@@ -1139,6 +1198,7 @@
   <script src="/static/app.js" defer></script>
   <script src="/static/wallets.js" defer></script>
   <script src="/static/tesoreria.js" defer></script>
+  <script src="/static/recaudos.js" defer></script>
   <script src="/static/parametros.js" defer></script>
 </body>
 </html>

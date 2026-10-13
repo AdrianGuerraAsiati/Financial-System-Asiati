@@ -2434,3 +2434,25 @@ summary {
 @media (max-width: 360px) {
   .tesoreria-metricas { grid-template-columns: 1fr; }
 }
+
+/* Recaudos: detalle legible, sin apariencia de pago confirmado */
+.recaudos-detalle {
+  display: grid;
+  grid-template-columns: minmax(145px, 1fr) minmax(0, 2fr);
+  gap: .6rem 1.2rem;
+  padding: .8rem 0;
+}
+.recaudos-detalle dt {
+  color: var(--muted, #596779);
+  font-weight: 650;
+}
+.recaudos-detalle dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+#vista-recaudos .table-wrap { overflow-x: auto; }
+#vista-recaudos #recaudos-filas td:nth-child(6) { font-weight: 650; }
+@media (max-width: 640px) {
+  .recaudos-detalle { grid-template-columns: 1fr; gap: .3rem; }
+  .recaudos-detalle dd { margin-bottom: .7rem; }
+}

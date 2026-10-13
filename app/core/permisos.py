@@ -49,6 +49,8 @@ PERMISOS: dict[str, dict[str, Alcance]] = {
     "cartera.ver": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG, ROL_TI: _TODAS},
     "compras.ver": {_SA: _TODAS, _CO: _ASIG, _CN: _ASIG, ROL_TI: _TODAS},
     "tesoreria.ver": {_SA: _TODAS, _CO: _ASIG, ROL_ANALISTA_TESORERIA: _ASIG, ROL_TI: _TODAS},
+    "recaudos.ver": {_SA: _TODAS, _CO: _ASIG, ROL_ANALISTA_TESORERIA: _ASIG, ROL_TI: _TODAS},
+    "recaudos.registrar": {_SA: _TODAS, ROL_ANALISTA_TESORERIA: _ASIG},
     "tesoreria.facturas.gestionar": {_SA: _TODAS, ROL_ANALISTA_TESORERIA: _ASIG},
     "tesoreria.pagos.registrar": {_SA: _TODAS, ROL_ANALISTA_TESORERIA: _ASIG},
     "cartera.comprobantes.subir": {_SA: _TODAS, _CN: _ASIG},
