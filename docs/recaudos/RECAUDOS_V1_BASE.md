@@ -30,7 +30,7 @@ No se importan CSV/Excel, no se hace OCR, no se consultan bancos ni Google Sheet
 
 ## Datos y futuras integraciones
 
-- Tabla `recaudos_ingresos_reportados`, migración `0023_recaudos_ingresos_reportados` con claves únicas e índices empresa+fecha.
+- Tabla `recaudos_ingresos_reportados`, migración `0023_recaudos_reportados` con claves únicas e índices empresa+fecha.
 - Cada fila tiene referencia de origen, fecha y monto **reportados** y una referencia auditada al usuario que capturó.
 - Futuros motores podrán incorporar un identificador externo inmutable, lote, hash del archivo fuente y evidencia real, una vez definido el formato de cada banco. La verificación y aplicación requerirán un contrato separado y trazabilidad evento a evento.
 - No se conectan claves foráneas a compras ni a Cartera sin validar el identificador de obligación (véase issue #137).
