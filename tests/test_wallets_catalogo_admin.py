@@ -44,3 +44,33 @@ def test_no_aprueba_catalogo_vacio():
     ), patch("app.motores.conciliacion_wallets.catalogo_admin._filas", return_value=[]):
         with pytest.raises(ValueError, match="vacío"):
             aprobar(session, empresa_id=1, periodo_id=2, usuario_id=3, motivo="validado")
+
+
+def test_no_permite_wallet_ajena_o_no_parametrizada():
+    session = Mock()
+    with patch("app.motores.conciliacion_wallets.catalogo_admin.periodo_bloqueado"), patch(
+        "app.motores.conciliacion_wallets.catalogo_admin._aprobacion", return_value=None
+    ), patch(
+        "app.motores.conciliacion_wallets.catalogo_admin.catalogo_de_empresa",
+        return_value={"wiilog": False, "tiendas": [], "pagos": []},
+    ):
+        with pytest.raises(ValueError, match="no está parametrizada"):
+            agregar(session, empresa_id=1, periodo_id=2, usuario_id=3,
+                    tipo_wallet="pagos", identidad_wallet="otra@example.test")
+    session.add.assert_not_called()
+
+
+def test_alta_acepta_wallet_parametrizada_y_deja_auditoria():
+    session = Mock()
+    session.scalar.return_value = None
+    with patch("app.motores.conciliacion_wallets.catalogo_admin.periodo_bloqueado"), patch(
+        "app.motores.conciliacion_wallets.catalogo_admin._aprobacion", return_value=None
+    ), patch(
+        "app.motores.conciliacion_wallets.catalogo_admin.catalogo_de_empresa",
+        return_value={"wiilog": False, "tiendas": [], "pagos": [{"usuario_email": "wallet@example.test"}]},
+    ), patch("app.motores.conciliacion_wallets.catalogo_admin.registrar_auditoria") as auditar:
+        item = agregar(session, empresa_id=1, periodo_id=2, usuario_id=3,
+                       tipo_wallet="pagos", identidad_wallet="WALLET@example.test")
+    assert item.identidad_wallet == "wallet@example.test"
+    session.add.assert_called_once()
+    auditar.assert_called_once()
