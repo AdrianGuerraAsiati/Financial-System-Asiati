@@ -1,4 +1,6 @@
 """Administración autorizada del catálogo, separada de cierre financiero."""
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +23,8 @@ autorizar = requiere("periodos.cerrar", empresa_de=_empresa)
 class NuevaWallet(BaseModel):
     tipo_wallet: str
     identidad_wallet: str | None = None
+    vigente_desde: date | None = None
+    vigente_hasta: date | None = None
 
 
 class Motivo(BaseModel):
@@ -62,8 +66,10 @@ def registrar(empresa_id: int, periodo_id: int, datos: NuevaWallet,
     item = _hacer(session, lambda: agregar(
         session, empresa_id=empresa_id, periodo_id=periodo_id,
         usuario_id=acceso.usuario.id, tipo_wallet=datos.tipo_wallet,
-        identidad_wallet=datos.identidad_wallet, ip=acceso.ip))
-    return {"id": item.id, "tipo_wallet": item.tipo_wallet, "identidad_wallet": item.identidad_wallet}
+        identidad_wallet=datos.identidad_wallet, ip=acceso.ip,
+        vigente_desde=datos.vigente_desde, vigente_hasta=datos.vigente_hasta))
+    return {"id": item.id, "tipo_wallet": item.tipo_wallet, "identidad_wallet": item.identidad_wallet,
+            "vigente_desde": item.vigente_desde, "vigente_hasta": item.vigente_hasta}
 
 
 @router.delete("/{periodo_id}/wallets-esperadas/{item_id}", status_code=204)
