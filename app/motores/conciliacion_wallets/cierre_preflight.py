@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.hallazgos.model import Hallazgo
 from app.core.periodos import Periodo
 from .historial import WalletEjecucionHistorial
+from .esperadas import claves_esperadas
 
 
 def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id: int) -> dict:
@@ -28,6 +29,12 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         if llave not in ultimos:
             ultimos[llave] = registro
 
+    esperadas = claves_esperadas(session, empresa_id=empresa_id, periodo_id=periodo_id)
+    faltantes = [
+        {"tipo_wallet": tipo, "identidad_wallet": identidad or None}
+        for tipo, identidad in sorted(esperadas - set(ultimos))
+    ]
+
     pendientes = list(session.scalars(
         select(Hallazgo).where(
             Hallazgo.periodo_id == periodo_id,
@@ -42,20 +49,26 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         if registro.bloqueado or not (registro.resultado.get("c0") or {}).get("cuadra")
     ]
     razones = []
+    if not esperadas:
+        razones.append("El catálogo de wallets esperadas no está definido para este período.")
+    if faltantes:
+        razones.append("Faltan conciliaciones de wallets obligatorias; las excepciones no habilitan el cierre.")
     if not ultimos:
         razones.append("No existen ejecuciones históricas de Wallets para el período.")
     if bloqueados:
         razones.append("Existen últimas ejecuciones con C0 bloqueado o no conciliado.")
     if pendientes:
         razones.append("Existen hallazgos de Wallets sin resolver, de cualquier gravedad.")
-    # El alcance de wallets esperadas, margen operativo y firma funcional
+    # La cobertura ahora se diagnostica, pero falta catálogo aprobado, margen y firma.
     # no están definidos como contratos ejecutables; se bloquea el cierre.
-    razones.append("Faltan reglas de corte, cobertura de wallets y aprobación financiera formalizadas.")
+    razones.append("Faltan validación formal del catálogo, reglas de corte y aprobación financiera.")
     return {
         "empresa_id": empresa_id,
         "periodo_id": periodo_id,
         "periodo_cerrado": periodo.cerrado,
         "ejecuciones_ultimas": len(ultimos),
+        "wallets_esperadas": len(esperadas),
+        "wallets_faltantes": faltantes,
         "ejecuciones_bloqueadas": bloqueados,
         "hallazgos_pendientes": len(pendientes),
         "criticos_abiertos": sum(1 for h in pendientes if h.critico),
