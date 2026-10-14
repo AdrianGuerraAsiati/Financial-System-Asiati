@@ -12,6 +12,9 @@ from app.core.periodos import Periodo
 from app.core.auditoria import registrar_auditoria
 
 
+ZONA_HORARIA_OFICIAL = "America/Bogota"
+
+
 class CorteOperativo(Base):
     __tablename__ = "wallets_cortes_operativos"
     __table_args__ = (
@@ -31,6 +34,8 @@ class CorteOperativo(Base):
 
 
 def validar_corte(zona_horaria: str, corte_local: datetime, periodo: Periodo) -> datetime:
+    if zona_horaria != ZONA_HORARIA_OFICIAL:
+        raise ValueError("La zona horaria oficial del corte es America/Bogota.")
     if corte_local.tzinfo is not None:
         raise ValueError("La fecha/hora local no debe incluir zona u offset.")
     try:
