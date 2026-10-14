@@ -36,3 +36,15 @@ def test_ultima_ejecucion_bloqueada_impide_dar_false_pass():
     assert resultado["ejecuciones_ultimas"] == 1
     assert resultado["ejecuciones_bloqueadas"][0]["ejecucion_id"] == 11
     assert resultado["puede_cerrar"] is False
+
+
+def test_hallazgo_no_critico_pendiente_tambien_bloquea():
+    session = Mock()
+    session.get.return_value = Mock(empresa_id=1, cerrado=False)
+    hallazgo = Mock(critico=False, resuelto=False)
+    session.scalars.side_effect = [iter([]), iter([hallazgo])]
+    resultado = diagnostico_cierre_wallets(session, empresa_id=1, periodo_id=10)
+    assert resultado["hallazgos_pendientes"] == 1
+    assert resultado["criticos_abiertos"] == 0
+    assert resultado["puede_cerrar"] is False
+    assert any("cualquier gravedad" in motivo for motivo in resultado["razones"])
