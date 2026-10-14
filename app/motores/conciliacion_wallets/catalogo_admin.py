@@ -152,13 +152,12 @@ def aprobar(session: Session, *, empresa_id: int, periodo_id: int, usuario_id: i
     filas = _filas(session, periodo_id)
     if not filas:
         raise ValueError("No se puede aprobar un catálogo vacío.")
-    # Sin fechas acreditadas no se presupone vigencia histórica.
+    # Segregación antes de evaluar vigencias.
+    if any(f.registrado_por == usuario_id for f in filas):
+        raise ValueError("El aprobador no puede aprobar wallets que registró.")
     if any(f.vigente_desde is None or f.vigente_hasta is None or
            f.vigente_desde > periodo.fecha_inicio or f.vigente_hasta < periodo.fecha_fin for f in filas):
         raise ValueError("Cada wallet debe acreditar vigencia durante todo el período antes de aprobar.")
-    # Control de segregación: quien aprobó no puede ser quien añadió una wallet vigente.
-    if any(f.registrado_por == usuario_id for f in filas):
-        raise ValueError("El aprobador no puede aprobar wallets que registró.")
     snapshot = [
         {"tipo_wallet": f.tipo_wallet, "identidad_wallet": f.identidad_wallet, "id": f.id,
          "vigente_desde": f.vigente_desde.isoformat(), "vigente_hasta": f.vigente_hasta.isoformat()}
