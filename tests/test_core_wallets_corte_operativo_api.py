@@ -1,5 +1,5 @@
 """Corte operativo: flujo HTTP real con PostgreSQL y usuarios sintéticos."""
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 import pytest
@@ -22,7 +22,7 @@ def _ctx():
     periodo = crear_periodo(empresa)
     with Session(engine()) as session:
         p = session.get(Periodo, periodo)
-        corte_local = datetime.combine(p.fecha_fin, datetime.min.time()).replace(hour=18)
+        corte_local = datetime.combine(p.fecha_fin, time(23, 59, 59))
     return empresa, periodo, f"/api/v1/wallets/periodos/{periodo}/corte-operativo", corte_local
 
 
@@ -44,7 +44,7 @@ def test_corte_autorizado_persistido_auditado_y_sin_sobrescritura():
     with Session(engine()) as session:
         corte = session.scalar(select(CorteOperativo).where(CorteOperativo.periodo_id == periodo))
         assert corte.registrado_por == coord_id
-        assert corte.corte_utc == corte_local.replace(tzinfo=timezone.utc).replace(hour=23)
+        assert corte.corte_utc == corte_local.replace(tzinfo=timezone.utc) + timedelta(hours=5)
         auditoria = session.scalar(select(Auditoria).where(
             Auditoria.entidad == "wallets_cortes_operativos", Auditoria.entidad_id == corte.id))
         assert auditoria is not None
