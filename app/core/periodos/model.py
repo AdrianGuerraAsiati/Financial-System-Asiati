@@ -15,6 +15,7 @@ class Periodo(Base):
             "fecha_fin",
             name="uq_periodos_empresa_rango",
         ),
+        UniqueConstraint("id", "empresa_id", name="uq_periodos_id_empresa"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
