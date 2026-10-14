@@ -28,11 +28,10 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         if llave not in ultimos:
             ultimos[llave] = registro
 
-    criticos = list(session.scalars(
+    pendientes = list(session.scalars(
         select(Hallazgo).where(
             Hallazgo.periodo_id == periodo_id,
             Hallazgo.motor_slug == "conciliacion_wallets",
-            Hallazgo.critico.is_(True),
             Hallazgo.resuelto.is_(False),
         )
     ))
@@ -47,8 +46,8 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         razones.append("No existen ejecuciones históricas de Wallets para el período.")
     if bloqueados:
         razones.append("Existen últimas ejecuciones con C0 bloqueado o no conciliado.")
-    if criticos:
-        razones.append("Existen hallazgos críticos abiertos.")
+    if pendientes:
+        razones.append("Existen hallazgos de Wallets sin resolver, de cualquier gravedad.")
     # El alcance de wallets esperadas, margen operativo y firma funcional
     # no están definidos como contratos ejecutables; se bloquea el cierre.
     razones.append("Faltan reglas de corte, cobertura de wallets y aprobación financiera formalizadas.")
@@ -58,7 +57,8 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         "periodo_cerrado": periodo.cerrado,
         "ejecuciones_ultimas": len(ultimos),
         "ejecuciones_bloqueadas": bloqueados,
-        "criticos_abiertos": len(criticos),
+        "hallazgos_pendientes": len(pendientes),
+        "criticos_abiertos": sum(1 for h in pendientes if h.critico),
         "puede_cerrar": False,
         "razones": razones,
     }
