@@ -9,6 +9,7 @@ from app.core.periodos import Periodo
 from .historial import WalletEjecucionHistorial
 from .esperadas import claves_esperadas
 from .catalogo_admin import WalletCatalogoAprobacion
+from .corte_operativo import CorteOperativo
 
 
 def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id: int) -> dict:
@@ -35,6 +36,9 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         WalletCatalogoAprobacion.periodo_id == periodo_id,
         WalletCatalogoAprobacion.empresa_id == empresa_id,
     ))
+    corte = session.scalar(select(CorteOperativo).where(
+        CorteOperativo.empresa_id == empresa_id, CorteOperativo.periodo_id == periodo_id,
+    ))
     faltantes = [
         {"tipo_wallet": tipo, "identidad_wallet": identidad or None}
         for tipo, identidad in sorted(esperadas - set(ultimos))
@@ -54,6 +58,8 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         if (tipo, identidad) in esperadas and (registro.bloqueado or not (registro.resultado.get("c0") or {}).get("cuadra"))
     ]
     razones = []
+    if corte is None:
+        razones.append("El corte operativo aún no está definido para el período.")
     if aprobacion is None:
         razones.append("Catálogo esperado pendiente de aprobación financiera.")
     if not esperadas:
@@ -75,6 +81,7 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         "ejecuciones_ultimas": len(ultimos),
         "wallets_esperadas": len(esperadas),
         "catalogo_aprobado": aprobacion is not None,
+        "corte_configurado": corte is not None,
         "wallets_faltantes": faltantes,
         "wallets_adicionales": [
             {"tipo_wallet": tipo, "identidad_wallet": identidad or None}
