@@ -17,8 +17,8 @@
 - `DELETE /api/v1/wallets/periodos/{periodo_id}/wallets-esperadas/{item_id}?empresa_id=X` (JSON con motivo)
 - `POST /api/v1/wallets/periodos/{periodo_id}/wallets-esperadas/aprobar?empresa_id=X` (JSON con motivo)
 
-El catálogo de Tiendas y Pagos requiere comprobación funcional por Finanzas; por ahora el API valida forma y contexto, no existencia en los parámetros ni vigencia exacta de una wallet. No se permite declarar el catálogo completo para cierre con esta sola aprobación.
+El catálogo de Tiendas y Pagos requiere comprobación funcional por Finanzas; el alta valida la pertenencia a los parámetros de la empresa; la vigencia temporal exacta de una wallet aún no está modelada. No se permite declarar el catálogo completo para cierre con esta sola aprobación.
 
 ## Pendiente antes de usar en cierres reales
 
-Comprobar la pertenencia de cada identidad al catálogo parametrizado vigente, vigencia por fecha, pruebas de PostgreSQL y permisos con usuarios reales, manejo excepcional controlado de una aprobación errónea, firma/aceptación financiera, corte temporal y congelación integral del período. No introducir datos sensibles en Git.
+Validar vigencia por fecha y cambios posteriores de los parámetros, pruebas de PostgreSQL y permisos con usuarios reales, manejo excepcional controlado de una aprobación errónea, firma/aceptación financiera, corte temporal y congelación integral del período. No introducir datos sensibles en Git.
