@@ -13,17 +13,16 @@ def test_bogota_es_valida_solo_si_se_declara():
     assert utc == datetime(2026, 10, 1, 4, 59, tzinfo=timezone.utc)
 
 def test_sin_zona_y_fuera_de_periodo_no_pasan():
-    with pytest.raises(ValueError, match="IANA"):
+    with pytest.raises(ValueError, match="America/Bogota"):
         validar_corte("Zona/Ficticia", datetime(2026, 9, 30, 12), _periodo())
     with pytest.raises(ValueError, match="período"):
         validar_corte("America/Bogota", datetime(2026, 10, 1, 0), _periodo())
 
-def test_dst_ambiguo_e_inexistente_se_rechaza():
-    periodo = Mock(fecha_inicio=date(2026, 3, 1), fecha_fin=date(2026, 11, 30))
-    with pytest.raises(ValueError, match="inexistente"):
-        validar_corte("America/New_York", datetime(2026, 3, 8, 2, 30), periodo)
-    with pytest.raises(ValueError, match="ambigua"):
-        validar_corte("America/New_York", datetime(2026, 11, 1, 1, 30), periodo)
+def test_rechaza_otra_zona_incluso_si_es_iana_valida():
+    with pytest.raises(ValueError, match="America/Bogota"):
+        validar_corte("America/New_York", datetime(2026, 9, 30, 12), _periodo())
+    with pytest.raises(ValueError, match="America/Bogota"):
+        validar_corte("UTC", datetime(2026, 9, 30, 12), _periodo())
 
 def test_clasificacion_temporal_incluye_limite():
     corte = datetime(2026, 10, 1, 0, tzinfo=timezone.utc)
