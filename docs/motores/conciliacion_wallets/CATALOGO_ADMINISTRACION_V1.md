@@ -22,3 +22,10 @@ El catálogo de Tiendas y Pagos requiere comprobación funcional por Finanzas; e
 ## Pendiente antes de usar en cierres reales
 
 Validar vigencia por fecha y cambios posteriores de los parámetros, pruebas de PostgreSQL y permisos con usuarios reales, manejo excepcional controlado de una aprobación errónea, firma/aceptación financiera, corte temporal y congelación integral del período. No introducir datos sensibles en Git.
+
+
+## Vigencia temporal declarada (migración 0027)
+
+El alta admite `vigente_desde` y `vigente_hasta` en formato ISO (YYYY-MM-DD). Son datos **declarados por el operador**, no fechas deducidas del catálogo de configuración actual ni pruebas documentales en sí mismas. Si falta alguna fecha o la vigencia no abarca completamente el rango `periodos.fecha_inicio` a `periodos.fecha_fin`, la aprobación se rechaza. Una wallet que comenzó a operar a mitad del mes requiere una decisión formal sobre si el período íntegro debe considerarla esperada; este PR no inventa esa regla.
+
+Las fechas de vigencia se incluyen en el snapshot de aprobación. Aún queda pendiente enlazar evidencia documental, validar el dato declarado y diseñar modificaciones justificadas para períodos con altas/bajas durante su transcurso.
