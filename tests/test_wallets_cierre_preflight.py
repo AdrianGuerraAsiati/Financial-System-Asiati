@@ -2,6 +2,11 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+from app.core.permisos import RecursoNoVisibleError, verificar_acceso
+from app.core.usuarios.roles import ROL_CONCILIACION
 
 from app.motores.conciliacion_wallets.cierre_preflight import diagnostico_cierre_wallets
 
@@ -124,3 +129,18 @@ def test_catalogo_vacio_no_equivale_a_cobertura_aprobada():
     assert resultado["wallets_esperadas"] == 0
     assert any("no está definido" in motivo for motivo in resultado["razones"])
     assert resultado["puede_cerrar"] is False
+
+
+def test_endpoint_diagnostico_requiere_autenticacion():
+    response = TestClient(app).get(
+        "/api/v1/wallets/periodos/10/diagnostico-cierre?empresa_id=1"
+    )
+    assert response.status_code == 401
+
+
+def test_permiso_de_conciliador_no_expone_empresa_ajena():
+    with pytest.raises(RecursoNoVisibleError):
+        verificar_acceso(
+            ROL_CONCILIACION, "conciliacion.ver",
+            empresa_id=2, asignadas=frozenset({1}),
+        )
