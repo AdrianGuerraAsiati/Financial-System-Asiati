@@ -15,7 +15,7 @@ from app.motores.cartera_ocs import snapshot_model as cartera_snapshot_model  # 
 from app.motores.tesoreria import model as tesoreria_model  # noqa: F401
 from app.motores.recaudos import model as recaudos_model  # noqa: F401
 from app.integrations.google_sheets import model as google_sheets_model  # noqa: F401
-from app.motores.conciliacion_wallets import reconciliation_model, historial, esperadas, catalogo_admin, corte_operativo, movimientos_tardios  # noqa: F401
+from app.motores.conciliacion_wallets import reconciliation_model, historial, esperadas, catalogo_admin, corte_operativo, movimientos_tardios, revision_tardios  # noqa: F401
 
 config = context.config
 
