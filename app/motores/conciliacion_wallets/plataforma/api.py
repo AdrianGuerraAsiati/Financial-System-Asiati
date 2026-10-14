@@ -88,21 +88,6 @@ def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet], *, empres
 
     return {**respuesta, "ejecucion_id": registro.id}
 
-    return {
-        "bloqueado": ejecucion.bloqueado,
-        "c0": ejecucion.c0,
-        "cargas": {
-            "wallet_id": ejecucion.carga_wallet_id,
-            "ordenes_id": ejecucion.carga_ordenes_id,
-            "ordenes_reutilizadas": ejecucion.ordenes_reutilizadas,
-            "wallet_reutilizada": ejecucion.wallet_reutilizada,
-        },
-        "hallazgos_creados": ejecucion.hallazgos_creados,
-        "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,
-        "sincronizacion": ejecucion.sincronizacion,
-        "resumen": ejecucion.resumen,
-        "corte_ordenes_usado": ejecucion.corte_ordenes_usado,
-    }
 
 
 def hallazgo_json(hallazgo: Hallazgo) -> dict[str, object]:
