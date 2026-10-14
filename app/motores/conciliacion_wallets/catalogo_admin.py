@@ -1,7 +1,7 @@
 """Altas, bajas y aprobación de cobertura; nunca cierra un período."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import DateTime, ForeignKey, ForeignKeyConstraint, Integer, JSON, Text, UniqueConstraint, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
@@ -79,15 +79,19 @@ def catalogo(session: Session, *, empresa_id: int, periodo_id: int) -> dict:
         "aprobado_at": aprobacion.aprobado_at if aprobacion else None,
         "aprobado_por": aprobacion.aprobado_por if aprobacion else None,
         "wallets": [
-            {"id": r.id, "tipo_wallet": r.tipo_wallet, "identidad_wallet": r.identidad_wallet}
+            {"id": r.id, "tipo_wallet": r.tipo_wallet, "identidad_wallet": r.identidad_wallet,
+             "vigente_desde": r.vigente_desde, "vigente_hasta": r.vigente_hasta}
             for r in _filas(session, periodo_id)
         ],
     }
 
 
 def agregar(session: Session, *, empresa_id: int, periodo_id: int, usuario_id: int,
-            tipo_wallet: str, identidad_wallet: str | None, ip: str | None = None) -> WalletEsperada:
+            tipo_wallet: str, identidad_wallet: str | None, ip: str | None = None,
+            vigente_desde: date | None = None, vigente_hasta: date | None = None) -> WalletEsperada:
     tipo, identidad = validar_identidad(tipo_wallet, identidad_wallet)
+    if vigente_desde is not None and vigente_hasta is not None and vigente_desde > vigente_hasta:
+        raise ValueError("La fecha inicial de vigencia no puede superar la final.")
     periodo_bloqueado(session, empresa_id, periodo_id)
     if _aprobacion(session, periodo_id):
         raise CatalogoCongeladoError("Catálogo aprobado: no se puede modificar.")
@@ -108,7 +112,8 @@ def agregar(session: Session, *, empresa_id: int, periodo_id: int, usuario_id: i
     )) is not None:
         raise ValueError("La wallet ya está declarada para este período.")
     item = WalletEsperada(empresa_id=empresa_id, periodo_id=periodo_id,
-                          tipo_wallet=tipo, identidad_wallet=identidad, registrado_por=usuario_id)
+                          tipo_wallet=tipo, identidad_wallet=identidad, registrado_por=usuario_id,
+                          vigente_desde=vigente_desde, vigente_hasta=vigente_hasta)
     session.add(item)
     session.flush()
     registrar_auditoria(session, usuario_id=usuario_id, accion="WALLET_CATALOGO_AGREGAR",
@@ -139,7 +144,7 @@ def quitar(session: Session, *, empresa_id: int, periodo_id: int, item_id: int,
 
 def aprobar(session: Session, *, empresa_id: int, periodo_id: int, usuario_id: int,
             motivo: str, ip: str | None = None) -> WalletCatalogoAprobacion:
-    periodo_bloqueado(session, empresa_id, periodo_id)
+    periodo = periodo_bloqueado(session, empresa_id, periodo_id)
     if _aprobacion(session, periodo_id):
         raise CatalogoCongeladoError("Catálogo ya aprobado.")
     if not motivo.strip():
@@ -147,11 +152,16 @@ def aprobar(session: Session, *, empresa_id: int, periodo_id: int, usuario_id: i
     filas = _filas(session, periodo_id)
     if not filas:
         raise ValueError("No se puede aprobar un catálogo vacío.")
+    # Sin fechas acreditadas no se presupone vigencia histórica.
+    if any(f.vigente_desde is None or f.vigente_hasta is None or
+           f.vigente_desde > periodo.fecha_inicio or f.vigente_hasta < periodo.fecha_fin for f in filas):
+        raise ValueError("Cada wallet debe acreditar vigencia durante todo el período antes de aprobar.")
     # Control de segregación: quien aprobó no puede ser quien añadió una wallet vigente.
     if any(f.registrado_por == usuario_id for f in filas):
         raise ValueError("El aprobador no puede aprobar wallets que registró.")
     snapshot = [
-        {"tipo_wallet": f.tipo_wallet, "identidad_wallet": f.identidad_wallet, "id": f.id}
+        {"tipo_wallet": f.tipo_wallet, "identidad_wallet": f.identidad_wallet, "id": f.id,
+         "vigente_desde": f.vigente_desde.isoformat(), "vigente_hasta": f.vigente_hasta.isoformat()}
         for f in filas
     ]
     aprobacion = WalletCatalogoAprobacion(
