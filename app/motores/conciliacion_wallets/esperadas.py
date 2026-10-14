@@ -1,7 +1,7 @@
 """Cobertura de wallets declaradas para un período; sin inferencias desde ejecuciones."""
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, UniqueConstraint, func, select
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, UniqueConstraint, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.core.db import Base
@@ -12,6 +12,7 @@ class WalletEsperada(Base):
     __tablename__ = "wallets_esperadas"
     __table_args__ = (
         UniqueConstraint("periodo_id", "tipo_wallet", "identidad_wallet", name="uq_wallets_esperadas_contexto"),
+        CheckConstraint("(vigente_desde IS NULL OR vigente_hasta IS NULL OR vigente_desde <= vigente_hasta)", name="ck_wallets_esperadas_vigencia_orden"),
         CheckConstraint("tipo_wallet IN ('wiilog','tienda','pagos')", name="ck_wallets_esperadas_tipo"),
         CheckConstraint("(tipo_wallet = 'wiilog' AND identidad_wallet = '') OR (tipo_wallet <> 'wiilog' AND identidad_wallet <> '')", name="ck_wallets_esperadas_identidad"),
         Index("ix_wallets_esperadas_empresa_periodo", "empresa_id", "periodo_id"),
@@ -23,6 +24,8 @@ class WalletEsperada(Base):
     periodo_id: Mapped[int] = mapped_column(ForeignKey("periodos.id", ondelete="RESTRICT"), nullable=False)
     tipo_wallet: Mapped[str] = mapped_column(String(16), nullable=False)
     identidad_wallet: Mapped[str] = mapped_column(String(320), nullable=False, default="")
+    vigente_desde: Mapped[date | None] = mapped_column(Date, nullable=True)
+    vigente_hasta: Mapped[date | None] = mapped_column(Date, nullable=True)
     registrado_por: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False)
     registrado_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

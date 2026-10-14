@@ -8,6 +8,7 @@ from app.core.hallazgos.model import Hallazgo
 from app.core.periodos import Periodo
 from .historial import WalletEjecucionHistorial
 from .esperadas import claves_esperadas
+from .catalogo_admin import WalletCatalogoAprobacion
 
 
 def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id: int) -> dict:
@@ -30,6 +31,10 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
             ultimos[llave] = registro
 
     esperadas = claves_esperadas(session, empresa_id=empresa_id, periodo_id=periodo_id)
+    aprobacion = session.scalar(select(WalletCatalogoAprobacion).where(
+        WalletCatalogoAprobacion.periodo_id == periodo_id,
+        WalletCatalogoAprobacion.empresa_id == empresa_id,
+    ))
     faltantes = [
         {"tipo_wallet": tipo, "identidad_wallet": identidad or None}
         for tipo, identidad in sorted(esperadas - set(ultimos))
@@ -49,6 +54,8 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         if (tipo, identidad) in esperadas and (registro.bloqueado or not (registro.resultado.get("c0") or {}).get("cuadra"))
     ]
     razones = []
+    if aprobacion is None:
+        razones.append("Catálogo esperado pendiente de aprobación financiera.")
     if not esperadas:
         razones.append("El catálogo de wallets esperadas no está definido para este período.")
     if faltantes:
@@ -67,6 +74,7 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         "periodo_cerrado": periodo.cerrado,
         "ejecuciones_ultimas": len(ultimos),
         "wallets_esperadas": len(esperadas),
+        "catalogo_aprobado": aprobacion is not None,
         "wallets_faltantes": faltantes,
         "wallets_adicionales": [
             {"tipo_wallet": tipo, "identidad_wallet": identidad or None}
