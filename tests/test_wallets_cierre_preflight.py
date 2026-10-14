@@ -4,6 +4,7 @@ from unittest.mock import Mock
 import pytest
 
 from app.motores.conciliacion_wallets.cierre_preflight import diagnostico_cierre_wallets
+from unittest.mock import patch
 
 
 def test_rechaza_periodo_de_otra_empresa():
@@ -18,7 +19,8 @@ def test_no_autoriza_cierre_sin_reglas_aprobadas():
     session = Mock()
     session.get.return_value = Mock(empresa_id=1, cerrado=False)
     session.scalars.side_effect = [iter([]), iter([])]
-    resultado = diagnostico_cierre_wallets(session, empresa_id=1, periodo_id=10)
+    with patch("app.motores.conciliacion_wallets.cierre_preflight.claves_esperadas", return_value=set()):
+        resultado = diagnostico_cierre_wallets(session, empresa_id=1, periodo_id=10)
     assert resultado["puede_cerrar"] is False
     assert resultado["ejecuciones_ultimas"] == 0
     assert resultado["razones"]
@@ -48,3 +50,16 @@ def test_hallazgo_no_critico_pendiente_tambien_bloquea():
     assert resultado["criticos_abiertos"] == 0
     assert resultado["puede_cerrar"] is False
     assert any("cualquier gravedad" in motivo for motivo in resultado["razones"])
+
+
+def test_wallet_esperada_faltante_no_se_perdona():
+    session = Mock()
+    session.get.return_value = Mock(empresa_id=1, cerrado=False)
+    session.scalars.side_effect = [iter([]), iter([])]
+    with patch("app.motores.conciliacion_wallets.cierre_preflight.claves_esperadas",
+               return_value={("wiilog", ""), ("pagos", "wallet@example.test")}):
+        resultado = diagnostico_cierre_wallets(session, empresa_id=1, periodo_id=10)
+    assert resultado["wallets_esperadas"] == 2
+    assert len(resultado["wallets_faltantes"]) == 2
+    assert resultado["puede_cerrar"] is False
+    assert any("excepciones no habilitan" in r for r in resultado["razones"])
