@@ -1,7 +1,7 @@
 """Cobertura de wallets declaradas para un período; sin inferencias desde ejecuciones."""
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func, select
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, UniqueConstraint, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.core.db import Base
@@ -15,6 +15,7 @@ class WalletEsperada(Base):
         CheckConstraint("tipo_wallet IN ('wiilog','tienda','pagos')", name="ck_wallets_esperadas_tipo"),
         CheckConstraint("(tipo_wallet = 'wiilog' AND identidad_wallet = '') OR (tipo_wallet <> 'wiilog' AND identidad_wallet <> '')", name="ck_wallets_esperadas_identidad"),
         Index("ix_wallets_esperadas_empresa_periodo", "empresa_id", "periodo_id"),
+        ForeignKeyConstraint(["periodo_id", "empresa_id"], ["periodos.id", "periodos.empresa_id"], name="fk_wallets_esperadas_periodo_empresa", ondelete="RESTRICT"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
