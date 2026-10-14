@@ -109,3 +109,17 @@ def test_resolved_finding_says_it_is_read_only_and_role_message_stays_for_roles(
 
     assert "Este hallazgo ya está resuelto. Solo se puede consultar." in response.text
     assert "Tu rol tiene acceso de lectura para este hallazgo." in response.text
+
+
+def test_wallets_summary_is_tabular_and_progress_is_not_fake_percentage() -> None:
+    shell = TestClient(app).get("/").text
+    javascript = TestClient(app).get("/static/wallets.js").text
+
+    assert 'id="wallets-avance"' in shell
+    assert 'role="status" aria-live="polite"' in shell
+    assert 'id="wallets-resumen"' in shell
+    assert 'aria-label="Resumen tabular de conciliación"' in javascript
+    assert 'filasResumen(valor, ruta = [])' in javascript
+    assert 'esperando respuesta del motor (avance no medido)' in javascript
+    assert 'data.bloqueado || !data.resumen' in javascript
+    assert 'escapar(valor === null' in javascript
