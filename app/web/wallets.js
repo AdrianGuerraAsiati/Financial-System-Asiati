@@ -20,6 +20,7 @@
   const archivoOrdenes = $("#wallets-archivo-ordenes");
   const avisoForm = $("#wallets-form-aviso");
   const conciliar = $("#wallets-conciliar");
+  const avance = $("#wallets-avance");
 
   const c0Panel = $("#wallets-c0-panel");
   const c0Estado = $("#wallets-c0-estado");
@@ -398,18 +399,12 @@
       : "";
   }
 
-  function valorResumen(valor) {
-    if (valor === null || valor === undefined) return "—";
-    if (typeof valor !== "object") return escapar(valor);
-    if (Array.isArray(valor)) return escapar(valor.join(", "));
-    const filas = Object.entries(valor);
-    if (!filas.length) return '<span class="muted">Sin registros</span>';
-    return '<div class="wallet-summary-rows">' + filas.map(([clave, dato]) => {
-      const texto = typeof dato === "object" && dato !== null
-        ? Object.entries(dato).map(([k, v]) => escapar(k) + ": " + escapar(v)).join(" · ")
-        : escapar(dato);
-      return "<div><span>" + escapar(clave) + "</span><strong>" + texto + "</strong></div>";
-    }).join("") + "</div>";
+  function filasResumen(valor, ruta = []) {
+    if (valor !== null && typeof valor === "object" && !Array.isArray(valor)) {
+      return Object.entries(valor).flatMap(([clave, dato]) => filasResumen(dato, [...ruta, clave]));
+    }
+    const detalle = Array.isArray(valor) ? valor.join(", ") : valor;
+    return [{ruta, valor: detalle}];
   }
 
   function mostrarResumen(data) {
@@ -417,15 +412,23 @@
       resumenPanel.hidden = true;
       return;
     }
+    const filas = Object.entries(data.resumen).flatMap(([grupo, valor]) =>
+      filasResumen(valor, [grupo])
+    );
     resumenPanel.hidden = false;
-    resumen.innerHTML = Object.entries(data.resumen).map(([clave, valor]) => {
-      const significado = SIGNIFICADOS[clave];
-      return '<article class="wallet-summary-card">' +
-        "<h4>" + escapar(clave.replaceAll("_", " ")) + "</h4>" +
-        (significado ? "<p>" + escapar(significado) + "</p>" : "") +
-        valorResumen(valor) +
-        "</article>";
-    }).join("");
+    resumen.innerHTML = filas.length
+      ? '<div class="table-wrap"><table class="wallets-table" aria-label="Resumen tabular de conciliación">' +
+        '<thead><tr><th scope="col">Regla o sección</th><th scope="col">Detalle</th><th scope="col">Resultado</th></tr></thead><tbody>' +
+        filas.map(({ruta, valor}) => {
+          const grupo = ruta[0];
+          const detalle = ruta.slice(1).join(" · ") || "Total";
+          return "<tr><td title=\"" + escapar(SIGNIFICADOS[grupo] || "") + "\">" +
+            escapar(grupo.replaceAll("_", " ")) + "</td><td>" +
+            escapar(detalle.replaceAll("_", " ")) + "</td><td>" +
+            escapar(valor === null || valor === undefined || valor === "" ? "—" : valor) +
+            "</td></tr>";
+        }).join("") + "</tbody></table></div>"
+      : '<p class="empty">La conciliación no devolvió filas de resumen.</p>';
   }
 
   function guardarResultado(data) {
@@ -494,10 +497,13 @@
     const textoOriginal = conciliar.textContent;
     conciliar.disabled = true;
     conciliar.textContent = "Conciliando…";
+    avance.hidden = false;
+    avance.textContent = "Conciliación en curso · esperando respuesta del motor (avance no medido).";
     setEstadoWallets("Procesando archivos…", "");
 
     try {
       const resultado = await walletApi(endpoint, {method: "POST", body: data});
+      avance.textContent = resultado.bloqueado ? "Finalizada · C0 bloqueado" : "Conciliación finalizada";
       guardarResultado(resultado);
       mostrarC0(resultado);
       mostrarResumen(resultado);
@@ -508,6 +514,7 @@
       );
       if (!resultado.bloqueado) await cargarHallazgos();
     } catch (error) {
+      avance.textContent = "La conciliación no terminó correctamente.";
       setEstadoWallets(error.message, "error");
     } finally {
       conciliar.textContent = textoOriginal;
