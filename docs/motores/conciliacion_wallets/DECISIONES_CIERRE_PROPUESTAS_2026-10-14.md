@@ -1,28 +1,42 @@
-# PR3 · Decisiones propuestas para cierre de Wallets (14-oct-2026)
+# PR3 · Propuesta de reglas de cierre de Wallets (14-oct-2026)
 
-**Estado: insumo de cuestionario, NO aprobación financiera formal.** No habilita cierres.
+**Estado: decisiones de cuestionario, pendientes de aprobación formal por Finanzas y seguridad.** Este documento no concede permisos ni habilita cierres.
 
-## Respuestas registradas
-1. Exigir todas las wallets esperadas conciliadas, C0 aprobado y sin críticos abiertos.
-2. Wallet faltante bloquea, salvo excepción autorizada.
-3. C0 descuadrado siempre bloquea; sin tolerancias inventadas.
-4. **Todos los hallazgos deben quedar resueltos** (más estricto que solo críticos).
-5. Cualquier conciliador puede cerrar (propuesta que contradice la matriz actual).
-6. Excepciones solo para casos autorizados por Finanzas, con motivo, responsable y evidencia.
-7. Guardar fecha, responsable, empresa, período, ejecuciones, C0, hallazgos, aprobaciones y auditoría.
-8. Cualquier conciliador puede reabrir (propuesta que contradice la matriz actual).
-9. Congelar conciliaciones y modificaciones financieras hasta reapertura autorizada.
-10. Corte operativo con zona horaria, fecha/hora y tratamiento tardío aprobado por Finanzas.
+## Condiciones propuestas de cierre
 
-## Compatibilidad y bloqueos
-- La condición 4 es más estricta que 1: un informativo o REVISAR pendiente también impide el cierre.
-- La regla 2 admite una excepción por wallet faltante, pero 1 exige todas las wallets. Definir si una excepción sustituye una wallet esperada a efectos de cobertura; **nunca** convierte un C0 inválido en aprobado.
-- La regla 6 reserva excepciones a Finanzas. Las reglas 5 y 8 piden ampliar permisos de cierre y reapertura a cualquier conciliador, cuando hoy `periodos.cerrar` solo habilita Coordinación Financiera/Superadmin y `periodos.reabrir` solo Superadmin. **No cambiar los permisos sin firma de negocio y seguridad.**
-- `app/core/periodos/service.py` ya implementa cierre y reapertura con evento. Su guarda actual impide críticos abiertos, no todos los hallazgos. **No publicar operaciones nuevas sobre ese servicio** sin incorporar las condiciones definitivas y control transaccional.
-- No existe definición aprobada de wallets esperadas por empresa/período (vigencia, altas/bajas), casos de excepción, firmantes, corte temporal, zona horaria y manejo de movimientos tardíos.
-- La categoría de estado de hallazgos incluye resueltos por sistema; precisar si éstos satisfacen la regla 4 y cómo se congela su evidencia histórica.
-- Las evidencias del PR2 registran C0 y resumen, pero deben verificarse cobertura, hash de cargas, versiones de reglas, sello de aprobación y congelación efectiva antes de habilitar cierre.
-- El código en PR3 sigue mostrando `puede_cerrar=false` por diseño hasta aprobación formal y desarrollo completo.
+1. Todas las wallets **esperadas para la empresa y período** deben tener última ejecución válida y C0 aprobado. No se inventan tolerancias.
+2. Una wallet esperada faltante **bloquea incondicionalmente el cierre**. Puede registrarse una excepción/documento de incidencia, pero **esa excepción NO permite cerrar** ni satisface el requisito de cobertura.
+3. Un C0 descuadrado bloquea siempre; una excepción administrativa no transforma C0 inválido en válido.
+4. **Todo hallazgo pendiente**, crítico o no, bloquea. Hallazgos **resueltos por el sistema** se consideran resueltos cuando conservan evidencia y trazabilidad verificable. No equivale a eliminar el hallazgo ni a omitirlo del historial.
+5. Los conciliadores **solicitan** el cierre. **Coordinación Financiera ejecuta/autoriza** el cierre. **Superadministración reabre**, con motivo obligatorio y auditoría. Esto coincide en lo esencial con la matriz actual de permisos; la solicitud es un flujo **nuevo, todavía no implementado**.
+6. Excepciones de carácter administrativo o incidencias: casos permitidos por Finanzas, con motivo, responsable y evidencia. No anulan las condiciones 1 a 4. El catálogo de excepciones admitidas sigue pendiente.
+7. Al cerrar, preservar fecha, responsable, empresa, período, ejecuciones y sus C0, estados/evidencia de hallazgos, aprobaciones, hashes/referencias de cargas, versiones aplicables y eventos auditados.
+8. Bloquear nuevas conciliaciones y modificaciones financieras del período cerrado. Una operación tardía que afecte dicho período exige **reapertura autorizada por Superadmin**, con motivo y traza de correcciones; **no** se incorpora silenciosamente.
+9. El corte requiere una definición explícita de Finanzas sobre zona horaria, fecha y hora límite, margen y tratamiento de movimientos tardíos; todavía no hay valores aprobados.
 
-## Próxima aprobación requerida
-Documento firmado por responsable financiero y responsable de seguridad con alcance de permisos, reglas de cobertura, excepciones, corte, auditoría y reapertura. Registrar la decisión sin datos privados, usando evidencia operacional fuera de Git.
+## Secuencia funcional propuesta
+
+Conciliador prepara evidencia → solicita cierre → diagnóstico revisa catálogo de wallets esperadas, C0 y hallazgos → Coordinación Financiera verifica el expediente y autoriza/ejecuta el cierre → período se congela con auditoría. Si hay movimientos tardíos que afectan el cierre: solicitud justificada → Superadmin reabre → ajustes auditados → nueva conciliación y autorización de cierre.
+
+**Nota:** el flujo de solicitudes, expediente/aceptación y cierre transaccional aún deben diseñarse/implementarse; las flechas no representan endpoints existentes.
+
+## Reglas que el código ya verifica
+
+- Diagnóstico de las **últimas ejecuciones existentes** por tipo/identidad, y detección de C0 bloqueado/descuadrado.
+- Hallazgos de Wallets no resueltos de **cualquier gravedad**. Un hallazgo con `resuelto=True` no cuenta como pendiente, incluidos los resueltos por el sistema; la condición adicional de trazabilidad/evidencia debe probarse antes del cierre real.
+- Aislamiento del período por empresa y permiso `conciliacion.ver` en la consulta.
+- `puede_cerrar=false` deliberadamente, hasta cumplir las dependencias y contar con aprobación formal.
+
+## Definiciones y controles pendientes
+
+- Catálogo de wallets **esperadas y vigentes** por empresa/período, con altas/bajas y cobertura verificable. **No basta con contar ejecuciones existentes**.
+- Regla de corte con zona horaria, hora límite, margen y contabilización de novedades tardías.
+- Protocolo y soporte firmado por Finanzas; autorizaciones de excepción limitadas a incidencias sin permitir faltantes o C0 inválidos.
+- Flujo de solicitud por conciliador y aprobación/cierre por Coordinación Financiera, con segregación de funciones y controles contra doble solicitud/ejecución.
+- Congelación efectiva de escrituras financieras por período, verificación de carreras transaccionales, reapertura por Superadmin con motivo obligatorio y auditoría.
+- Evidencia de resolución por sistema, snapshot de hallazgos, hashes y versión de reglas, sin exponer datos sensibles.
+- Pruebas de seguridad, concurrencia, migraciones, regresiones privadas y aceptación funcional.
+
+## Gate
+
+**No fusionar una autorización de cierre funcional** hasta que estén implementados los bloqueos definitivos y aprobados formalmente por Finanzas y seguridad. El PR #144 mantiene un preflight de solo lectura; no abre rutas de cierre/reapertura ni modifica permisos.
