@@ -118,7 +118,9 @@ def agregar(session: Session, *, empresa_id: int, periodo_id: int, usuario_id: i
     session.flush()
     registrar_auditoria(session, usuario_id=usuario_id, accion="WALLET_CATALOGO_AGREGAR",
         entidad="wallets_esperadas", entidad_id=item.id, empresa_id=empresa_id,
-        despues={"periodo_id": periodo_id, "tipo_wallet": tipo, "identidad_wallet": identidad}, ip=ip)
+        despues={"periodo_id": periodo_id, "tipo_wallet": tipo, "identidad_wallet": identidad,
+                 "vigente_desde": vigente_desde.isoformat() if vigente_desde else None,
+                 "vigente_hasta": vigente_hasta.isoformat() if vigente_hasta else None}, ip=ip)
     return item
 
 
@@ -138,7 +140,10 @@ def quitar(session: Session, *, empresa_id: int, periodo_id: int, item_id: int,
     registrar_auditoria(session, usuario_id=usuario_id, accion="WALLET_CATALOGO_QUITAR",
         entidad="wallets_esperadas", entidad_id=item.id, empresa_id=empresa_id,
         antes={"periodo_id": periodo_id, "tipo_wallet": item.tipo_wallet,
-               "identidad_wallet": item.identidad_wallet, "motivo": motivo.strip()}, ip=ip)
+               "identidad_wallet": item.identidad_wallet,
+               "vigente_desde": item.vigente_desde.isoformat() if item.vigente_desde else None,
+               "vigente_hasta": item.vigente_hasta.isoformat() if item.vigente_hasta else None,
+               "motivo": motivo.strip()}, ip=ip)
     session.delete(item)
 
 
