@@ -10,6 +10,7 @@ from app.core.db import Base
 from app.core.periodos import Periodo
 from app.core.auditoria import registrar_auditoria
 from .esperadas import WalletEsperada
+from .plataforma.integracion import catalogo_de_empresa
 
 
 class CatalogoCongeladoError(ValueError):
@@ -90,6 +91,17 @@ def agregar(session: Session, *, empresa_id: int, periodo_id: int, usuario_id: i
     periodo_bloqueado(session, empresa_id, periodo_id)
     if _aprobacion(session, periodo_id):
         raise CatalogoCongeladoError("Catálogo aprobado: no se puede modificar.")
+    configuradas = catalogo_de_empresa(session, empresa_id)
+    if tipo == "wiilog":
+        permitida = configuradas["wiilog"]
+    else:
+        grupo = "tiendas" if tipo == "tienda" else "pagos"
+        permitida = any(
+            w["usuario_email"].strip().lower() == identidad
+            for w in configuradas[grupo]
+        )
+    if not permitida:
+        raise ValueError("La wallet no está parametrizada para la empresa indicada.")
     if session.scalar(select(WalletEsperada.id).where(
         WalletEsperada.periodo_id == periodo_id, WalletEsperada.tipo_wallet == tipo,
         WalletEsperada.identidad_wallet == identidad
