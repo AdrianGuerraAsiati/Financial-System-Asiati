@@ -9,13 +9,13 @@ def _periodo():
     return Mock(fecha_inicio=date(2026, 9, 1), fecha_fin=date(2026, 9, 30))
 
 def test_bogota_es_valida_solo_si_se_declara():
-    utc = validar_corte("America/Bogota", datetime(2026, 9, 30, 23, 59), _periodo())
-    assert utc == datetime(2026, 10, 1, 4, 59, tzinfo=timezone.utc)
+    utc = validar_corte("America/Bogota", datetime(2026, 9, 30, 23, 59, 59), _periodo())
+    assert utc == datetime(2026, 10, 1, 4, 59, 59, tzinfo=timezone.utc)
 
 def test_sin_zona_y_fuera_de_periodo_no_pasan():
     with pytest.raises(ValueError, match="America/Bogota"):
         validar_corte("Zona/Ficticia", datetime(2026, 9, 30, 12), _periodo())
-    with pytest.raises(ValueError, match="período"):
+    with pytest.raises(ValueError, match="último día calendario"):
         validar_corte("America/Bogota", datetime(2026, 10, 1, 0), _periodo())
 
 def test_rechaza_otra_zona_incluso_si_es_iana_valida():
@@ -37,3 +37,8 @@ def test_rechaza_instante_naive():
         clasificar_movimiento(instante_movimiento=datetime(2026, 9, 1),
                              instante_recepcion=datetime.now(timezone.utc),
                              corte_utc=datetime.now(timezone.utc))
+
+
+def test_rechaza_corte_antes_del_ultimo_segundo():
+    with pytest.raises(ValueError, match="23:59:59"):
+        validar_corte("America/Bogota", datetime(2026, 9, 30, 23, 59, 58), _periodo())
