@@ -9,6 +9,7 @@ from app.core.cargas.errors import ContextoCargaInvalidoError
 from app.core.periodos.errors import PeriodoCerradoError
 from app.core.session import obtener_session
 
+from ..historial import guardar_historial
 from ..cargas import CargaDuplicadaError, ConciliacionRepetidaError
 from ..plataforma.api import hallazgo_json
 from .integracion import (
@@ -61,6 +62,19 @@ def conciliar_wiilog(
             wallet_contenido=wallet_contenido,
             usuario_id=acceso.usuario.id,
         )
+        respuesta = {
+            "bloqueado": ejecucion.bloqueado, "c0": ejecucion.c0,
+            "cargas": {"ordenes_id": ejecucion.carga_ordenes_id,
+                       "wallet_id": ejecucion.carga_wallet_id,
+                       "ordenes_reutilizadas": ejecucion.ordenes_reutilizadas,
+                       "wallet_reutilizada": ejecucion.wallet_reutilizada},
+            "hallazgos_creados": ejecucion.hallazgos_creados,
+            "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,
+            "sincronizacion": ejecucion.sincronizacion, "resumen": ejecucion.resumen,
+        }
+        registro = guardar_historial(session, empresa_id=empresa_id, periodo_id=periodo_id,
+                                  usuario_id=acceso.usuario.id, tipo_wallet="wiilog",
+                                  identidad_wallet=None, resultado=respuesta)
         session.commit()
     except IntegrityError as exc:
         session.rollback()
@@ -93,6 +107,9 @@ def conciliar_wiilog(
         session.rollback()
         raise
 
+    return {**respuesta, "ejecucion_id": registro.id}
+
+    # Legacy response (kept below unreachable for compatibility during migration)
     return {
         "bloqueado": ejecucion.bloqueado,
         "c0": ejecucion.c0,
