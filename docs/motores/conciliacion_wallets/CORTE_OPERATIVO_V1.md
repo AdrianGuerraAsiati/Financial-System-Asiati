@@ -4,7 +4,7 @@
 
 ## Parámetros obligatorios
 
-Por empresa y período: zona horaria IANA explícita, fecha/hora local del corte, justificación y actor. La fecha del corte debe estar dentro del período. **Decisión operativa del proyecto (cuestionario, sin firma financiera formal): la única zona aceptada es `America/Bogota` (UTC−05:00); otras zonas se rechazan. La hora y fecha exactas del corte siguen sin aprobarse y deben suministrarse expresamente.** Se guarda también el instante UTC calculado y se rechazan horas ambiguas o inexistentes por transiciones DST.
+Por empresa y período: zona horaria IANA explícita, fecha/hora local del corte, justificación y actor. El corte debe ocurrir exactamente a las **23:59:59 del último día calendario del período**, hora de Bogotá; otros horarios se rechazan. **Decisión operativa del proyecto (cuestionario, sin firma financiera formal): la única zona aceptada es `America/Bogota` (UTC−05:00); otras zonas se rechazan. La hora y fecha exactas del corte han sido confirmadas como regla operativa: fin de período a las 23:59:59.** Se guarda también el instante UTC calculado y se rechazan horas ambiguas o inexistentes por transiciones DST.
 
 En esta primera versión el registro es único y no modificable desde la API. Cualquier rectificación exige diseñar un proceso de autorización con historial; **no usar SQL manual como corrección operacional**.
 
@@ -19,4 +19,4 @@ La clasificación **no cambia saldos, no reasigna períodos ni ejecuta asientos*
 
 ## Gate financiero pendiente
 
-Finanzas debe ratificar formalmente la zona horaria acordada y autorizar el reloj de corte por empresa/período, semántica de fechas de origen y recepción, tolerancias o márgenes (sin inventarlos), fuente de marcas temporales y procedimiento de correcciones. Hasta entonces, el preflight sigue con `puede_cerrar=false`.
+Finanzas debe ratificar formalmente la zona horaria acordada y ratificar formalmente la hora de corte del último día del período, semántica de fechas de origen y recepción, tolerancias o márgenes (sin inventarlos), fuente de marcas temporales y procedimiento de correcciones. Hasta entonces, el preflight sigue con `puede_cerrar=false`.
