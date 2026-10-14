@@ -22,6 +22,7 @@ from app.motores.conciliacion_wallets.catalogo_admin_api import router as wallet
 from app.motores.conciliacion_wallets.corte_operativo_api import router as wallets_corte_router
 from app.motores.conciliacion_wallets.movimientos_tardios_api import router as wallets_tardios_router
 from app.motores.conciliacion_wallets.revision_tardios_api import router as wallets_revision_router
+from app.motores.conciliacion_wallets.solicitudes_reapertura_api import router as wallets_reapertura_router
 from app.motores.conciliacion_wallets.plataforma.api import router as wallets_router
 from app.motores.conciliacion_wallets.wiilog.api import router as wiilog_wallet_router
 from app.integrations.google_sheets.api import router as google_sheets_router
@@ -55,6 +56,7 @@ app.include_router(wallets_catalogo_admin_router, prefix=API_V1)
 app.include_router(wallets_corte_router, prefix=API_V1)
 app.include_router(wallets_tardios_router, prefix=API_V1)
 app.include_router(wallets_revision_router, prefix=API_V1)
+app.include_router(wallets_reapertura_router, prefix=API_V1)
 app.include_router(google_sheets_router, prefix=API_V1)
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
