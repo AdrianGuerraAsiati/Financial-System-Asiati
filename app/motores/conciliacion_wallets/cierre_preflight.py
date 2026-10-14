@@ -46,7 +46,7 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         {"tipo_wallet": tipo, "identidad_wallet": identidad or None,
          "ejecucion_id": registro.id}
         for (tipo, identidad), registro in ultimos.items()
-        if registro.bloqueado or not (registro.resultado.get("c0") or {}).get("cuadra")
+        if (tipo, identidad) in esperadas and (registro.bloqueado or not (registro.resultado.get("c0") or {}).get("cuadra"))
     ]
     razones = []
     if not esperadas:
@@ -59,8 +59,7 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         razones.append("Existen últimas ejecuciones con C0 bloqueado o no conciliado.")
     if pendientes:
         razones.append("Existen hallazgos de Wallets sin resolver, de cualquier gravedad.")
-    # La cobertura ahora se diagnostica, pero falta catálogo aprobado, margen y firma.
-    # no están definidos como contratos ejecutables; se bloquea el cierre.
+    # La cobertura se diagnostica; catálogo, corte y firma siguen pendientes de aprobación.
     razones.append("Faltan validación formal del catálogo, reglas de corte y aprobación financiera.")
     return {
         "empresa_id": empresa_id,
@@ -69,6 +68,10 @@ def diagnostico_cierre_wallets(session: Session, *, empresa_id: int, periodo_id:
         "ejecuciones_ultimas": len(ultimos),
         "wallets_esperadas": len(esperadas),
         "wallets_faltantes": faltantes,
+        "wallets_adicionales": [
+            {"tipo_wallet": tipo, "identidad_wallet": identidad or None}
+            for tipo, identidad in sorted(set(ultimos) - esperadas)
+        ],
         "ejecuciones_bloqueadas": bloqueados,
         "hallazgos_pendientes": len(pendientes),
         "criticos_abiertos": sum(1 for h in pendientes if h.critico),
