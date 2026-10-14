@@ -13,6 +13,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.create_unique_constraint("uq_periodos_id_empresa", "periodos", ["id", "empresa_id"])
     op.create_table(
         "wallets_esperadas",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -24,6 +25,7 @@ def upgrade() -> None:
         sa.Column("registrado_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("tipo_wallet IN ('wiilog','tienda','pagos')", name="ck_wallets_esperadas_tipo"),
         sa.CheckConstraint("(tipo_wallet = 'wiilog' AND identidad_wallet = '') OR (tipo_wallet <> 'wiilog' AND identidad_wallet <> '')", name="ck_wallets_esperadas_identidad"),
+        sa.ForeignKeyConstraint(["periodo_id", "empresa_id"], ["periodos.id", "periodos.empresa_id"], name="fk_wallets_esperadas_periodo_empresa", ondelete="RESTRICT"),
         sa.UniqueConstraint("periodo_id", "tipo_wallet", "identidad_wallet", name="uq_wallets_esperadas_contexto"),
     )
     op.create_index("ix_wallets_esperadas_empresa_periodo", "wallets_esperadas", ["empresa_id", "periodo_id"])
@@ -32,3 +34,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_wallets_esperadas_empresa_periodo", table_name="wallets_esperadas")
     op.drop_table("wallets_esperadas")
+    op.drop_constraint("uq_periodos_id_empresa", "periodos", type_="unique")
