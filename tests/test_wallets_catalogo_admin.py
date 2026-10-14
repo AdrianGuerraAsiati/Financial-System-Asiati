@@ -1,5 +1,6 @@
 """Pruebas unitarias de límites del catálogo de cobertura."""
 from unittest.mock import Mock, patch
+from datetime import date
 
 import pytest
 
@@ -74,3 +75,33 @@ def test_alta_acepta_wallet_parametrizada_y_deja_auditoria():
     assert item.identidad_wallet == "wallet@example.test"
     session.add.assert_called_once()
     auditar.assert_called_once()
+
+
+def test_no_aprueba_vigencia_sin_fechas():
+    session = Mock()
+    periodo = Mock(fecha_inicio=date(2026, 9, 1), fecha_fin=date(2026, 9, 30))
+    fila = Mock(registrado_por=3, vigente_desde=None, vigente_hasta=None)
+    with patch("app.motores.conciliacion_wallets.catalogo_admin.periodo_bloqueado", return_value=periodo), patch(
+        "app.motores.conciliacion_wallets.catalogo_admin._aprobacion", return_value=None
+    ), patch("app.motores.conciliacion_wallets.catalogo_admin._filas", return_value=[fila]):
+        with pytest.raises(ValueError, match="acreditar vigencia"):
+            aprobar(session, empresa_id=1, periodo_id=2, usuario_id=4, motivo="verificado")
+
+
+def test_no_aprueba_vigencia_parcial():
+    session = Mock()
+    periodo = Mock(fecha_inicio=date(2026, 9, 1), fecha_fin=date(2026, 9, 30))
+    fila = Mock(registrado_por=3, vigente_desde=date(2026, 9, 10),
+                vigente_hasta=date(2026, 9, 30))
+    with patch("app.motores.conciliacion_wallets.catalogo_admin.periodo_bloqueado", return_value=periodo), patch(
+        "app.motores.conciliacion_wallets.catalogo_admin._aprobacion", return_value=None
+    ), patch("app.motores.conciliacion_wallets.catalogo_admin._filas", return_value=[fila]):
+        with pytest.raises(ValueError, match="acreditar vigencia"):
+            aprobar(session, empresa_id=1, periodo_id=2, usuario_id=4, motivo="verificado")
+
+
+def test_rechaza_fechas_invertidas_en_alta():
+    with pytest.raises(ValueError, match="fecha inicial"):
+        agregar(Mock(), empresa_id=1, periodo_id=2, usuario_id=3,
+                tipo_wallet="pagos", identidad_wallet="a@example.test",
+                vigente_desde=date(2026, 9, 30), vigente_hasta=date(2026, 9, 1))
