@@ -12,6 +12,7 @@ from app.core.hallazgos import Hallazgo
 from app.core.periodos.errors import PeriodoCerradoError
 from app.core.session import obtener_session
 
+from ..historial import guardar_historial
 from ..cargas import ConciliacionRepetidaError
 from ..wiilog.integracion import (
     MENSAJE_CONFIGURACION_FALTANTE,
@@ -42,9 +43,23 @@ ejecutar_conciliacion = requiere("conciliacion.ejecutar", empresa_de=_empresa_de
 ver_conciliacion = requiere("conciliacion.ver", empresa_de=_empresa_de_query)
 
 
-def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet]) -> dict[str, object]:
+def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet], *, empresa_id: int, periodo_id: int, usuario_id: int, tipo_wallet: str, identidad_wallet: str | None) -> dict[str, object]:
     try:
         ejecucion = accion()
+        respuesta = {
+            "bloqueado": ejecucion.bloqueado, "c0": ejecucion.c0,
+            "cargas": {"wallet_id": ejecucion.carga_wallet_id,
+                       "ordenes_id": ejecucion.carga_ordenes_id,
+                       "ordenes_reutilizadas": ejecucion.ordenes_reutilizadas,
+                       "wallet_reutilizada": ejecucion.wallet_reutilizada},
+            "hallazgos_creados": ejecucion.hallazgos_creados,
+            "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,
+            "sincronizacion": ejecucion.sincronizacion, "resumen": ejecucion.resumen,
+            "corte_ordenes_usado": ejecucion.corte_ordenes_usado,
+        }
+        registro = guardar_historial(session, empresa_id=empresa_id, periodo_id=periodo_id,
+                                   usuario_id=usuario_id, tipo_wallet=tipo_wallet,
+                                   identidad_wallet=identidad_wallet, resultado=respuesta)
         session.commit()
     except IntegrityError as exc:
         session.rollback()
@@ -70,6 +85,8 @@ def _ejecutar(session: Session, accion: Callable[[], EjecucionWallet]) -> dict[s
     except Exception:
         session.rollback()
         raise
+
+    return {**respuesta, "ejecucion_id": registro.id}
 
     return {
         "bloqueado": ejecucion.bloqueado,
@@ -154,6 +171,8 @@ def conciliar_tienda(
             nombre_ordenes=ordenes.filename,
             corte=corte_ordenes,
         ),
+        empresa_id=empresa_id, periodo_id=periodo_id, usuario_id=acceso.usuario.id,
+        tipo_wallet="tienda", identidad_wallet=tienda,
     )
 
 
@@ -198,6 +217,8 @@ def conciliar_pagos(
             wallet_contenido=wallet_contenido,
             usuario_id=acceso.usuario.id,
         ),
+        empresa_id=empresa_id, periodo_id=periodo_id, usuario_id=acceso.usuario.id,
+        tipo_wallet="pagos", identidad_wallet=wallet_pagos,
     )
 
 
