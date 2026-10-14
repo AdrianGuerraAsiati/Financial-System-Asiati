@@ -1,7 +1,7 @@
 """Contrato de corte explícito y de solo diagnóstico, sin cierres financieros."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import DateTime, ForeignKey, ForeignKeyConstraint, Integer, String, Text, UniqueConstraint, func, select
@@ -42,8 +42,9 @@ def validar_corte(zona_horaria: str, corte_local: datetime, periodo: Periodo) ->
         zona = ZoneInfo(zona_horaria)
     except (ZoneInfoNotFoundError, ValueError, KeyError) as exc:
         raise ValueError("Zona horaria IANA inválida.") from exc
-    if not periodo.fecha_inicio <= corte_local.date() <= periodo.fecha_fin:
-        raise ValueError("El corte debe pertenecer a las fechas del período.")
+    esperado = datetime.combine(periodo.fecha_fin, time(23, 59, 59))
+    if corte_local != esperado:
+        raise ValueError("El corte debe ser a las 23:59:59 del último día calendario del período, hora de Bogotá.")
     local = corte_local.replace(tzinfo=zona)
     utc = local.astimezone(timezone.utc)
     if utc.astimezone(zona).replace(tzinfo=None) != corte_local:
