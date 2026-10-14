@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from app.core.session import obtener_session
 
 from app.main import app
 from app.core.permisos import RecursoNoVisibleError, verificar_acceso
@@ -132,10 +133,16 @@ def test_catalogo_vacio_no_equivale_a_cobertura_aprobada():
 
 
 def test_endpoint_diagnostico_requiere_autenticacion():
-    response = TestClient(app).get(
-        "/api/v1/wallets/periodos/10/diagnostico-cierre?empresa_id=1"
-    )
-    assert response.status_code == 401
+    def fake_session():
+        yield Mock()
+    app.dependency_overrides[obtener_session] = fake_session
+    try:
+        response = TestClient(app).get(
+            "/api/v1/wallets/periodos/10/diagnostico-cierre?empresa_id=1"
+        )
+        assert response.status_code == 401
+    finally:
+        app.dependency_overrides.pop(obtener_session, None)
 
 
 def test_permiso_de_conciliador_no_expone_empresa_ajena():
