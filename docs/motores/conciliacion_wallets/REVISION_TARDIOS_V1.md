@@ -8,3 +8,5 @@ Los dos pasos se auditan en la misma transacción. `AUTORIZAR_GESTION` significa
 
 ## Límites pendientes
 El campo de evidencia es una referencia declarada, no una prueba de verificación criptográfica. Quedan pendientes vínculo a cargas y movimientos, prueba integrada PostgreSQL de los endpoints, proceso de reapertura y validación formal de Finanzas/Seguridad. `puede_cerrar=false` se mantiene.
+
+La decisión `AUTORIZAR_GESTION` no elimina hallazgos pendientes, no marca una incidencia resuelta y no omite validaciones de cobertura ni corte.
