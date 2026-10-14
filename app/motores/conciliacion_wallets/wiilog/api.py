@@ -109,21 +109,6 @@ def conciliar_wiilog(
 
     return {**respuesta, "ejecucion_id": registro.id}
 
-    # Legacy response (kept below unreachable for compatibility during migration)
-    return {
-        "bloqueado": ejecucion.bloqueado,
-        "c0": ejecucion.c0,
-        "cargas": {
-            "ordenes_id": ejecucion.carga_ordenes_id,
-            "wallet_id": ejecucion.carga_wallet_id,
-            "ordenes_reutilizadas": ejecucion.ordenes_reutilizadas,
-            "wallet_reutilizada": ejecucion.wallet_reutilizada,
-        },
-        "hallazgos_creados": ejecucion.hallazgos_creados,
-        "hallazgos_por_gravedad": ejecucion.hallazgos_por_gravedad,
-        "sincronizacion": ejecucion.sincronizacion,
-        "resumen": ejecucion.resumen,
-    }
 
 
 @router.get("/hallazgos")
