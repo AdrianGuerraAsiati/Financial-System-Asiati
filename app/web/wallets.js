@@ -454,6 +454,26 @@
     }
   }
 
+  async function restaurarHistorial() {
+    const clave = contextoKey();
+    if (!periodo.value || !tipo.value || (tipo.value !== "wiilog" && !identidad.value)) return;
+    const params = new URLSearchParams({
+      empresa_id: String(empresaIdWallets()), periodo_id: periodo.value,
+      tipo_wallet: tipo.value
+    });
+    if (tipo.value !== "wiilog") params.set("identidad_wallet", identidad.value);
+    try {
+      const registros = await walletApi("/api/v1/wallets/ejecuciones?" + params.toString());
+      if (clave !== contextoKey() || !registros.length) return;
+      const ultimo = registros[0].resultado;
+      mostrarC0(ultimo);
+      mostrarResumen(ultimo);
+      hallazgosPanel.hidden = Boolean(ultimo.bloqueado);
+    } catch (_) {
+      // El historial no debe impedir consultar hallazgos ni usar el resultado de sesión.
+    }
+  }
+
   function endpointConciliar() {
     if (tipo.value === "wiilog") return "/api/v1/wallets/wiilog/conciliar";
     if (tipo.value === "tienda") return "/api/v1/wallets/tiendas/conciliar";
@@ -734,6 +754,7 @@
       renderTipos();
       actualizarTipo();
       restaurarResultado();
+      await restaurarHistorial();
       if (!hallazgosPanel.hidden) await cargarHallazgos();
 
       const errores = resultados
@@ -762,6 +783,7 @@
   tipo.addEventListener("change", async () => {
     actualizarTipo();
     restaurarResultado();
+    await restaurarHistorial();
     if (!hallazgosPanel.hidden) await cargarHallazgos();
   });
   identidad.addEventListener("change", async () => {

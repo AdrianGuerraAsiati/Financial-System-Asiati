@@ -123,3 +123,12 @@ def test_wallets_summary_is_tabular_and_progress_is_not_fake_percentage() -> Non
     assert 'esperando respuesta del motor (avance no medido)' in javascript
     assert 'data.bloqueado || !data.resumen' in javascript
     assert 'escapar(valor === null' in javascript
+
+
+def test_wallets_history_restored_from_persisted_execution() -> None:
+    javascript = TestClient(app).get("/static/wallets.js").text
+    assert '"/api/v1/wallets/ejecuciones?"' in javascript
+    assert "await restaurarHistorial();" in javascript
+    assert "clave !== contextoKey()" in javascript
+    assert "mostrarC0(ultimo)" in javascript
+    assert "mostrarResumen(ultimo)" in javascript
