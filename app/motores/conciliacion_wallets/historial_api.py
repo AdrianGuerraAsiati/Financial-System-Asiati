@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.auth.dependencias import Acceso, requiere
 from app.core.session import obtener_session
 from .historial import listar_historial
+from .cierre_preflight import diagnostico_cierre_wallets
 
 router = APIRouter(prefix="/wallets", tags=["wallets"])
 
@@ -34,3 +35,16 @@ def consultar_ejecuciones(
          "resultado": r.resultado}
         for r in registros
     ]
+
+
+@router.get("/periodos/{periodo_id}/diagnostico-cierre")
+def diagnosticar_cierre(
+    periodo_id: int, empresa_id: int,
+    _acceso: Acceso = Depends(ver),
+    session: Session = Depends(obtener_session),
+) -> dict:
+    """Solo lectura. No aplica cierre ni modifica el período."""
+    try:
+        return diagnostico_cierre_wallets(session, empresa_id=empresa_id, periodo_id=periodo_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
