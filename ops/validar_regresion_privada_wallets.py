@@ -40,6 +40,11 @@ def ejecutar() -> int:
             "REGRESION PRIVADA NO ACEPTADA: pytest no termino correctamente.",
             file=sys.stderr,
         )
+    else:
+        print(
+            "SUITES PRIVADAS PASS. Esto no certifica las cinco wallets: "
+            "Recompra Menpros no tiene regresion dedicada en estas suites."
+        )
     return int(estado)
 
 
