@@ -14,7 +14,7 @@ def test_no_operational_fixture_is_committed():
         ["git", "ls-files", "--cached", "-z"],
         check=True, capture_output=True,
     )
-    archivos = [p.decode("utf-8") for p in result.stdout.split(b"\\0") if p]
+    archivos = [p.decode("utf-8") for p in result.stdout.split(b"\0") if p]
     assert not any(p.startswith(("fixtures/", "secrets/")) for p in archivos)
     assert not any(
         p.endswith((".xlsx", ".xls", ".xlsm", ".csv", ".zip"))
