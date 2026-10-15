@@ -13,6 +13,7 @@ import pytest
 PRUEBAS_PRIVADAS = (
     "tests/wallet_wiilog/test_regresion_septiembre.py",
     "tests/wallet_tiendas/test_regresion_tiendas_septiembre.py",
+    "tests/wallet_tiendas/test_regresion_recompra_septiembre.py",
 )
 
 
@@ -42,8 +43,8 @@ def ejecutar() -> int:
         )
     else:
         print(
-            "SUITES PRIVADAS PASS. Esto no certifica las cinco wallets: "
-            "Recompra Menpros no tiene regresion dedicada en estas suites."
+            "REGRESIONES PRIVADAS DE LAS CINCO WALLETS: PASS de las suites. "
+            "Pendiente validacion funcional en el entorno autorizado."
         )
     return int(estado)
 
