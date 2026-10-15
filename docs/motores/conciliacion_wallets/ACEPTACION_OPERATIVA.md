@@ -37,6 +37,10 @@ El ejecutor devuelve error si pytest falla **o si se omite cualquier prueba** po
 - [ ] Ningún baseline cambia sin una decisión de negocio documentada.
 - [ ] Si una regla aprobada cambia el resultado, actualizar juntos regla, decisión y baseline privado.
 
+**Cobertura actual de las suites:** Wiilog, Menpros, Proveeduría ASIATI y Pagos. La quinta wallet de la línea base, **Recompra Menpros**, está documentada en `WALLETS_TIENDAS_Y_PAGOS.md` pero no tiene un caso de regresión dedicado en estas dos suites. Un PASS de este comando es **parcial (4/5)** y NO autoriza declarar la aceptación total del Motor 01.
+
+- [ ] Agregar y ejecutar regresión privada independiente de Recompra Menpros antes de firmar 5/5.
+
 El criterio no es “se parece”: debe reproducir exactamente el baseline vigente del paquete privado.
 
 ## 3. Flujo UI por tipo de wallet
