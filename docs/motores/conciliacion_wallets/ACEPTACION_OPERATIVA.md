@@ -34,12 +34,14 @@ El ejecutor devuelve error si pytest falla **o si se omite cualquier prueba** po
 
 - [ ] Wiilog: `tests/wallet_wiilog/test_regresion_septiembre.py`.
 - [ ] Tiendas/pagos: `tests/wallet_tiendas/test_regresion_tiendas_septiembre.py`.
+- [ ] Recompra Menpros: `tests/wallet_tiendas/test_regresion_recompra_septiembre.py`.
 - [ ] Ningún baseline cambia sin una decisión de negocio documentada.
 - [ ] Si una regla aprobada cambia el resultado, actualizar juntos regla, decisión y baseline privado.
 
-**Cobertura actual de las suites:** Wiilog, Menpros, Proveeduría ASIATI y Pagos. La quinta wallet de la línea base, **Recompra Menpros**, está documentada en `WALLETS_TIENDAS_Y_PAGOS.md` pero no tiene un caso de regresión dedicado en estas dos suites. Un PASS de este comando es **parcial (4/5)** y NO autoriza declarar la aceptación total del Motor 01.
+**Cobertura del ejecutor propuesto:** Wiilog, Menpros, Proveeduría ASIATI, Pagos y Recompra Menpros. La quinta regresión está implementada en `tests/wallet_tiendas/test_regresion_recompra_septiembre.py` y exige `fixtures/wallet_tiendas/2026-09/expected_recompra_menpros.json` más un único `wallet_recompra_menpros_*.xlsx`, ambos privados. Los valores del baseline deben corresponder a resultados previamente validados por negocio; nunca se generan a partir de la corrida que se pretende aprobar. La ausencia de cualquiera de esos archivos produce un **FAIL del gate**, no un PASS.
 
-- [ ] Agregar y ejecutar regresión privada independiente de Recompra Menpros antes de firmar 5/5.
+- [ ] Aportar y validar el baseline privado de Recompra Menpros, sin modificar cifras de la referencia histórica.
+- [ ] Confirmar **cero omisiones** y PASS de las cinco regresiones en entorno autorizado.
 
 El criterio no es “se parece”: debe reproducir exactamente el baseline vigente del paquete privado.
 
