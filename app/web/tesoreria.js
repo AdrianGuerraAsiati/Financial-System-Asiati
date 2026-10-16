@@ -208,6 +208,7 @@
     facturaActiva = null;
     paginaDesde = 0;
     abrirNueva.hidden = !window.tesoreriaPuedeEditar;
+    $("#tesoreria-solo-consulta").hidden = window.tesoreriaPuedeEditar || window.tesoreriaPuedePagar;
     edicion.hidden = !window.tesoreriaPuedeEditar;
     abrirPago.hidden = !window.tesoreriaPuedePagar;
     try {
@@ -402,5 +403,9 @@
   });
   $("#tesoreria-exportar").addEventListener("click", descargarExcel);
   $("#tesoreria-actualizar").addEventListener("click", cargarTodo);
+  window.actualizarAvisosFacturacion = () => {
+    if ($("#nav-tesoreria").hidden) return Promise.resolve();
+    return cargarAvisos();
+  };
   window.cargarTesoreriaTodo = cargarTodo;
 })();
