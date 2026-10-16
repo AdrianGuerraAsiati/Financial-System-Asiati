@@ -166,7 +166,7 @@
       </button>
       <button class="nav-item" data-view="tesoreria" id="nav-tesoreria" hidden>
         <span class="nav-icon" aria-hidden="true">▣</span>
-        <span class="nav-label">Facturación</span>
+        <span class="nav-label">Facturación</span><span id="tesoreria-nav-alertas" class="facturacion-nav-alertas" hidden aria-label="Facturas con alerta">0</span>
       </button>
       <button class="nav-item" data-view="parametros" id="nav-parametros" hidden>
         <span class="nav-icon" aria-hidden="true">⚙</span>
@@ -887,7 +887,10 @@
             <h2>Facturas de compra y pagos</h2>
             <p>Carga facturas de compra y registra la fecha, el monto y el comprobante de cada pago realizado. Información separada por empresa.</p>
           </div>
-          <div id="tesoreria-estado" class="status" role="status">Listo</div>
+          <div class="facturacion-header-actions">
+            <button type="button" id="tesoreria-abrir-nueva">Cargar factura</button>
+            <div id="tesoreria-estado" class="status" role="status">Listo</div>
+          </div>
         </section>
         <section class="panel tesoreria-tablero" aria-labelledby="tesoreria-resumen-titulo">
           <div class="panel-heading"><div>
@@ -903,24 +906,26 @@
           </div>
           <p class="muted">«Por vencer» es una ventana informativa de 7 días calendario; no modifica estados ni define tolerancias financieras.</p>
         </section>
-        <section class="panel">
-          <div class="panel-heading"><div><h3>Nueva factura</h3>
-            <p>La fecha oportuna es el vencimiento de la factura. El pago real se registra después.</p></div>
+        <dialog id="tesoreria-dialogo-nueva" class="facturacion-dialogo" aria-labelledby="tesoreria-dialogo-nueva-titulo">
+          <div class="facturacion-dialog-cabecera">
+            <div><p class="eyebrow">Facturación · Nueva obligación</p><h3 id="tesoreria-dialogo-nueva-titulo">Cargar factura</h3></div>
+            <button type="button" class="secondary-button" data-cerrar-facturacion="tesoreria-dialogo-nueva" aria-label="Cerrar carga de factura">Cerrar</button>
           </div>
+          <p class="muted">Adjunta la factura o foto del recibo. La fecha prevista es su vencimiento; la fecha real y el comprobante se agregan solo al efectuar el pago.</p>
           <form id="tesoreria-nueva">
             <div class="form-grid">
-              <label class="span-two">Archivo de factura PDF, XML UBL o imagen
-                <input name="archivo" type="file" accept=".xml,.pdf,.png,.jpg,.jpeg" required>
+              <label class="span-two">Archivo o foto de la factura / recibo (PDF, XML, JPG o PNG)
+                <input name="archivo" type="file" accept=".xml,.pdf,.png,.jpg,.jpeg,image/*" required>
               </label>
               <div><button id="tesoreria-extraer" class="secondary-button" type="button">Prellenar desde XML</button>
                 <p class="muted" id="tesoreria-extraccion-aviso">PDF e imágenes requieren captura manual en V1.</p></div>
-              <label>Número de factura<input name="numero" maxlength="120" required></label>
-              <label>Proveedor<input name="proveedor" maxlength="255" required></label>
+              <label>Número de factura o referencia<input name="numero" maxlength="120" required></label>
+              <label>Proveedor o tercero<input name="proveedor" maxlength="255" required></label>
               <label>Fecha de expedición<input name="fecha_emision" type="date"></label>
-              <label>Fecha de pago oportuno (vencimiento)<input name="fecha_vencimiento" type="date"></label>
+              <label>Fecha prevista de pago (vencimiento)<input name="fecha_vencimiento" type="date"></label>
               <label>Monto total a pagar<input name="monto" type="number" step="0.01" min="0.01" required></label>
               <label>Moneda<select name="moneda"><option>COP</option><option>USD</option><option>CLP</option></select></label>
-              <label class="span-two">Descripción<input name="descripcion" maxlength="1000" required></label>
+              <label class="span-two">Descripción del gasto<input name="descripcion" maxlength="1000" required></label>
               <label>Ciudad<input name="ciudad" maxlength="100"></label>
               <label>Unidad de negocio<select name="unidad_negocio" data-catalogo="unidad_negocio"><option value="">Sin asignar</option></select></label>
               <label>Categoría<select name="categoria" data-catalogo="categoria"><option value="">Sin asignar</option></select></label>
@@ -929,8 +934,40 @@
               <label>Documento contable<input name="documento_contable" maxlength="120"></label>
             </div>
             <p class="muted">La factura se guarda pendiente. No se crea comprobante ni fecha de pago al radicarla.</p>
-            <button type="submit">Guardar factura</button>
+            <div class="facturacion-dialog-acciones">
+              <button type="button" class="secondary-button" data-cerrar-facturacion="tesoreria-dialogo-nueva">Cancelar</button>
+              <button type="submit">Guardar factura</button>
+            </div>
           </form>
+        </dialog>
+        <dialog id="tesoreria-dialogo-pago" class="facturacion-dialogo" aria-labelledby="tesoreria-dialogo-pago-titulo">
+          <div class="facturacion-dialog-cabecera">
+            <div><p class="eyebrow">Facturación · Pago efectuado</p><h3 id="tesoreria-dialogo-pago-titulo">Registrar pago y comprobante</h3></div>
+            <button type="button" class="secondary-button" data-cerrar-facturacion="tesoreria-dialogo-pago" aria-label="Cerrar registro de pago">Cerrar</button>
+          </div>
+          <p id="tesoreria-pago-resumen" class="muted">Selecciona una factura para registrar el pago.</p>
+          <form id="tesoreria-pagar">
+            <div class="form-grid">
+              <label>Fecha real de pago<input name="fecha" type="date" required></label>
+              <label>Monto del abono<input name="monto" type="number" min="0.01" step="0.01" required></label>
+              <label>Referencia bancaria<input name="referencia" maxlength="120"></label>
+              <label>Comprobante real (PDF o imagen)<input name="comprobante" type="file" accept=".pdf,.png,.jpg,.jpeg" required></label>
+            </div>
+            <div class="facturacion-dialog-acciones">
+              <button type="button" class="secondary-button" data-cerrar-facturacion="tesoreria-dialogo-pago">Cancelar</button>
+              <button type="submit">Confirmar pago y adjuntar soporte</button>
+            </div>
+          </form>
+        </dialog>
+        <section class="panel facturacion-avisos" aria-labelledby="tesoreria-avisos-titulo">
+          <div class="panel-heading">
+            <div><h3 id="tesoreria-avisos-titulo">Avisos de vencimiento <span id="tesoreria-avisos-total" class="facturacion-avisos-contador">0</span></h3>
+              <p>Facturas con saldo pendiente, vencidas o que vencen en los próximos 7 días. Avisos internos por empresa, en todas sus monedas.</p>
+            </div>
+            <button type="button" id="tesoreria-actualizar-avisos" class="secondary-button">Actualizar avisos</button>
+          </div>
+          <p id="tesoreria-avisos-resumen" class="facturacion-avisos-resumen" role="status" aria-live="polite">Consultando vencimientos…</p>
+          <div id="tesoreria-avisos-lista" class="facturacion-avisos-lista"></div>
         </section>
         <section class="panel">
           <div class="panel-heading"><div><h3>Bandeja de facturas</h3>
@@ -994,16 +1031,9 @@
             </div>
             <button type="submit">Guardar cambios</button>
           </form>
-          <h3>Registrar pago realizado</h3>
-          <form id="tesoreria-pagar">
-            <div class="form-grid">
-              <label>Fecha real de pago<input name="fecha" type="date" required></label>
-              <label>Monto del abono<input name="monto" type="number" min="0.01" step="0.01" required></label>
-              <label>Referencia bancaria<input name="referencia" maxlength="120"></label>
-              <label>Comprobante real (PDF o imagen)<input name="comprobante" type="file" accept=".pdf,.png,.jpg,.jpeg" required></label>
-            </div>
-            <button type="submit">Confirmar pago y adjuntar soporte</button>
-          </form>
+          <div class="facturacion-detalle-acciones">
+            <button type="button" id="tesoreria-abrir-pago">Registrar pago y comprobante</button>
+          </div>
           <h3>Historial de pagos</h3>
           <div id="tesoreria-pagos"><p class="empty">No hay pagos registrados.</p></div>
         </section>
