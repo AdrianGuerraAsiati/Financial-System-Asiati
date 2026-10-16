@@ -2481,6 +2481,17 @@ summary {
 .facturacion-dialogo .form-grid input,
 .facturacion-dialogo .form-grid select { width: 100%; min-width: 0; }
 .facturacion-dialogo .form-grid input[type="file"] { max-width: 100%; }
+.facturacion-campos-opcionales {
+  margin: 1rem 0;
+  border-top: 1px solid #e1e9f0;
+  padding-top: .8rem;
+}
+.facturacion-campos-opcionales summary {
+  font-size: .84rem;
+  font-weight: 650;
+  color: #17597c;
+  cursor: pointer;
+}
 .facturacion-dialog-acciones {
   display: flex;
   justify-content: flex-end;
