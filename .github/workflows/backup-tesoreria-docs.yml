@@ -50,6 +50,9 @@ jobs:
           if [[ -n "$CERT_KEY" ]]; then
             printf '%s\n' "$CERT_KEY" > "$RUNNER_TEMP/tesoreria-ssh.pem-cert.pub"
             chmod 644 "$RUNNER_TEMP/tesoreria-ssh.pem-cert.pub"
+            ssh-keygen -L -f "$RUNNER_TEMP/tesoreria-ssh.pem-cert.pub" >/dev/null
+          else
+            rm -f "$RUNNER_TEMP/tesoreria-ssh.pem-cert.pub"
           fi
 
       - name: Create, verify and upload encrypted document backup
@@ -59,7 +62,7 @@ jobs:
           umask 077
           ARCHIVO="$RUNNER_TEMP/tesoreria-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tar.gz"
           MANIFIESTO="$RUNNER_TEMP/tesoreria-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
-          trap 'rm -f "$ARCHIVO" "$MANIFIESTO" "$RUNNER_TEMP/tesoreria-ssh.pem"' EXIT
+          trap 'rm -f "$ARCHIVO" "$MANIFIESTO" "$RUNNER_TEMP/tesoreria-ssh.pem" "$RUNNER_TEMP/tesoreria-ssh.pem-cert.pub"' EXIT
 
           # stdout remoto: exclusivamente tar.gz. Los mensajes se envían a stderr.
           ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
