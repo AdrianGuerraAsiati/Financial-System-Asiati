@@ -4,12 +4,12 @@ Todas las consultas se limitan a una empresa visible. Las monedas no se suman
 entre sí; el histórico pagado usa fechas de abono, no la fecha de factura.
 """
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from io import BytesIO
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -149,6 +149,76 @@ def consulta_facturas(
                   for factura, pagado, fecha, cantidad in filas],
         "total": total, "limite": limite, "desde": desde,
         "moneda": f.moneda,
+    }
+
+
+@router.get("/notificaciones")
+def notificaciones(
+    response: Response,
+    empresa_id: int = Query(..., gt=0),
+    acceso: Acceso = Depends(requiere("tesoreria.ver")),
+    session: Session = Depends(obtener_session),
+) -> dict:
+    """Avisos dentro de la plataforma. No son órdenes de pago ni notificaciones externas.
+
+    Se consultan todas las monedas de una sola empresa, sin sumarlas entre sí.
+    El horizonte de 7 días reutiliza la ventana informativa del tablero.
+    """
+    _empresa(session, acceso, empresa_id)
+    response.headers["Cache-Control"] = "no-store"
+    hoy = date.today()
+    hasta = hoy + timedelta(days=7)
+    pagos = _pagos_agrupados()
+    pagado = func.coalesce(pagos.c.pagado, Decimal("0.00"))
+    saldo = FacturaCompra.monto - pagado
+    base = (
+        select(
+            FacturaCompra.id.label("id"),
+            FacturaCompra.numero.label("numero"),
+            FacturaCompra.proveedor.label("proveedor"),
+            FacturaCompra.fecha_vencimiento.label("vencimiento"),
+            FacturaCompra.moneda.label("moneda"),
+            saldo.label("saldo"),
+        )
+        .outerjoin(pagos, FacturaCompra.id == pagos.c.factura_id)
+        .where(
+            FacturaCompra.empresa_id == empresa_id,
+            FacturaCompra.fecha_vencimiento.is_not(None),
+            FacturaCompra.fecha_vencimiento <= hasta,
+            saldo > 0,
+        )
+    )
+    sub = base.subquery()
+    total, vencidas = session.execute(
+        select(
+            func.count(sub.c.id),
+            func.coalesce(func.sum(case((sub.c.vencimiento < hoy, 1), else_=0)), 0),
+        )
+    ).one()
+    items = session.execute(
+        base.order_by(FacturaCompra.fecha_vencimiento, FacturaCompra.id).limit(20)
+    ).mappings().all()
+    return {
+        "empresa_id": empresa_id,
+        "fecha_corte": hoy,
+        "horizonte_dias": 7,
+        "total": int(total),
+        "vencidas": int(vencidas),
+        "por_vencer": int(total - vencidas),
+        "hay_mas": total > len(items),
+        "items": [
+            {
+                "id": row["id"],
+                "numero": row["numero"],
+                "proveedor": row["proveedor"],
+                "vencimiento": row["vencimiento"],
+                "moneda": row["moneda"],
+                "saldo": format(row["saldo"], ".2f"),
+                "tipo": "VENCIDA" if row["vencimiento"] < hoy else "POR_VENCER",
+                "dias_para_vencer": (row["vencimiento"] - hoy).days,
+            }
+            for row in items
+        ],
     }
 
 

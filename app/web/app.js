@@ -115,6 +115,9 @@ empresaInput.addEventListener("change", () => {
   } else if (moduloActivo === "recaudos" && window.cargarRecaudosTodo) {
     window.cargarRecaudosTodo();
   }
+  if (moduloActivo !== "tesoreria" && window.actualizarAvisosFacturacion) {
+    window.actualizarAvisosFacturacion().catch(() => {});
+  }
 });
 
 function empresaId() {
@@ -273,6 +276,9 @@ function mostrarApp(sesion) {
 
   mostrarModulo("inicio");
   iniciarMonitorDashboard();
+  if (window.actualizarAvisosFacturacion) {
+    window.actualizarAvisosFacturacion().catch(() => {});
+  }
 }
 
 async function api(url, options = {}) {

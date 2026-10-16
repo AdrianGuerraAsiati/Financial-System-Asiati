@@ -2435,6 +2435,141 @@ summary {
   .tesoreria-metricas { grid-template-columns: 1fr; }
 }
 
+/* Facturación: formularios modales, alertas internas y estados visibles */
+.facturacion-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+.facturacion-header-actions > button,
+.facturacion-detalle-acciones > button {
+  min-height: 2.5rem;
+  border: 1px solid #005283;
+  border-radius: .62rem;
+  background: #006a9e;
+  color: #fff;
+  padding: .6rem 1rem;
+  font-size: .82rem;
+  font-weight: 700;
+}
+.facturacion-header-actions > button[hidden],
+.facturacion-detalle-acciones > button[hidden],
+.facturacion-nav-alertas[hidden] { display: none; }
+.facturacion-dialogo {
+  width: min(740px, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  border: 1px solid var(--line, #dce3ec);
+  border-radius: 18px;
+  padding: 1.35rem;
+  background: #fff;
+  color: var(--ink, #17354e);
+  box-shadow: 0 20px 64px rgba(5, 32, 50, .24);
+}
+.facturacion-dialogo::backdrop { background: rgba(5, 29, 49, .55); }
+.facturacion-dialog-cabecera {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: .8rem;
+}
+.facturacion-dialog-cabecera h3 { margin: .4rem 0; font-size: 1.22rem; }
+.facturacion-dialog-cabecera .secondary-button { flex: 0 0 auto; }
+.facturacion-dialogo .form-grid input,
+.facturacion-dialogo .form-grid select { width: 100%; min-width: 0; }
+.facturacion-dialogo .form-grid input[type="file"] { max-width: 100%; }
+.facturacion-campos-opcionales {
+  margin: 1rem 0;
+  border-top: 1px solid #e1e9f0;
+  padding-top: .8rem;
+}
+.facturacion-campos-opcionales summary {
+  font-size: .84rem;
+  font-weight: 650;
+  color: #17597c;
+  cursor: pointer;
+}
+.facturacion-dialog-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: .65rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+.facturacion-dialog-acciones .secondary-button,
+.facturacion-dialog-cabecera .secondary-button {
+  background: #fff;
+  border: 1px solid #d2dce8;
+  color: #17354e;
+  box-shadow: none;
+}
+.facturacion-avisos .panel-heading { align-items: flex-start; }
+.facturacion-avisos-contador {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 1.4rem;
+  border-radius: 999px;
+  background: #eef3f9;
+  color: #27475f;
+  font-size: .75rem;
+  padding: .18rem .38rem;
+}
+.facturacion-nav-alertas {
+  border-radius: 999px;
+  padding: .15rem .4rem;
+  background: #b45309;
+  color: #fff;
+  font-weight: 750;
+}
+.facturacion-avisos-resumen {
+  margin: .75rem 0;
+  font-size: .86rem;
+  color: #4c6176;
+}
+.facturacion-avisos-lista { display: grid; gap: .6rem; }
+.facturacion-aviso {
+  border: 1px solid #e1e9f0;
+  border-left: 3px solid #d39825;
+  border-radius: .55rem;
+  background: #fcfdfd;
+  padding: .8rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.facturacion-aviso[data-tipo="VENCIDA"] { border-left-color: #b42318; }
+.facturacion-aviso strong { font-size: .85rem; }
+.facturacion-aviso p { margin: .3rem 0 0; color: #54677a; font-size: .8rem; }
+.facturacion-estado {
+  display: inline-block;
+  border-radius: 999px;
+  background: #f0f4f8;
+  color: #284b62;
+  padding: .28rem .48rem;
+  font-weight: 700;
+  font-size: .72rem;
+}
+.facturacion-estado[data-estado="PAGADA"] { background: #e6f6ee; color: #137047; }
+.facturacion-estado[data-estado="VENCIDA"] { background: #fff0ed; color: #a5221b; }
+.facturacion-estado[data-estado="PARCIAL"] { background: #fff6dc; color: #8c600f; }
+.facturacion-alerta { font-size: .79rem; font-weight: 650; }
+.facturacion-acciones-fila { min-width: 160px; }
+.facturacion-acciones-fila button { margin: .15rem; }
+.facturacion-detalle-acciones { margin: 1rem 0; }
+
+@media (max-width: 640px) {
+  .facturacion-dialogo { padding: 1rem; }
+  .facturacion-dialogo .form-grid { grid-template-columns: 1fr; }
+  .facturacion-dialogo .span-two { grid-column: auto; }
+  .facturacion-aviso { align-items: flex-start; flex-direction: column; }
+  .facturacion-avisos .panel-heading { flex-wrap: wrap; }
+}
+
 /* Recaudos: detalle legible, sin apariencia de pago confirmado */
 .recaudos-detalle {
   display: grid;
