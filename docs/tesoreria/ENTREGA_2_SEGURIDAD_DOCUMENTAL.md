@@ -18,6 +18,45 @@ El script ops/tesoreria_archivos.py verifica nombres y hashes, rechaza enlaces, 
 4. En una validación posterior, disparar el workflow manualmente y comprobar archivo .tar.gz y manifiesto .json, permisos privados, cifrado y checksum coincidente.
 5. Programar alertas de ausencia/fallo de respaldos y ejecutar recuperación controlada cuando Finanzas autorice una muestra real.
 
+## Incidencia de SSH y validación pendiente (16-oct-2026)
+
+Los backups automáticos del **15 y 16 de octubre de 2026** terminaron en
+`failure`. En el [run #38846487682](https://github.com/AdrianGuerraAsiati/Financial-System-Asiati/actions/runs/38846487682)
+del 16-oct, el acceso temporal de AWS se obtuvo, pero SSH respondió
+`Permission denied (publickey,...)` **antes** de generar el archivo comprimido.
+
+El workflow de despliegue (que había terminado correctamente) lee
+`accessDetails.certKey` y guarda el certificado de usuario junto a la
+clave SSH temporal; el workflow de respaldo solo guardaba la clave.
+La corrección propuesta replica la configuración de certificado opcional,
+lo valida antes de usarlo y elimina ambos archivos al terminar. La
+explicación es coherente con el síntoma, pero **solo una ejecución real
+posterior al merge podrá confirmar que lo corrige**.
+
+### Procedimiento para comprobar el respaldo después del fix
+
+1. Revisar las pruebas del PR y fusionarlo en `main` sin modificar las
+   facturas. El workflow tiene `workflow_dispatch` (manual) y horario
+   diario; **no** corre en pull requests.
+2. En GitHub Actions → `Backup Tesoreria documents (development)` →
+   **Run workflow** (rama `main`). Asegurar que la cuenta y el rol AWS
+   correspondan a ASIATI; no publicar archivos ni credenciales en logs.
+3. Exigir resultado `success` con comprobación de conectividad SSH y
+   generación/validación del tar, y consultar en almacenamiento privado S3
+   la existencia del archivo y manifiesto bajo `dev/tesoreria/backups/`.
+4. Validar en S3 tamaño, SHA256 del metadato, cifrado AES256, acceso
+   restringido y consistencia del manifiesto. Registrar únicamente
+   hora, identificador del run, estado y referencias privadas.
+5. Si falla **después** del acceso SSH, tratar ese error como incidencia
+   nueva (permisos IAM/S3, ruta/volumen, archivos corruptos). No informar
+   backup exitoso solo porque SSH conecte.
+6. La restauración controlada y la comprobación de correspondencia con
+   PostgreSQL requieren gate y autorización separados: nunca restaurar
+   automáticamente ni escribir sobre el volumen activo.
+
+**Estado a 16-oct:** acceso al servidor y verificación S3 no completados.
+Ninguna copia verificada de esa fecha queda acreditada por estos runs.
+
 ## Recuperación (procedimiento para uso futuro)
 
 No se restaura automáticamente ningún archivo ni se escribe jamás en el volumen activo. La extracción exige ruta ABSOLUTA vacía cuyo último componente empiece por tesoreria-restore-; nunca usa extracción de tar sin validación. En una máquina de administración autorizada:
