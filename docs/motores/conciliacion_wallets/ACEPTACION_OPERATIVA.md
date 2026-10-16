@@ -24,12 +24,24 @@ No copiar datos operativos, identificadores reales, saldos, montos ni filas de e
 
 ## 2. Regresión antes de UI
 
-Ejecutar las regresiones privadas/reales disponibles antes de usar la interfaz.
+Ejecutar las regresiones privadas/reales disponibles antes de usar la interfaz, **en un entorno autorizado con los archivos fuera de Git**:
+
+```bash
+python ops/validar_regresion_privada_wallets.py
+```
+
+El ejecutor devuelve error si pytest falla **o si se omite cualquier prueba** por falta de archivos o configuracion. Un CI verde no sustituye esta ejecucion. No enviar la salida de fallos de datos reales a CI publico, issues ni PRs, porque puede incluir evidencia sensible.
 
 - [ ] Wiilog: `tests/wallet_wiilog/test_regresion_septiembre.py`.
 - [ ] Tiendas/pagos: `tests/wallet_tiendas/test_regresion_tiendas_septiembre.py`.
+- [ ] Recompra Menpros: `tests/wallet_tiendas/test_regresion_recompra_septiembre.py`.
 - [ ] Ningún baseline cambia sin una decisión de negocio documentada.
 - [ ] Si una regla aprobada cambia el resultado, actualizar juntos regla, decisión y baseline privado.
+
+**Cobertura del ejecutor propuesto:** Wiilog, Menpros, Proveeduría ASIATI, Pagos y Recompra Menpros. La quinta regresión está implementada en `tests/wallet_tiendas/test_regresion_recompra_septiembre.py` y exige `fixtures/wallet_tiendas/2026-09/expected_recompra_menpros.json` más un único `wallet_recompra_menpros_*.xlsx`, ambos privados. Los valores del baseline deben corresponder a resultados previamente validados por negocio; nunca se generan a partir de la corrida que se pretende aprobar. La ausencia de cualquiera de esos archivos produce un **FAIL del gate**, no un PASS.
+
+- [ ] Aportar y validar el baseline privado de Recompra Menpros, sin modificar cifras de la referencia histórica.
+- [ ] Confirmar **cero omisiones** y PASS de las cinco regresiones en entorno autorizado.
 
 El criterio no es “se parece”: debe reproducir exactamente el baseline vigente del paquete privado.
 
@@ -83,20 +95,19 @@ Probar con roles reales de desarrollo.
 - [ ] Las cargas conservan hash e idempotencia.
 - [ ] Toda acción humana relevante queda auditada.
 
-## 6. Persistencia y limitación conocida
+## 6. Persistencia y verificación de evidencia
 
-Hoy:
-
-- hallazgos persisten;
-- C0 + resumen de la última corrida se conservan en `sessionStorage`.
+Desde el PR #143, la última ejecución de Wallets conserva C0, resumen, estado de bloqueo y referencias a cargas en PostgreSQL; la pantalla recupera esa ejecución al recargar. Los hallazgos también persisten. No se inventa ni se reconstruye historial anterior a esa migración, y la persistencia por sí sola no equivale a evidencia de cierre financiero aceptada.
 
 Validar explícitamente:
 
-- [ ] Recargar la página y confirmar qué evidencia permanece.
-- [ ] Confirmar que la UI comunica que el resumen es de la sesión actual.
-- [ ] Registrar como deuda que la ejecución completa todavía no es una entidad persistente.
+- [ ] Ejecutar y recargar la página: comprobar que reaparece la última ejecución del mismo período, empresa y wallet.
+- [ ] Comprobar que otro rol/empresa no pueda recuperar esa información sin permisos.
+- [ ] Comprobar que un C0 bloqueado no se presenta como conciliación válida.
+- [ ] Contrastar resultados restaurados con la regresión privada correspondiente.
+- [ ] Confirmar que el expediente de cierre conserva la evidencia requerida, sin atribuirle firmas que aún no existen.
 
-Esta limitación no debe ocultarse al firmar la aceptación.
+Esta verificación debe quedar registrada antes de firmar la aceptación.
 
 ## 7. Aceptación funcional
 
