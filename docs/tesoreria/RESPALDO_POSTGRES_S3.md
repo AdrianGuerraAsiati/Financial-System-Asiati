@@ -9,9 +9,9 @@ Conservar el respaldo local `backup_data` y añadir una **segunda copia externa 
 - S3: `s3://financial-system-asiati-dev-data-890876258895/dev/postgres/backups/`; archivo `.sql.gz` y manifiesto `.json` con tamaño, SHA-256, fecha UTC, formato, origen y commit. Ambos con `--sse AES256`; tras la subida se consultan los encabezados S3 para comprobar tamaño, SHA-256 en metadata y cifrado.
 - Nunca adjuntar el dump a un PR, artefacto de GitHub Actions ni repositorio público. Contiene información sensible de **toda** la plataforma.
 
-## Preparación IAM: pendiente hasta que se apruebe el PR
+## Política IAM de respaldo — verificada en AWS (16-oct-2026)
 
-La cuenta objetivo es `890876258895` (región `us-east-2`). El rol OIDC `financial-system-asiati-github-deploy` dispone de `deploy-lightsail` y `tesoreria-dev-backup`, pero **aún no tiene autorizaciones en `dev/postgres/backups/`**. Instalar `ops/aws/postgres-dev-backup-role-policy.json` como una **política inline independiente** llamada `postgres-dev-backup`, conservando las demás. No otorgar lectura ni escritura sobre otros prefijos; no otorgar `DeleteObject` ni hacer público el bucket. Confirmar con IAM antes de ejecutar.
+La cuenta objetivo es `890876258895` (región `us-east-2`). El rol OIDC `financial-system-asiati-github-deploy` dispone de `deploy-lightsail` y `tesoreria-dev-backup`, y ya tiene autorizaciones exclusivas en `dev/postgres/backups/` mediante `ops/aws/postgres-dev-backup-role-policy.json`, instalada como política inline independiente `postgres-dev-backup`. Se verificó en AWS que conserva las demás políticas y que permite Put/GetObject pero no DeleteObject. No otorgar lectura ni escritura sobre otros prefijos; no otorgar `DeleteObject` ni hacer público el bucket. Confirmar con IAM antes de ejecutar.
 
 **Importante:** el bucket ya tiene una regla de expiración de 45 días para `dev/tesoreria/backups/`. Si se decide agregar retención para PostgreSQL (propuesta: 45 días en desarrollo), hay que **leer y fusionar** la configuración actual de lifecycle antes de aplicar una nueva. `PutBucketLifecycleConfiguration` reemplaza el conjunto completo de reglas: jamás sustituir la de documentos por accidente. La creación de esta nueva regla no forma parte del PR.
 
@@ -27,3 +27,14 @@ La cuenta objetivo es `890876258895` (región `us-east-2`). El rol OIDC `financi
 ## Criterio de salida
 
 Un run verde, objeto presente, metadatos coherentes y cifrado demuestran una copia **técnicamente transferida**. La capacidad de recuperación integral requiere una **restauración comprobada** en entorno aislado y asociar documentos y registros con cortes compatibles.
+
+
+## Restauración aislada automatizada — verificación de aceptación
+
+El workflow `.github/workflows/verify-postgres-restore.yml` ejecuta, en la rama `main`, una **única prueba automática al introducirse el propio workflow**, y luego permite repetirla manualmente mediante `workflow_dispatch` indicando la clave S3 exacta de un respaldo `.sql.gz`. Se valida que la clave pertenezca únicamente a `dev/postgres/backups/`.
+
+Prueba inicial seleccionada: `dev/postgres/backups/20261016T162035Z-run38931157212-attempt1.sql.gz`. El objeto ya existe, tiene manifiesto, cifrado SSE-S3 AES256 y hash/tamaño coincidentes. Una verificación de metadatos por sí sola **no** equivale a restauración exitosa.
+
+El job usa el rol de GitHub OIDC y **solo descarga** ambos objetos. Recalcula SHA-256 en el runner y verifica tamaño, cifrado, formato gzip y marcador de exportación completa. A continuación restaura el SQL en un servicio **PostgreSQL 16 nuevo y desechable, exclusivo del job**, con `psql -v ON_ERROR_STOP=1`, sin escribir en Lightsail ni en una BD activa. Comprueba presencia de tablas `empresas`, `tesoreria_facturas`, `tesoreria_pagos`, `alembic_version` y al menos una empresa cargada; registra solo PASS/FAIL. Redirige y suprime los mensajes SQL y elimina cualquier archivo temporal al finalizar. No crea artifacts, PRs con datos ni copias públicas.
+
+**Criterio verificable de cierre:** ejecución completa en `success` **después del merge**, más constatación de su log sanitizado y del commit de `main`. Un run FAIL no se considera restauración acreditada: investigar en entorno privado sin publicar payloads ni diagnósticos SQL. La prueba es sobre un respaldo tomado en un instante determinado: no valida restauración de documentos, consistencia simultánea con la base viva ni un RPO/RTO.
