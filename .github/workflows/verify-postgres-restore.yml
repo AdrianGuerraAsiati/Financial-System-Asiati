@@ -1,0 +1,114 @@
+name: Verify isolated PostgreSQL restore (development)
+
+on:
+  # Una sola ejecucion automatica al integrar este workflow en main.
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-postgres-restore.yml
+  workflow_dispatch:
+    inputs:
+      backup_key:
+        description: "Clave exacta .sql.gz del respaldo PostgreSQL en S3"
+        type: string
+        required: true
+        default: "dev/postgres/backups/20261016T162035Z-run38931157212-attempt1.sql.gz"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: postgres-restore-verification-development
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  BUCKET: financial-system-asiati-dev-data-890876258895
+  INITIAL_BACKUP_KEY: dev/postgres/backups/20261016T162035Z-run38931157212-attempt1.sql.gz
+
+jobs:
+  restore:
+    if: github.repository == 'AdrianGuerraAsiati/Financial-System-Asiati' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      isolated_postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: isolated_restore
+          POSTGRES_PASSWORD: ephemeral_not_a_corporate_secret
+          POSTGRES_DB: isolated_restore
+        options: >-
+          --health-cmd "pg_isready -U isolated_restore -d isolated_restore"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 8
+
+    steps:
+      - name: AWS credentials by OIDC (read-only operations)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::890876258895:role/financial-system-asiati-github-deploy
+          aws-region: us-east-2
+
+      - name: Download and validate one exact S3 backup
+        shell: bash
+        env:
+          BACKUP_KEY: ${{ inputs.backup_key || 'dev/postgres/backups/20261016T162035Z-run38931157212-attempt1.sql.gz' }}
+          PG_CONTAINER: ${{ job.services.isolated_postgres.id }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          # Solo acepta copias del prefijo privado autorizado; nunca rutas externas.
+          if [[ ! "$BACKUP_KEY" =~ ^dev/postgres/backups/[0-9]{8}T[0-9]{6}Z-run[0-9]+-attempt[0-9]+\.sql\.gz$ ]]; then
+            echo "::error::Clave de respaldo S3 fuera del contrato autorizado."
+            exit 2
+          fi
+          test -n "$PG_CONTAINER"
+          ARCHIVE="$RUNNER_TEMP/isolated-postgres.sql.gz"
+          MANIFEST="$RUNNER_TEMP/isolated-postgres.json"
+          STDOUT_FILE="$RUNNER_TEMP/isolated-restore.stdout"
+          STDERR_FILE="$RUNNER_TEMP/isolated-restore.stderr"
+          trap 'rm -f -- "$ARCHIVE" "$MANIFEST" "$STDOUT_FILE" "$STDERR_FILE"' EXIT
+          META_KEY="${BACKUP_KEY%.sql.gz}.json"
+
+          aws s3 cp "s3://$BUCKET/$BACKUP_KEY" "$ARCHIVE" --only-show-errors
+          aws s3 cp "s3://$BUCKET/$META_KEY" "$MANIFEST" --only-show-errors
+          MANIFEST_HASH="$(jq -er '.sha256 | select(test("^[0-9a-f]{64}$"))' "$MANIFEST")"
+          MANIFEST_SIZE="$(jq -er '.size_bytes | select(type == "number" and . > 0)' "$MANIFEST")"
+          test "$(jq -r '.format' "$MANIFEST")" = "postgresql-plain-sql-gzip"
+          test "$(stat -c%s "$ARCHIVE")" = "$MANIFEST_SIZE"
+          test "$(sha256sum "$ARCHIVE" | awk '{print $1}')" = "$MANIFEST_HASH"
+
+          HEAD="$(aws s3api head-object --bucket "$BUCKET" --key "$BACKUP_KEY")"
+          MANIFEST_HEAD="$(aws s3api head-object --bucket "$BUCKET" --key "$META_KEY")"
+          test "$(jq -r '.Metadata.sha256 // empty' <<<"$HEAD")" = "$MANIFEST_HASH"
+          test "$(jq -r '.ContentLength' <<<"$HEAD")" = "$MANIFEST_SIZE"
+          test "$(jq -r '.ServerSideEncryption' <<<"$HEAD")" = "AES256"
+          test "$(jq -r '.ServerSideEncryption' <<<"$MANIFEST_HEAD")" = "AES256"
+          gzip -t "$ARCHIVE"
+          gzip -cd "$ARCHIVE" | tail -n 8 | grep -Fqx -- '-- PostgreSQL database dump complete'
+          echo "PASS: S3, AES256, SHA256, tamano y SQL gzip verificados."
+
+          # El contenedor postgres:16 es efimero y exclusivo del job.
+          # Nunca conecta a Lightsail ni a la base de datos activa.
+          if ! (gzip -cd "$ARCHIVE" | docker exec -i "$PG_CONTAINER" \
+            psql -X -q -v ON_ERROR_STOP=1 -U isolated_restore -d isolated_restore \
+            > "$STDOUT_FILE" 2> "$STDERR_FILE"); then
+            echo "::error::Fallo la restauracion SQL aislada; salida SQL sensible suprimida."
+            exit 1
+          fi
+
+          # Consultas tecnicas, sin mostrar empresas, facturas, importes ni filas.
+          CHECK="$(docker exec "$PG_CONTAINER" psql -X -A -t -v ON_ERROR_STOP=1 \
+            -U isolated_restore -d isolated_restore \
+            -c "SELECT CASE WHEN to_regclass('public.empresas') IS NOT NULL AND to_regclass('public.tesoreria_facturas') IS NOT NULL AND to_regclass('public.tesoreria_pagos') IS NOT NULL AND to_regclass('public.alembic_version') IS NOT NULL THEN 'PASS' ELSE 'FAIL' END")"
+          test "$CHECK" = "PASS"
+          HAS_COMPANIES="$(docker exec "$PG_CONTAINER" psql -X -A -t -v ON_ERROR_STOP=1 \
+            -U isolated_restore -d isolated_restore \
+            -c "SELECT CASE WHEN EXISTS (SELECT 1 FROM public.empresas) THEN 'PASS' ELSE 'FAIL' END")"
+          test "$HAS_COMPANIES" = "PASS"
+          echo "PASS: PostgreSQL 16 restaurado en contenedor temporal; tablas y registros de prueba tecnica presentes."
+          echo "No se publicaron datos financieros ni se modifico el servidor Lightsail."
