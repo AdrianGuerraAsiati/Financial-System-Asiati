@@ -24,7 +24,7 @@ def test_factura_y_pago_tienen_formularios_separados_y_comprobantes():
     assert 'name="comprobante" type="file"' in HTML
     assert '"/api/v1/tesoreria/facturas"' in JS
     assert '"/pagos"' in JS
-    assert 'datos.append("empresa_id", String(empresaId()))' in JS
+    assert 'datos.append("empresa_id", String(empresa))' in JS
 
 
 def test_factura_y_pago_se_abren_en_modales_con_avisos():
