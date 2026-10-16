@@ -25,3 +25,18 @@ def test_factura_y_pago_tienen_formularios_separados_y_comprobantes():
     assert '"/api/v1/tesoreria/facturas"' in JS
     assert '"/pagos"' in JS
     assert 'datos.append("empresa_id", String(empresaId()))' in JS
+
+
+def test_factura_y_pago_se_abren_en_modales_con_avisos():
+    assert 'id="tesoreria-abrir-nueva"' in HTML
+    assert 'id="tesoreria-dialogo-nueva"' in HTML
+    assert 'id="tesoreria-dialogo-pago"' in HTML
+    assert 'id="tesoreria-abrir-pago"' in HTML
+    assert 'id="tesoreria-avisos-lista"' in HTML
+    assert 'id="tesoreria-nav-alertas"' in HTML
+    assert "dialogoNueva.showModal()" in JS
+    assert "dialogoPago.showModal()" in JS
+    assert '/api/v1/tesoreria/notificaciones?empresa_id=' in JS
+    assert 'fecha_pago_oportuno' in JS
+    assert "window.tesoreriaPuedeEditar" in JS
+    assert "window.tesoreriaPuedePagar" in JS
