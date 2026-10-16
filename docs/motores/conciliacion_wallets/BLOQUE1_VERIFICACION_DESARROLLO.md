@@ -73,10 +73,13 @@ A la fecha de esta revisión GitHub presenta el repositorio como
 **público**, mientras las especificaciones y suites históricas contienen
 resultados de casos operativos. Requiere atención del administrador:
 
-1. **Prioridad:** revisar y restringir la visibilidad en GitHub
-   (Settings → General → Danger Zone → Change repository visibility)
-   si el contenido es de uso interno. Este cambio es administrativo,
-   no lo realiza el PR.
+1. **Decisión del responsable (16-oct-2026):** el repositorio continuará
+   **público hasta finalizar el desarrollo**. No solicitar ni condicionar
+   la aceptación de Wallets a cambiar su visibilidad ahora. El código,
+   los ejemplos y los documentos públicos deben evitar cualquier dato
+   operativo confidencial; baselines, facturas, identificadores y
+   evidencias financieras permanecen en almacenamiento privado.
+   Revisar la visibilidad al término del desarrollo por decisión administrativa.
 2. Determinar qué cifras, identificadores y evidencia deben estar
    exclusivamente en almacenes privados; preservar copia íntegra
    autorizada antes de retirar contenido versionado.
