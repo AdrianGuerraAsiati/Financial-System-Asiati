@@ -1,0 +1,115 @@
+name: Backup PostgreSQL offsite (development)
+
+on:
+  schedule:
+    - cron: "47 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: backup-postgres-offsite-development
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  LIGHTSAIL_INSTANCE: financial-system-asiati-dev
+  LIGHTSAIL_HOST: 3.141.226.208
+  BACKUP_BUCKET: financial-system-asiati-dev-data-890876258895
+  BACKUP_PREFIX: dev/postgres/backups
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+
+      - name: AWS credentials by OIDC (no persistent keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::890876258895:role/financial-system-asiati-github-deploy
+          aws-region: us-east-2
+
+      - name: Obtain temporary Lightsail SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          DETAILS="$(aws lightsail get-instance-access-details --region "$AWS_REGION" \
+            --instance-name "$LIGHTSAIL_INSTANCE" --protocol ssh)"
+          USERNAME="$(jq -r '.accessDetails.username // empty' <<<"$DETAILS")"
+          PRIVATE_KEY="$(jq -r '.accessDetails.privateKey // empty' <<<"$DETAILS")"
+          CERT_KEY="$(jq -r '.accessDetails.certKey // empty' <<<"$DETAILS")"
+          test -n "$USERNAME" && test -n "$PRIVATE_KEY"
+          printf '%s\n' "$PRIVATE_KEY" > "$RUNNER_TEMP/postgres-ssh.pem"
+          chmod 600 "$RUNNER_TEMP/postgres-ssh.pem"
+          ssh-keygen -y -f "$RUNNER_TEMP/postgres-ssh.pem" >/dev/null
+          if [[ -n "$CERT_KEY" ]]; then
+            printf '%s\n' "$CERT_KEY" > "$RUNNER_TEMP/postgres-ssh.pem-cert.pub"
+            chmod 644 "$RUNNER_TEMP/postgres-ssh.pem-cert.pub"
+            ssh-keygen -L -f "$RUNNER_TEMP/postgres-ssh.pem-cert.pub" >/dev/null
+          else
+            rm -f "$RUNNER_TEMP/postgres-ssh.pem-cert.pub"
+          fi
+          echo "USERNAME=$USERNAME" >> "$GITHUB_ENV"
+
+      - name: Create, verify and upload private PostgreSQL dump
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          ARCHIVO="$RUNNER_TEMP/postgres-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.sql.gz"
+          MANIFIESTO="$RUNNER_TEMP/postgres-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          trap 'rm -f -- "$ARCHIVO" "$MANIFIESTO"' EXIT
+
+          # Solo un stream comprimido cruza SSH. No mostrar SQL ni credenciales.
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=12 -i "$RUNNER_TEMP/postgres-ssh.pem" \
+            "$USERNAME@$LIGHTSAIL_HOST" "sudo -n bash -s" > "$ARCHIVO" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/financial-system
+          DC=(docker compose --env-file .env.production -f compose.production.yml)
+          # pg_dump no lleva la contraseña en argumentos; permanece dentro del contenedor db.
+          "${DC[@]}" exec -T db sh -c \
+            'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_dump --no-owner --no-privileges -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+            | gzip -c
+          REMOTE
+
+          test -s "$ARCHIVO"
+          gzip -t "$ARCHIVO"
+          # Comprobar el marcador de fin sin imprimir filas ni datos financieros.
+          gzip -cd "$ARCHIVO" | tail -n 8 | grep -Fqx -- '-- PostgreSQL database dump complete'
+          HASH="$(sha256sum "$ARCHIVO" | awk '{print $1}')"
+          BYTES="$(stat -c%s "$ARCHIVO")"
+          TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          CLAVE="$BACKUP_PREFIX/$TIMESTAMP-run$GITHUB_RUN_ID-attempt$GITHUB_RUN_ATTEMPT"
+
+          jq -n --arg sha256 "$HASH" --arg commit "$GITHUB_SHA" \
+            --arg utc "$TIMESTAMP" --argjson bytes "$BYTES" \
+            '{schema:1, format:"postgresql-plain-sql-gzip", sha256:$sha256, size_bytes:$bytes, created_utc:$utc, source:"lightsail-development", workflow_commit:$commit}' \
+            > "$MANIFIESTO"
+
+          # Sin artifacts de GitHub: los datos solo llegan al bucket privado de ASIATI.
+          aws s3 cp "$ARCHIVO" "s3://$BACKUP_BUCKET/$CLAVE.sql.gz" \
+            --sse AES256 --metadata "sha256=$HASH" --only-show-errors
+          aws s3 cp "$MANIFIESTO" "s3://$BACKUP_BUCKET/$CLAVE.json" \
+            --sse AES256 --content-type application/json --only-show-errors
+
+          HEAD="$(aws s3api head-object --bucket "$BACKUP_BUCKET" --key "$CLAVE.sql.gz")"
+          META="$(aws s3api head-object --bucket "$BACKUP_BUCKET" --key "$CLAVE.json")"
+          test "$(jq -r '.ContentLength' <<<"$HEAD")" = "$BYTES"
+          test "$(jq -r '.Metadata.sha256 // empty' <<<"$HEAD")" = "$HASH"
+          test "$(jq -r '.ServerSideEncryption' <<<"$HEAD")" = "AES256"
+          test "$(jq -r '.ServerSideEncryption' <<<"$META")" = "AES256"
+          test "$(jq -r '.ContentLength' <<<"$META")" = "$(stat -c%s "$MANIFIESTO")"
+          echo "Respaldo PostgreSQL externo cifrado; tamaño, metadatos y formato verificados."
+
+      - name: Remove temporary SSH credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -f -- "$RUNNER_TEMP/postgres-ssh.pem" "$RUNNER_TEMP/postgres-ssh.pem-cert.pub"
