@@ -927,13 +927,18 @@
               <label>Monto total a pagar<input name="monto" type="number" step="0.01" min="0.01" required></label>
               <label>Moneda<select name="moneda"><option>COP</option><option>USD</option><option>CLP</option></select></label>
               <label class="span-two">Descripción del gasto<input name="descripcion" maxlength="1000" required></label>
+            </div>
+            <details class="facturacion-campos-opcionales">
+              <summary>Datos adicionales de la factura (opcional)</summary>
+              <div class="form-grid">
               <label>Ciudad<input name="ciudad" maxlength="100"></label>
               <label>Unidad de negocio<select name="unidad_negocio" data-catalogo="unidad_negocio"><option value="">Sin asignar</option></select></label>
               <label>Categoría<select name="categoria" data-catalogo="categoria"><option value="">Sin asignar</option></select></label>
               <label>Fijo / variable<select name="fijo_variable" data-catalogo="fijo_variable"><option value="">Sin asignar</option></select></label>
               <label>Cuenta de pago prevista<input name="cuenta_pago" maxlength="200"></label>
               <label>Documento contable<input name="documento_contable" maxlength="120"></label>
-            </div>
+              </div>
+            </details>
             <p class="muted">La factura se guarda pendiente. No se crea comprobante ni fecha de pago al radicarla.</p>
             <div class="facturacion-dialog-acciones">
               <button type="button" class="secondary-button" data-cerrar-facturacion="tesoreria-dialogo-nueva">Cancelar</button>
