@@ -46,6 +46,11 @@ jobs:
           jq -r '.accessDetails.privateKey' <<<"$DETAILS" > "$RUNNER_TEMP/tesoreria-ssh.pem"
           chmod 600 "$RUNNER_TEMP/tesoreria-ssh.pem"
           ssh-keygen -y -f "$RUNNER_TEMP/tesoreria-ssh.pem" >/dev/null
+          CERT_KEY="$(jq -r '.accessDetails.certKey // empty' <<<"$DETAILS")"
+          if [[ -n "$CERT_KEY" ]]; then
+            printf '%s\n' "$CERT_KEY" > "$RUNNER_TEMP/tesoreria-ssh.pem-cert.pub"
+            chmod 644 "$RUNNER_TEMP/tesoreria-ssh.pem-cert.pub"
+          fi
 
       - name: Create, verify and upload encrypted document backup
         shell: bash
