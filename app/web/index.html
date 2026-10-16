@@ -892,6 +892,7 @@
             <div id="tesoreria-estado" class="status" role="status">Listo</div>
           </div>
         </section>
+        <p id="tesoreria-solo-consulta" class="notice" hidden>Tu perfil tiene acceso de consulta. Para cargar facturas o registrar pagos necesitas el permiso financiero correspondiente.</p>
         <section class="panel tesoreria-tablero" aria-labelledby="tesoreria-resumen-titulo">
           <div class="panel-heading"><div>
             <h3 id="tesoreria-resumen-titulo">Resumen de cuentas por pagar</h3>
@@ -915,7 +916,7 @@
           <form id="tesoreria-nueva">
             <div class="form-grid">
               <label class="span-two">Archivo o foto de la factura / recibo (PDF, XML, JPG o PNG)
-                <input name="archivo" type="file" accept=".xml,.pdf,.png,.jpg,.jpeg,image/*" required>
+                <input name="archivo" type="file" accept=".xml,.pdf,.png,.jpg,.jpeg,image/jpeg,image/png" required>
               </label>
               <div><button id="tesoreria-extraer" class="secondary-button" type="button">Prellenar desde XML</button>
                 <p class="muted" id="tesoreria-extraccion-aviso">PDF e imágenes requieren captura manual en V1.</p></div>
