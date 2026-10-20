@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASIATI · O.C. de Google Drive</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#19344b;background:#f3f6f9}
+*{box-sizing:border-box}body{margin:0}header{background:#003f64;color:white;padding:18px 5vw;display:flex;gap:20px;align-items:center;justify-content:space-between}
+header a{color:white}main{max-width:1200px;padding:28px 20px;margin:auto}
+h1{font-size:1.65rem;margin:.2rem 0 .8rem}p{line-height:1.5}.muted{color:#5c7080}
+.panel{background:white;border:1px solid #dbe3e9;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 3px 14px #18365009}
+table{border-collapse:collapse;width:100%;font-size:.91rem}td,th{padding:11px;border-bottom:1px solid #e1e9ee;text-align:left;vertical-align:top}
+th{background:#f3f7fa;color:#30465a}td a{color:#005b8f;overflow-wrap:anywhere}
+button{background:#005b8f;color:white;border:none;border-radius:7px;padding:10px 15px;cursor:pointer;font-weight:650}
+button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,a:focus-visible{outline:3px solid #f4cf22;outline-offset:3px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+.scroller{overflow-x:auto}.note{background:#fff8d7;padding:12px;border-radius:8px;color:#594900}
+</style>
+</head>
+<body>
+<header><strong>ASIATI 360° · Cartera</strong><a href="/">Volver a la plataforma</a></header>
+<main>
+<h1>Inventario de órdenes de compra en Drive</h1>
+<p class="muted">Consulta documental para administración global. Se muestran las revisiones registradas durante la última sincronización autorizada; esta vista no representa cartera, vencimientos ni pagos confirmados.</p>
+<section class="panel">
+<div class="toolbar"><div><strong id="total">—</strong> registros documentales en PostgreSQL</div><button id="reload" type="button">Consultar inventario</button></div>
+<p id="estado" role="status" aria-live="polite" class="muted">Consultando la base de datos…</p>
+<div class="scroller"><table><thead><tr><th>O.C. candidata</th><th>Documento</th><th>Ruta en Drive</th><th>Revisión</th><th>Estado</th><th>Original</th></tr></thead><tbody id="filas"></tbody></table></div>
+<div class="toolbar" style="margin-top:15px"><span class="muted" id="pagina"></span><div><button id="prev" type="button">Anterior</button> <button id="next" type="button">Siguiente</button></div></div>
+</section>
+<p class="note">Los documentos de distintas empresas no se atribuyen automáticamente. Solo administración global puede consultar nombres y enlaces mientras falta la validación jurídica por Juanfe. «Consultar inventario» no sincroniza Google Drive.</p>
+</main>
+<script>
+const endpoint="/api/v1/cartera/ocs/drive/inventario";
+const pageSize=50;let offset=0,total=0;
+const el=id=>document.getElementById(id);
+function celda(tr,contenido){const td=document.createElement("td");td.textContent=contenido??"—";tr.appendChild(td);return td}
+async function cargar(){
+ el("reload").disabled=true;el("estado").textContent="Consultando la base de datos…";
+ try{
+  const r=await fetch(endpoint+"?limit="+pageSize+"&offset="+offset,{credentials:"same-origin",headers:{"Accept":"application/json"}});
+  if(!r.ok){
+   const msg=r.status===401?"Debes iniciar sesión en la plataforma.":r.status===403?"Este inventario requiere permiso global de administración.":"No se pudo consultar el inventario (HTTP "+r.status+").";
+   throw new Error(msg);
+  }
+  const d=await r.json();total=d.total;el("total").textContent=String(total);
+  const body=el("filas");body.replaceChildren();
+  for(const item of d.items){
+   const tr=document.createElement("tr");
+   celda(tr,item.numero_oc_candidato);celda(tr,item.nombre);celda(tr,item.ruta);
+   celda(tr,item.revision);celda(tr,item.estado);
+   const td=document.createElement("td");const a=document.createElement("a");
+   a.textContent="Ver archivo";a.href=item.url_origen;a.target="_blank";a.rel="noopener noreferrer";
+   td.appendChild(a);tr.appendChild(td);body.appendChild(tr);
+  }
+  el("pagina").textContent=total?(offset+1)+"–"+Math.min(offset+d.items.length,total)+" de "+total:"No hay documentos importados";
+  el("estado").textContent="Consulta completada. Fuente: índice PostgreSQL; no es lectura en vivo de Drive.";
+  el("prev").disabled=offset===0;el("next").disabled=offset+pageSize>=total;
+ }catch(e){el("estado").textContent=e.message;el("prev").disabled=true;el("next").disabled=true}
+ finally{el("reload").disabled=false}
+}
+el("reload").onclick=()=>cargar();
+el("prev").onclick=()=>{offset=Math.max(0,offset-pageSize);cargar()};
+el("next").onclick=()=>{offset+=pageSize;cargar()};
+cargar();
+</script>
+</body>
+</html>
