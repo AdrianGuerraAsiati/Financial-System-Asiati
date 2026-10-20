@@ -33,7 +33,7 @@ desde `compose.production.yml`. No guardar ni subir nuevas claves a Git.
    Puede que la cuenta actual para Sheets no tenga permiso para esta carpeta.
 2. Guardar `CARTERA_OC_DRIVE_FOLDER_ID` fuera de Git en variables del entorno de
    ejecución. Raíz facilitada por negocio:
-   `1OlP8ujc9CRfJvbVIlfTLPULrgL6bihNJ`.
+   `<ID_CARPETA_CONFIGURADO_EN_LIGHTSAIL>`.
 3. Aplicar las migraciones con el flujo habitual de despliegue. No usar SQL manual
    ni `create_all()`.
 4. **Con el PR fusionado y la base migrada**, lanzar una primera carga controlada
@@ -41,7 +41,7 @@ desde `compose.production.yml`. No guardar ni subir nuevas claves a Git.
 
 ```bash
 cd /opt/financial-system
-export CARPETA_OC='1OlP8ujc9CRfJvbVIlfTLPULrgL6bihNJ'
+export CARPETA_OC='<ID_CARPETA_CONFIGURADO_EN_LIGHTSAIL>'
 docker compose --env-file .env.production -f compose.production.yml \
   exec -e CARTERA_OC_DRIVE_FOLDER_ID="$CARPETA_OC" api \
   python -m app.motores.cartera_ocs.drive_sync
