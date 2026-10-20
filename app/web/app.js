@@ -18,6 +18,12 @@ const logoutError = document.querySelector("#logout-error");
 const empresaInput = document.querySelector("#empresa-id");
 const estado = document.querySelector("#estado-global");
 const operacionesBody = document.querySelector("#operaciones-body");
+const carteraOperacionesBuscar = document.querySelector("#cartera-operaciones-buscar");
+const carteraOperacionesPorPagina = document.querySelector("#cartera-operaciones-por-pagina");
+const carteraOperacionesTotal = document.querySelector("#cartera-operaciones-total");
+const carteraOperacionesPaginaTexto = document.querySelector("#cartera-operaciones-pagina");
+const carteraOperacionesAnterior = document.querySelector("#cartera-operaciones-anterior");
+const carteraOperacionesSiguiente = document.querySelector("#cartera-operaciones-siguiente");
 const moraBody = document.querySelector("#mora-body");
 const proyeccionBody = document.querySelector("#proyeccion-body");
 const detalleTitulo = document.querySelector("#detalle-titulo");
@@ -93,6 +99,9 @@ const comprasFiltroQ = document.querySelector("#compras-filtro-q");
 const comprasFiltroMixtas = document.querySelector("#compras-filtro-mixtas");
 
 let moduloActivo = "inicio";
+let carteraOperacionesRows = [];
+let carteraOperacionesPagina = 1;
+const CARTERA_OPERACIONES_PAGE_SIZE = 20;
 let comprasOcsOffset = 0;
 let dashboardVersiones = {};
 let dashboardVersionTimer = null;
@@ -1443,25 +1452,39 @@ async function cargarEstadoFuenteCartera() {
     carteraGuardarSnapshot.disabled = Number(resumen.rangos_configurados || 0) === 0;
 
     carteraFuenteContenido.innerHTML = `
-      <article class="proof-card">
-        <strong>Estado: ${escapar(estadoFuente.estado)}</strong>
-        <p>${escapar(estadoFuente.modo_fuente || "GOOGLE_SHEETS")} · ${estadoFuente.solo_lectura ? "Solo lectura" : "Modo no confirmado"}</p>
+      <article class="proof-card cartera-source-summary">
+        <div class="cartera-source-primary">
+          <div>
+            <strong>Estado: ${escapar(estadoFuente.estado)}</strong>
+            <p>${escapar(estadoFuente.modo_fuente || "GOOGLE_SHEETS")} · ${estadoFuente.solo_lectura ? "Solo lectura" : "Modo no confirmado"}</p>
+          </div>
+          <span class="cartera-source-pill ${estadoFuente.estado === "OK" ? "is-ok" : "is-warning"}">
+            ${estadoFuente.estado === "OK" ? "Fuente disponible" : "Requiere revisión"}
+          </span>
+        </div>
         <p>${escapar(String(resumen.rangos_validos ?? 0))} de ${escapar(String(resumen.rangos ?? 0))} rangos válidos · ${escapar(String(resumen.rangos_configurados ?? 0))} configurados · ${escapar(String(resumen.filas ?? 0))} filas observadas</p>
         ${faltantes.length ? `<p>Falta configurar: ${faltantes.map(escapar).join(", ")}</p>` : ""}
       </article>
-      ${diagnosticos.map((item) => `
-        <article class="proof-card">
-          <strong>${escapar(item.tipo)} · ${item.valido ? "Válido" : "Revisar"}</strong>
-          <p>${escapar(item.rango)} · ${escapar(String(item.filas_datos ?? 0))} filas</p>
-          ${(item.campos_criticos_faltantes || []).length
-            ? `<p>Campos faltantes: ${item.campos_criticos_faltantes.map(escapar).join(", ")}</p>`
-            : ""}
-          ${(item.encabezados_duplicados || []).length
-            ? `<p>Encabezados duplicados: ${item.encabezados_duplicados.map(escapar).join(", ")}</p>`
-            : ""}
-          ${item.error_lectura ? `<p>Error de lectura: ${escapar(item.error_lectura)}</p>` : ""}
-        </article>
-      `).join("")}
+      ${diagnosticos.length ? `
+        <details class="cartera-source-diagnostics" ${diagnosticos.some((item) => !item.valido) ? "open" : ""}>
+          <summary>Diagnóstico por rango (${diagnosticos.length})</summary>
+          <div class="cartera-source-grid">
+            ${diagnosticos.map((item) => `
+              <article class="proof-card">
+                <strong>${escapar(item.tipo)} · ${item.valido ? "Válido" : "Revisar"}</strong>
+                <p>${escapar(item.rango)} · ${escapar(String(item.filas_datos ?? 0))} filas</p>
+                ${(item.campos_criticos_faltantes || []).length
+                  ? `<p>Campos faltantes: ${item.campos_criticos_faltantes.map(escapar).join(", ")}</p>`
+                  : ""}
+                ${(item.encabezados_duplicados || []).length
+                  ? `<p>Encabezados duplicados: ${item.encabezados_duplicados.map(escapar).join(", ")}</p>`
+                  : ""}
+                ${item.error_lectura ? `<p>Error de lectura: ${escapar(item.error_lectura)}</p>` : ""}
+              </article>
+            `).join("")}
+          </div>
+        </details>` : ""}
+
     `;
 
     setEstado(
@@ -1626,8 +1649,12 @@ function mostrarFuenteNoDisponible(tipo) {
   if (tipo === "OPERACIONES") {
     carteraCalidadContenido.innerHTML =
       '<p class="empty">La calidad se valida cuando Operaciones está disponible.</p>';
+    carteraOperacionesRows = [];
+    carteraOperacionesPagina = 1;
+    renderizarOperacionesCartera();
     operacionesBody.innerHTML =
       '<tr><td colspan="7" class="empty">La fuente de Operaciones todavía no está disponible.</td></tr>';
+    carteraOperacionesTotal.textContent = "Fuente no disponible";
     return;
   }
   if (tipo === "MORA") {
@@ -1680,32 +1707,72 @@ async function cargarCarteraTodo() {
   await Promise.all(tareas);
 }
 
-async function cargarOperaciones() {
-  setEstado("Consultando operaciones…");
-  operacionesBody.innerHTML = '<tr><td colspan="7" class="empty">Consultando…</td></tr>';
-  try {
-    const rows = await api(`/api/v1/cartera/operaciones?empresa_id=${empresaId()}`);
-    if (!rows.length) {
-      operacionesBody.innerHTML = '<tr><td colspan="7" class="empty">No hay operaciones.</td></tr>';
-    } else {
-      operacionesBody.innerHTML = rows.map((row) => `
+function normalizarBusquedaCartera(valor) {
+  return String(valor ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CO");
+}
+
+function renderizarOperacionesCartera() {
+  const termino = normalizarBusquedaCartera(carteraOperacionesBuscar.value.trim());
+  const carteraOperacionesFiltradas = termino
+    ? carteraOperacionesRows.filter((row) =>
+        [row.oc, row.cliente, row.sku, row.estado, row.etapa].some(
+          (valor) => normalizarBusquedaCartera(valor).includes(termino)
+        )
+      )
+    : carteraOperacionesRows;
+
+  const porPagina = Number(carteraOperacionesPorPagina.value) || CARTERA_OPERACIONES_PAGE_SIZE;
+  const paginas = Math.max(1, Math.ceil(carteraOperacionesFiltradas.length / porPagina));
+  carteraOperacionesPagina = Math.min(Math.max(1, carteraOperacionesPagina), paginas);
+  const inicio = (carteraOperacionesPagina - 1) * porPagina;
+  const pagina = carteraOperacionesFiltradas.slice(inicio, inicio + porPagina);
+
+  operacionesBody.innerHTML = pagina.length
+    ? pagina.map((row) => `
         <tr>
-          <td>${escapar(row.oc)}</td>
+          <td class="cartera-cell-primary">${escapar(row.oc)}</td>
           <td>${escapar(row.cliente)}</td>
           <td>${escapar(row.sku)}</td>
           <td>${escapar(row.estado)}</td>
           <td>${escapar(row.etapa)}</td>
-          <td>${formatearDecimal(row.valor)}</td>
-          <td><button type="button" data-oc="${escapar(row.oc)}">Ver</button></td>
+          <td class="cartera-money">${formatearDecimal(row.valor)}</td>
+          <td><button type="button" data-oc="${escapar(row.oc)}" aria-label="Ver detalle de OC ${escapar(row.oc)}">Ver</button></td>
         </tr>
-      `).join("");
-      operacionesBody.querySelectorAll("[data-oc]").forEach((button) => {
-        button.addEventListener("click", () => cargarDetalle(button.dataset.oc));
-      });
-    }
+      `).join("")
+    : `<tr><td colspan="7" class="empty">${carteraOperacionesRows.length ? "No se encontraron operaciones con ese filtro." : "No hay operaciones."}</td></tr>`;
+
+  carteraOperacionesTotal.textContent = termino
+    ? `${carteraOperacionesFiltradas.length.toLocaleString("es-CO")} de ${carteraOperacionesRows.length.toLocaleString("es-CO")} operaciones`
+    : `${carteraOperacionesRows.length.toLocaleString("es-CO")} operaciones`;
+  carteraOperacionesPaginaTexto.textContent = `Página ${carteraOperacionesPagina} de ${paginas}`;
+  carteraOperacionesAnterior.disabled = carteraOperacionesPagina === 1;
+  carteraOperacionesSiguiente.disabled = carteraOperacionesPagina >= paginas;
+
+  operacionesBody.querySelectorAll("[data-oc]").forEach((button) => {
+    button.addEventListener("click", () => cargarDetalle(button.dataset.oc));
+  });
+}
+
+async function cargarOperaciones() {
+  setEstado("Consultando operaciones…");
+  operacionesBody.innerHTML = '<tr><td colspan="7" class="empty">Consultando…</td></tr>';
+  carteraOperacionesTotal.textContent = "Cargando operaciones…";
+  carteraOperacionesAnterior.disabled = true;
+  carteraOperacionesSiguiente.disabled = true;
+  const empresaConsultada = empresaId();
+  try {
+    const rows = await api(`/api/v1/cartera/operaciones?empresa_id=${empresaConsultada}`);
+    if (empresaConsultada !== empresaId()) return;
+    carteraOperacionesRows = Array.isArray(rows) ? rows : [];
+    carteraOperacionesPagina = 1;
+    renderizarOperacionesCartera();
     setEstado("Operaciones actualizadas", "ok");
   } catch (error) {
+    if (empresaConsultada !== empresaId()) return;
+    carteraOperacionesRows = [];
     operacionesBody.innerHTML = `<tr><td colspan="7" class="empty">${escapar(error.message)}</td></tr>`;
+    carteraOperacionesTotal.textContent = "No fue posible cargar las operaciones";
+    carteraOperacionesPaginaTexto.textContent = "Página 1 de 1";
     setEstado(error.message, "error");
   }
 }
@@ -1834,6 +1901,24 @@ formComprobante.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("#cargar-operaciones").addEventListener("click", cargarOperaciones);
+carteraOperacionesBuscar.addEventListener("input", () => {
+  carteraOperacionesPagina = 1;
+  renderizarOperacionesCartera();
+});
+carteraOperacionesPorPagina.addEventListener("change", () => {
+  carteraOperacionesPagina = 1;
+  renderizarOperacionesCartera();
+});
+carteraOperacionesAnterior.addEventListener("click", () => {
+  carteraOperacionesPagina = Math.max(1, carteraOperacionesPagina - 1);
+  renderizarOperacionesCartera();
+  document.querySelector("#operaciones").scrollIntoView({block: "start", behavior: "smooth"});
+});
+carteraOperacionesSiguiente.addEventListener("click", () => {
+  carteraOperacionesPagina += 1;
+  renderizarOperacionesCartera();
+  document.querySelector("#operaciones").scrollIntoView({block: "start", behavior: "smooth"});
+});
 document.querySelector("#cargar-mora").addEventListener("click", cargarMora);
 document.querySelector("#cargar-proyeccion").addEventListener("click", cargarProyeccion);
 document.querySelector("#cargar-pendientes").addEventListener("click", cargarPendientes);
