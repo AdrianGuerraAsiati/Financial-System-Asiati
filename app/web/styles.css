@@ -2591,3 +2591,221 @@ summary {
   .recaudos-detalle { grid-template-columns: 1fr; gap: .3rem; }
   .recaudos-detalle dd { margin-bottom: .7rem; }
 }
+
+
+/* Cartera: focused interface refinements --------------------------------- */
+
+#vista-cartera .panel-heading {
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+#cartera-fuente-contenido {
+  gap: .65rem;
+}
+
+#cartera-fuente-contenido .cartera-source-summary {
+  padding: .95rem 1rem;
+  background: #f8fafc;
+}
+
+.cartera-source-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .6rem 1rem;
+}
+
+.cartera-source-primary strong {
+  color: var(--ink);
+  font-size: .86rem;
+}
+
+.cartera-source-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: .3rem .65rem;
+  font-size: .71rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cartera-source-pill.is-ok {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.cartera-source-pill.is-warning {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.cartera-source-diagnostics {
+  padding: .75rem .9rem;
+  border: 1px solid #e7eaf0;
+  border-radius: .72rem;
+  background: #fff;
+}
+
+.cartera-source-diagnostics summary {
+  font-size: .78rem;
+  color: var(--ink-soft);
+}
+
+.cartera-source-diagnostics summary:focus-visible,
+#vista-cartera button:focus-visible,
+#vista-cartera input:focus-visible,
+#vista-cartera select:focus-visible {
+  outline: 2px solid #0875bb;
+  outline-offset: 2px;
+}
+
+.cartera-source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: .7rem;
+  margin-top: .8rem;
+}
+
+.cartera-source-grid .proof-card {
+  min-width: 0;
+  box-shadow: none;
+}
+
+#cartera-descubrimiento-contenido > .empty,
+#cartera-snapshots-lista > .empty {
+  text-align: left;
+  padding: .65rem .15rem;
+  line-height: 1.45;
+}
+
+.cartera-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .85rem 1rem;
+  margin-top: 1.1rem;
+}
+
+.cartera-toolbar label {
+  display: grid;
+  gap: .35rem;
+  color: var(--muted-strong);
+  font-size: .76rem;
+  font-weight: 650;
+}
+
+.cartera-search-label {
+  flex: 1 1 270px;
+  max-width: 460px;
+}
+
+.cartera-search-label input,
+.cartera-page-size-label select {
+  width: 100%;
+  min-height: 2.5rem;
+  border-color: #d5dae2;
+  border-radius: .55rem;
+  color: var(--ink);
+  background: #fff;
+}
+
+.cartera-page-size-label {
+  flex: 0 0 145px;
+}
+
+.cartera-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: .85rem;
+}
+
+.cartera-table {
+  min-width: 740px;
+  font-size: .82rem;
+}
+
+.cartera-table th {
+  padding: .78rem .75rem;
+  font-size: .68rem;
+}
+
+.cartera-table td {
+  padding: .72rem .75rem;
+}
+
+.cartera-table td:nth-child(2),
+.cartera-table td:nth-child(3) {
+  overflow-wrap: anywhere;
+}
+
+.cartera-cell-primary {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.cartera-money {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cartera-table td:last-child,
+.cartera-table th:last-child {
+  text-align: center;
+}
+
+.cartera-table td button {
+  min-height: 2rem;
+  min-width: 3rem;
+  color: #075985;
+  font-weight: 650;
+  border-radius: .45rem;
+  border-color: #cbddea;
+}
+
+.cartera-table td button:hover {
+  background: #f0f9ff;
+}
+
+.cartera-pagination-footer {
+  flex-wrap: wrap;
+  padding-top: .3rem;
+}
+
+.cartera-pagination-footer .table-footnote {
+  margin: 0;
+}
+
+.cartera-pagination-footer .pagination {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 620px) {
+  .cartera-search-label,
+  .cartera-page-size-label {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  #cartera-fuente .panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: .5rem;
+  }
+
+  #cartera-fuente .panel-actions button {
+    flex: 1 1 155px;
+  }
+
+  .cartera-pagination-footer {
+    align-items: stretch;
+  }
+
+  .cartera-pagination-footer .pagination {
+    justify-content: space-between;
+  }
+}
