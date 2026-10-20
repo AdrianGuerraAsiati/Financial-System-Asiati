@@ -130,7 +130,7 @@ class GoogleDriveInventario:
                         archivos.append(
                             ArchivoDriveOC(
                                 file_id=identidad,
-                                version=str(item.get("version") or "desconocida"),
+                                version=str(item.get("version") or item.get("modifiedTime") or "desconocida"),
                                 nombre=nombre,
                                 tipo_mime=mime,
                                 modificado=item.get("modifiedTime"),
