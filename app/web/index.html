@@ -293,31 +293,53 @@
         </div>
       </section>
 
-      <section class="panel" id="operaciones">
+      <section class="panel cartera-operaciones-panel" id="operaciones">
         <div class="panel-heading">
           <div>
             <h3>Operaciones</h3>
-            <p>Fuente temporal prevista: Google Sheets.</p>
+            <p>Consulta las operaciones de Google Sheets y abre su detalle sin salir de Cartera.</p>
           </div>
           <button id="cargar-operaciones" type="button">Actualizar</button>
         </div>
-        <div class="table-wrap">
-          <table>
+        <div class="cartera-toolbar">
+          <label class="cartera-search-label" for="cartera-operaciones-buscar">
+            Buscar operaciones
+            <input id="cartera-operaciones-buscar" type="search" placeholder="OC, cliente, SKU o estado" autocomplete="off">
+          </label>
+          <label class="cartera-page-size-label" for="cartera-operaciones-por-pagina">
+            Filas por página
+            <select id="cartera-operaciones-por-pagina">
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+        <div class="table-wrap cartera-table-wrap">
+          <table class="cartera-table" aria-label="Operaciones de cartera">
             <thead>
               <tr>
-                <th>OC</th>
-                <th>Cliente</th>
-                <th>SKU</th>
-                <th>Estado</th>
-                <th>Cartera</th>
-                <th>Valor</th>
-                <th></th>
+                <th scope="col">OC</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">SKU</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Cartera</th>
+                <th scope="col" class="cartera-money">Valor</th>
+                <th scope="col">Acción</th>
               </tr>
             </thead>
             <tbody id="operaciones-body">
               <tr><td colspan="7" class="empty">Carga las operaciones para comenzar.</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="table-footer cartera-pagination-footer">
+          <p id="cartera-operaciones-total" class="table-footnote" role="status" aria-live="polite">Sin operaciones cargadas</p>
+          <div class="pagination" aria-label="Paginación de operaciones">
+            <button id="cartera-operaciones-anterior" type="button" class="secondary-button" disabled>Anterior</button>
+            <span id="cartera-operaciones-pagina" class="table-footnote" aria-live="polite">Página 1 de 1</span>
+            <button id="cartera-operaciones-siguiente" type="button" class="secondary-button" disabled>Siguiente</button>
+          </div>
         </div>
       </section>
 
