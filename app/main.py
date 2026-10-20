@@ -12,6 +12,7 @@ from app.core.hallazgos.api import router as hallazgos_router
 from app.core.supervision.api import router as supervision_router
 from app.core.usuarios.api import router as usuarios_router
 from app.motores.cartera_ocs.api import router as cartera_router
+from app.motores.cartera_ocs.drive_api import router as cartera_drive_router
 from app.motores.tesoreria.api import router as tesoreria_router
 from app.motores.recaudos.api import router as recaudos_router
 from app.motores.tesoreria.tablero import router as tesoreria_tablero_router
@@ -46,6 +47,7 @@ app.include_router(hallazgos_router, prefix=API_V1)
 app.include_router(catalogos_router, prefix=API_V1)
 app.include_router(dimensiones_router, prefix=API_V1)
 app.include_router(cartera_router, prefix=API_V1)
+app.include_router(cartera_drive_router, prefix=API_V1)
 app.include_router(tesoreria_router, prefix=API_V1)
 app.include_router(recaudos_router, prefix=API_V1)
 app.include_router(tesoreria_edicion_router, prefix=API_V1)
