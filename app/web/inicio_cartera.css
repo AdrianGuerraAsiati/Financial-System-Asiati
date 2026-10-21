@@ -1,0 +1,134 @@
+/* Inicio · panorama ejecutivo de Cartera desde snapshot persistido */
+#vista-inicio .inicio-cartera-vision {
+  padding:clamp(17px,2.15vw,27px);
+  border:1px solid #e8e6e5;border-radius:11px;
+  background:#fff;margin-top:16px;
+}
+#vista-inicio .inicio-cartera-vision[hidden] {display:none!important;}
+#vista-inicio .inicio-cartera-cabecera {
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:18px;flex-wrap:wrap;
+}
+#vista-inicio .inicio-cartera-cabecera > div:first-child {max-width:760px;}
+#vista-inicio .inicio-cartera-cabecera h3 {
+  color:#0c0a09;font-size:21px;font-weight:600;
+  letter-spacing:-.035em;line-height:1.25;margin:6px 0;
+}
+#vista-inicio .inicio-cartera-cabecera p:not(.eyebrow) {
+  color:#78716c;font-size:12px;line-height:1.6;margin:5px 0;
+}
+#vista-inicio .inicio-cartera-cabecera-acciones {
+  display:flex;flex-direction:column;align-items:flex-end;gap:9px;
+}
+#vista-inicio .inicio-cartera-fecha {
+  color:#78716c;font-size:11px;font-variant-numeric:tabular-nums;
+}
+#vista-inicio #inicio-cartera-capturar {
+  border-radius:999px;padding:10px 16px;cursor:pointer;
+  border:1px solid #3398e1;background:#3ba6f1;color:#fff;
+  font-size:12px;font-weight:600;
+}
+#vista-inicio #inicio-cartera-capturar:hover:not(:disabled) {
+  background:#3398e1;color:#fff;
+}
+#vista-inicio #inicio-cartera-capturar:disabled {opacity:.55;cursor:progress;}
+#vista-inicio .inicio-cartera-kpis {
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;margin:19px 0;
+}
+#vista-inicio .inicio-cartera-kpi {
+  min-width:0;padding:15px 16px;border:1px solid #e8e6e5;
+  background:#fafaf9;border-radius:9px;
+  display:flex;flex-direction:column;gap:8px;
+}
+#vista-inicio .inicio-cartera-kpi > span {
+  font-size:11px;font-weight:550;color:#57534e;
+}
+#vista-inicio .inicio-cartera-kpi > strong {
+  color:#1c1917;font-size:clamp(17px,1.7vw,23px);
+  font-weight:650;line-height:1.22;letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+#vista-inicio .inicio-cartera-kpi > small {
+  font-size:10px;color:#78716c;line-height:1.5;
+}
+#vista-inicio .inicio-cartera-lecturas {
+  display:grid;grid-template-columns:minmax(0,1.65fr) minmax(245px,.75fr);
+  border-top:1px solid #e8e6e5;margin-top:8px;padding-top:18px;
+  gap:28px;
+}
+#vista-inicio .inicio-cartera-horizonte-titulo {
+  display:flex;align-items:baseline;justify-content:space-between;
+  flex-wrap:wrap;gap:8px 12px;margin:0 0 16px;
+}
+#vista-inicio .inicio-cartera-horizonte-titulo strong,
+#vista-inicio .inicio-cartera-accesos > strong {
+  color:#292524;font-size:13px;font-weight:630;
+}
+#vista-inicio .inicio-cartera-horizonte-titulo span {
+  font-size:11px;color:#78716c;
+}
+#vista-inicio .inicio-cartera-mes {
+  display:grid;grid-template-columns:75px minmax(0,1fr) minmax(92px,137px);
+  gap:10px;align-items:center;margin:0 0 12px;min-width:0;
+  font-size:12px;
+}
+#vista-inicio .inicio-cartera-mes-nombre {
+  color:#57534e;white-space:nowrap;
+  text-transform:capitalize;
+}
+#vista-inicio .inicio-cartera-mes-pista {
+  display:block;width:100%;height:12px;border-radius:4px;
+  background:#f5f5f4;overflow:hidden;
+}
+#vista-inicio .inicio-cartera-mes-pista > span {
+  display:block;background:#3ba6f1;height:100%;border-radius:4px;
+}
+#vista-inicio .inicio-cartera-mes > strong {
+  text-align:right;white-space:nowrap;color:#292524;font-weight:600;
+  font-size:12px;font-variant-numeric:tabular-nums;
+}
+#vista-inicio .inicio-cartera-accesos {
+  display:flex;flex-direction:column;gap:9px;
+  padding-left:20px;border-left:1px solid #e8e6e5;
+}
+#vista-inicio .inicio-cartera-accesos > p {
+  font-size:11px;color:#78716c;line-height:1.5;margin:0 0 4px;
+}
+#vista-inicio .inicio-cartera-accesos .secondary-button {
+  display:flex;justify-content:space-between;align-items:center;
+  text-align:left;padding:10px 12px;width:100%;border-radius:8px;
+  font-size:12px;
+}
+#vista-inicio .inicio-cartera-accesos .secondary-button:hover {border-color:#3ba6f1;}
+#vista-inicio .inicio-cartera-accesos .inicio-cartera-leyenda {
+  margin-top:5px;line-height:1.6;
+}
+#vista-inicio .inicio-cartera-leyenda strong {
+  color:#44403c;font-variant-numeric:tabular-nums;
+}
+#vista-inicio #inicio-cartera-accion-estado {
+  border-top:1px solid #e8e6e5;margin-top:15px;
+  padding-top:11px;color:#78716c;font-size:11px;
+}
+#vista-inicio .inicio-cartera-vacio {padding:12px;color:#78716c;font-size:12px;}
+@media(max-width:1170px) {
+  #vista-inicio .inicio-cartera-kpis {grid-template-columns:repeat(2,minmax(0,1fr));}
+  #vista-inicio .inicio-cartera-lecturas {
+    grid-template-columns:minmax(0,1fr);
+  }
+  #vista-inicio .inicio-cartera-accesos {
+    border-left:0;border-top:1px solid #e8e6e5;
+    padding:15px 0 0;
+  }
+}
+@media(max-width:570px) {
+  #vista-inicio .inicio-cartera-kpis {grid-template-columns:1fr;}
+  #vista-inicio .inicio-cartera-mes {
+    grid-template-columns:60px minmax(0,1fr) 96px;gap:7px;
+  }
+  #vista-inicio .inicio-cartera-mes > strong {font-size:11px;}
+  #vista-inicio .inicio-cartera-cabecera-acciones {
+    align-items:flex-start;width:100%;
+  }
+}
