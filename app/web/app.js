@@ -101,6 +101,8 @@ const comprasFiltroMixtas = document.querySelector("#compras-filtro-mixtas");
 let moduloActivo = "inicio";
 let carteraOperacionesRows = [];
 let carteraOperacionesPagina = 1;
+const carteraOperacionesOrden = document.querySelector("#cartera-operaciones-orden");
+const carteraOperacionesDireccion = document.querySelector("#cartera-operaciones-direccion");
 const CARTERA_OPERACIONES_PAGE_SIZE = 20;
 let carteraProyeccionSolicitud = 0;
 let carteraDetalleSolicitud = 0;
@@ -113,6 +115,7 @@ const DASHBOARD_VERSION_POLL_MS = 10000;
 empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
   dashboardVersiones = {};
+  window.ASIATI_MODAL?.close();
   ++carteraDetalleSolicitud;
   document.getElementById("detalle-operacion").hidden = true;
   detalleContenido.textContent = "Selecciona una OC.";
@@ -1933,11 +1936,22 @@ function renderizarOperacionesCartera() {
     ))
   );
 
+  const filasOrdenadas = window.ASIATI_CARTERA_SORT.ordenar(
+    carteraOperacionesFiltradas,carteraOperacionesOrden.value,carteraOperacionesDireccion.value
+  );
+  document.querySelectorAll("#operaciones [data-sort-th]").forEach((th) => {
+    const activo = th.dataset.sortTh === carteraOperacionesOrden.value;
+    th.setAttribute("aria-sort", activo
+      ? (carteraOperacionesDireccion.value==="asc"?"ascending":"descending") : "none");
+    const boton = th.querySelector("[data-cartera-sort]");
+    boton.setAttribute("aria-pressed",String(activo));
+    boton.dataset.direction=carteraOperacionesDireccion.value;
+  });
   const porPagina = Number(carteraOperacionesPorPagina.value) || CARTERA_OPERACIONES_PAGE_SIZE;
   const paginas = Math.max(1, Math.ceil(carteraOperacionesFiltradas.length / porPagina));
   carteraOperacionesPagina = Math.min(Math.max(1, carteraOperacionesPagina), paginas);
   const inicio = (carteraOperacionesPagina - 1) * porPagina;
-  const pagina = carteraOperacionesFiltradas.slice(inicio, inicio + porPagina);
+  const pagina = filasOrdenadas.slice(inicio, inicio + porPagina);
 
   operacionesBody.innerHTML = pagina.length
     ? pagina.map((row) => `
@@ -2031,10 +2045,15 @@ async function cargarDetalle(oc) {
   const consultada = empresaId();
   const solicitud = ++carteraDetalleSolicitud;
   const panel = document.getElementById("detalle-operacion");
-  panel.hidden = false;
   detalleTitulo.textContent = oc;
+  detalleContenido.className = "empty-block";
   detalleContenido.textContent = "Consultando…";
-  panel.scrollIntoView({block:"start", behavior:"auto"});
+  window.ASIATI_MODAL.open({
+    title: "Operación · " + oc,
+    subtitle: "Detalle de las líneas de la GM. La consulta no confirma recaudos.",
+    content: panel,
+    onClose: () => { panel.hidden = true; ++carteraDetalleSolicitud; },
+  });
   try {
     const detalle = await api(
       `/api/v1/cartera/operaciones/${encodeURIComponent(oc)}?empresa_id=${consultada}`
@@ -2136,6 +2155,25 @@ formComprobante.addEventListener("submit", async (event) => {
   }
 });
 
+
+for (const control of [carteraOperacionesOrden, carteraOperacionesDireccion]) {
+  control.addEventListener("change", () => {
+    carteraOperacionesPagina=1;
+    renderizarOperacionesCartera();
+  });
+}
+document.querySelectorAll("#operaciones [data-cartera-sort]").forEach((boton) => {
+  boton.addEventListener("click", () => {
+    if(carteraOperacionesOrden.value === boton.dataset.carteraSort) {
+      carteraOperacionesDireccion.value = carteraOperacionesDireccion.value==="asc"?"desc":"asc";
+    } else {
+      carteraOperacionesOrden.value=boton.dataset.carteraSort;
+      carteraOperacionesDireccion.value=boton.dataset.carteraSort==="valor"?"desc":"asc";
+    }
+    carteraOperacionesPagina=1;
+    renderizarOperacionesCartera();
+  });
+});
 document.querySelector("#cargar-operaciones").addEventListener("click", cargarOperaciones);
 carteraOperacionesBuscar.addEventListener("input", () => {
   carteraOperacionesPagina = 1;
