@@ -447,6 +447,54 @@
         </div>
       </section>
 
+      <section class="panel cartera-scatter-panel" id="cartera-dispersion" aria-labelledby="cartera-dispersion-titulo">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Cartera · Análisis comercial</p>
+            <h3 id="cartera-dispersion-titulo">Dispersión de proyecciones por comercial</h3>
+            <p>Comparación descriptiva de órdenes distintas y pagos esperados. No representa ventas, recaudos efectuados ni cartera vencida.</p>
+          </div>
+        </div>
+        <div class="cartera-scatter-filtros" role="group" aria-label="Filtros de la gráfica">
+          <label for="cartera-dispersion-desde">Mes esperado desde
+            <input type="month" id="cartera-dispersion-desde">
+          </label>
+          <label for="cartera-dispersion-hasta">Mes esperado hasta
+            <input type="month" id="cartera-dispersion-hasta">
+          </label>
+          <label for="cartera-dispersion-buscar">Buscar comercial
+            <input type="search" id="cartera-dispersion-buscar" placeholder="Nombre del comercial" autocomplete="off">
+          </label>
+          <button id="cartera-dispersion-limpiar" type="button" class="secondary-button">Limpiar filtros</button>
+        </div>
+        <p class="table-footnote" id="cartera-dispersion-origen">Fuente: hoja PROYECCIONES de Cartera · empresa seleccionada · sin datos cargados.</p>
+        <p id="cartera-dispersion-estado" class="table-footnote" role="status" aria-live="polite">Los puntos aparecerán al cargar la proyección de pagos.</p>
+        <div class="cartera-scatter-grafica" id="cartera-dispersion-grafica" aria-label="Dispersión de órdenes de compra y montos esperados por comercial"></div>
+        <div id="cartera-dispersion-seleccion" class="cartera-scatter-seleccion" role="status" aria-live="polite">Selecciona un punto para ver el detalle del comercial.</div>
+        <details class="cartera-scatter-tabla" open>
+          <summary>Tabla de valores por comercial</summary>
+          <div class="table-wrap">
+            <table aria-label="Valores utilizados en la dispersión por comercial">
+              <thead>
+                <tr><th scope="col">Comercial</th><th scope="col">OC distintas</th><th scope="col">Monto esperado (USD)</th><th scope="col">Registros</th><th scope="col">Sin OC</th><th scope="col">Acción</th></tr>
+              </thead>
+              <tbody id="cartera-dispersion-tabla-body"><tr><td colspan="6" class="empty">Sin datos cargados.</td></tr></tbody>
+            </table>
+          </div>
+          <div class="cartera-scatter-paginacion" aria-label="Paginación de comerciales">
+            <label for="cartera-dispersion-tamano">Comerciales por página
+              <select id="cartera-dispersion-tamano"><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option></select>
+            </label>
+            <div class="pagination">
+              <button id="cartera-dispersion-prev" type="button" class="secondary-button" disabled>Anterior</button>
+              <span id="cartera-dispersion-pagina" class="table-footnote" aria-live="polite">Página 1 de 1</span>
+              <button id="cartera-dispersion-next" type="button" class="secondary-button" disabled>Siguiente</button>
+            </div>
+          </div>
+        </details>
+        <p class="table-footnote cartera-scatter-nota">Cada punto representa un comercial tal como aparece en PROYECCIONES. Las OC se cuentan una vez por comercial dentro del período filtrado; una misma OC puede figurar en más de un comercial. Los montos suman registros de pagos esperados, no valores de venta ni cobros confirmados. Las referencias sin OC se mantienen en el monto pero no incrementan el eje X.</p>
+      </section>
+
       <section class="panel" id="detalle-operacion">
         <div class="panel-heading">
           <div>
@@ -1307,6 +1355,7 @@
 
   <script src="/static/financial_charts.js" defer></script>
   <script src="/static/cartera_paginacion.js" defer></script>
+  <script src="/static/cartera_scatter.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/cartera_drive.js" defer></script>
   <script src="/static/wallets.js" defer></script>
