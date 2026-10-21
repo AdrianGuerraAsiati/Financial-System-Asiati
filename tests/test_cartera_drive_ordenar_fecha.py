@@ -36,6 +36,9 @@ def test_fechas_ordena_antes_de_paginar_y_fechas_ausentes_al_final():
         "GM1", "GM2", "GM3", "GM4", "GM8", "GM9"
     ]
     assert items[0]["numero_oc"] == "GM9"  # No altera la lista original.
+    numericas = [{"numero_oc": k, "ultima_modificacion": None} for k in ("GM10", "GM2", "GM100")]
+    assert [x["numero_oc"] for x in _ordenar_ordenes_documentales(numericas,"oc_asc")] == ["GM2","GM10","GM100"]
+    assert [x["numero_oc"] for x in _ordenar_ordenes_documentales(numericas,"oc_desc")] == ["GM100","GM10","GM2"]
 
 
 @pytest.mark.skipif(
