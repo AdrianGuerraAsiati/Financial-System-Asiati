@@ -527,3 +527,114 @@ body {background:var(--finance-canvas); color:var(--finance-ink);}
   #cartera-aportes .cartera-aportes-oc-titular {flex-wrap:wrap;}
   #cartera-aportes .cartera-aportes-filtros label {flex:1 1 100%;}
 }
+
+
+/* Aportes v2 · convertir comparaciones visuales en calendario legible. */
+#cartera-aportes .cartera-aportes-flujo {
+  border:1px solid var(--finance-border);border-radius:10px;
+  padding:15px;margin:14px 0 16px;background:#fff;
+}
+#cartera-aportes .cartera-aportes-flujo-cabecera h4 {
+  font-size:13px;font-weight:650;margin:0;color:var(--finance-ink);
+}
+#cartera-aportes .cartera-aportes-flujo-cabecera p {
+  font-size:11px;margin:4px 0 14px;color:var(--finance-muted);
+}
+#cartera-aportes .cartera-aportes-meses-lista {
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));
+  gap:10px 14px;
+}
+#cartera-aportes .cartera-aportes-mes {
+  background:var(--finance-canvas);border:1px solid var(--finance-border);
+  border-radius:9px;padding:12px;min-width:0;
+  display:flex;flex-direction:column;gap:8px;
+}
+#cartera-aportes .cartera-aportes-mes-encabezado {
+  display:flex;justify-content:space-between;gap:10px;align-items:center;
+  font-size:12px;color:var(--finance-ink);font-variant-numeric:tabular-nums;
+}
+#cartera-aportes .cartera-aportes-mes-encabezado strong:last-child {font-size:13px;}
+#cartera-aportes .cartera-aportes-mes-pista {
+  height:8px;border-radius:999px;background:#e7e5e4;
+  width:100%;display:block;overflow:hidden;
+}
+#cartera-aportes .cartera-aportes-mes-barra {
+  display:block;height:100%;background:#2196ca;border-radius:999px;
+}
+#cartera-aportes .cartera-aportes-mes small {
+  font-size:10px;line-height:1.5;color:var(--finance-muted);
+}
+#cartera-aportes .cartera-aportes-opciones {
+  display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:0 0 13px;
+}
+#cartera-aportes .cartera-aportes-opciones label:not(.cartera-aportes-check) {
+  display:grid;gap:6px;font-size:11px;color:var(--finance-muted);
+}
+#cartera-aportes .cartera-aportes-opciones select {
+  width:100%;max-width:265px;min-height:37px;
+  border:1px solid var(--finance-border);border-radius:8px;
+  background:#fff;color:var(--finance-ink);padding:8px 10px;
+  font-size:12px;
+}
+#cartera-aportes .cartera-aportes-check {
+  display:flex;align-items:center;gap:7px;padding-bottom:9px;
+  font-size:11px;color:var(--finance-ink);cursor:pointer;
+}
+#cartera-aportes .cartera-aportes-check input {accent-color:#2196ca;}
+#cartera-aportes .cartera-aportes-oc-cronograma {
+  display:flex;align-items:center;flex-wrap:wrap;gap:5px 11px;
+  font-size:11px;color:#57534e;
+  font-variant-numeric:tabular-nums;
+}
+#cartera-aportes .cartera-aportes-oc-cronograma span:not(:last-child):after {
+  content:"·";padding-left:11px;color:#a8a29e;
+}
+#cartera-aportes .cartera-aportes-oc.is-selected .cartera-aportes-oc-cronograma {
+  color:#075985;
+}
+#cartera-aportes .cartera-aportes-detalle-metricas {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;margin:13px 0 16px;
+}
+#cartera-aportes .cartera-aportes-detalle-metrica {
+  display:flex;flex-direction:column;gap:6px;
+  padding:11px;border:1px solid var(--finance-border);
+  border-radius:8px;background:#fff;min-width:0;
+}
+#cartera-aportes .cartera-aportes-detalle-metrica span {
+  font-size:10px;line-height:1.35;color:var(--finance-muted);
+}
+#cartera-aportes .cartera-aportes-detalle-metrica strong {
+  font-size:13px;line-height:1.35;font-weight:650;
+  color:var(--finance-ink);overflow-wrap:anywhere;
+  font-variant-numeric:tabular-nums;
+}
+#cartera-aportes .cartera-aportes-detalle-subtitulo {
+  font-size:12px;font-weight:640;margin:10px 0 6px;
+  color:var(--finance-ink);
+}
+#cartera-aportes .cartera-aportes-fechas {
+  min-width:390px;
+}
+#cartera-aportes .cartera-aportes-fechas .cartera-aportes-proporcion {
+  min-width:90px;
+  font-size:11px;font-variant-numeric:tabular-nums;
+}
+#cartera-aportes .cartera-aportes-fecha-pista {
+  display:block;width:100%;height:6px;margin-top:5px;
+  overflow:hidden;background:#e7e5e4;border-radius:8px;
+}
+#cartera-aportes .cartera-aportes-fecha-barra {
+  display:block;height:100%;background:#2196ca;border-radius:8px;
+}
+@media(max-width:720px){
+  #cartera-aportes .cartera-aportes-meses-lista {
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  }
+}
+@media(max-width:480px){
+  #cartera-aportes .cartera-aportes-detalle-metricas {grid-template-columns:1fr;}
+  #cartera-aportes .cartera-aportes-opciones label:not(.cartera-aportes-check) {width:100%;}
+  #cartera-aportes .cartera-aportes-opciones select {max-width:none;}
+  #cartera-aportes .cartera-aportes-check {width:100%;padding-bottom:0;}
+}
