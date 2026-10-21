@@ -9,6 +9,8 @@
   const porId = (id) => document.getElementById("cartera-aportes-" + id);
   const lista = porId("lista");
   const detalle = porId("detalle-contenido");
+  const detallePanel = porId("detalle");
+  let modalAportesAbierto = false;
   const titulo = porId("detalle-titulo");
   const estado = porId("estado");
   const fuente = porId("fuente");
@@ -270,7 +272,6 @@
         cargado ? "No se encontraron OC con proyecciones para estos filtros." :
         "No hay proyecciones consultadas."));
     }
-    const mayor = listaActual.reduce((mayor,oc) => oc.monto > mayor ? oc.monto : mayor,1n);
     const totalFiltrado = listaActual.reduce((acum,oc)=>acum+oc.monto,0n);
     for (const oc of visibles) {
       const boton = nodo("button","cartera-aportes-oc");
@@ -289,25 +290,22 @@
           " fecha programada" : " fechas programadas")),
         nodo("span",null,porcentajeTexto(oc.monto,totalFiltrado) +
           " del importe filtrado"));
-      const pista = nodo("span","cartera-aportes-pista");
-      const barra = nodo("span","cartera-aportes-barra");
-      barra.style.width = String(Number(oc.monto * 10000n / (mayor || 1n)) / 100) + "%";
-      const paleta = ["#2196ca","#60b1ea","#93c5fd","#bcdafa","#0f6b95"];
-      for (const [idx,aporte] of oc.aportes.entries()) {
-        const segmento = nodo("span","cartera-aportes-segmento");
-        segmento.style.width = String(Number(aporte.monto * 10000n / oc.monto) / 100) + "%";
-        segmento.style.background = paleta[idx % paleta.length];
-        segmento.title = fechaLegible(aporte.fecha) + " · " + moneda(aporte.monto);
-        barra.appendChild(segmento);
-      }
-      pista.appendChild(barra);
-      boton.append(linea,subtitulo,cronograma,pista);
-      boton.addEventListener("click",()=>seleccionar(oc.oc));
+      const progreso = nodo("span","cartera-avance-sin-conciliar");
+      progreso.append(
+        nodo("span",null,"Pagado confirmado: sin verificar"),
+        nodo("span",null,"Faltante real: no calculable")
+      );
+      const pista = nodo("span","cartera-avance-pista");
+      pista.setAttribute("role","img");
+      pista.setAttribute("aria-label","Avance de pago no disponible: esta GM aún no tiene recaudos confirmados y aplicados");
+      pista.title="Sin conciliación por GM · no equivale a un avance del 0 %";
+      boton.append(linea,subtitulo,cronograma,progreso,pista);
+      boton.addEventListener("click",()=>seleccionar(oc.oc,true));
       lista.appendChild(boton);
     }
   }
 
-  function seleccionar(oc) {
+  function seleccionar(oc, abrir = false) {
     seleccionado = oc;
     for(const b of lista.querySelectorAll(".cartera-aportes-oc")){
       const activo = b.querySelector("strong")?.textContent === oc;
@@ -315,6 +313,19 @@
       b.setAttribute("aria-pressed",String(activo));
     }
     pintarDetalle(oc);
+    if(abrir && oc && window.ASIATI_MODAL) {
+      modalAportesAbierto = true;
+      window.ASIATI_MODAL.open({
+        title: "Seguimiento de aportes · " + oc,
+        subtitle: "Importes programados; el avance real necesita recaudos verificados y aplicados a esta GM.",
+        content: detallePanel,
+        size: "wide",
+        onClose: () => {
+          modalAportesAbierto = false;
+          detallePanel.hidden = true;
+        }
+      });
+    }
   }
 
   function refrescar() {
@@ -370,6 +381,7 @@
   }
 
   function limpiarDatos(mensaje="Esperando proyecciones…") {
+    if(modalAportesAbierto) window.ASIATI_MODAL?.close();
     registros=[];empresa=null;cargado=false;seleccionado="";pagina=1;
     comercial.replaceChildren(new Option("Todos",""));
     fuente.textContent="Fuente: PROYECCIONES · sin datos disponibles.";
