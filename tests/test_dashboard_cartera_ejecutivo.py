@@ -1,6 +1,8 @@
 """Indicadores de Cartera en Inicio sin consultar Sheets ni inventar cobros."""
-from datetime import date
-from decimal import Decimal
+import os
+from datetime import date, datetime, timezone
+
+import pytest
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -67,13 +69,14 @@ def test_fuentes_no_validadas_permanecen_ausentes_en_vez_de_cero():
     assert sin_validos["meses_futuros"] == []
 
 
+@pytest.mark.skipif(
+    not os.getenv("DATABASE_URL"), reason="PostgreSQL solo en integración"
+)
 def test_dashboard_lee_solo_snapshot_persistido_autorizado():
     permitido = crear_empresa("Resumen Cartera desde DB")
     ajeno = crear_empresa("Resumen empresa separada")
     snapshot = SnapshotFuenteCartera(
-        cargado_en=__import__("datetime").datetime(
-            2026, 10, 21, 17, 0, tzinfo=__import__("datetime").timezone.utc
-        ),
+        cargado_en=datetime(2026, 10, 21, 17, 0, tzinfo=timezone.utc),
         spreadsheet_id="source_test_cartera",
         rangos={"PROYECCION": "PROYECCIONES!A:Q", "MORA": "MORA!A:E"},
         diagnosticos=(
