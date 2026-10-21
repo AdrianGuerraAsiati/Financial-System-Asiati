@@ -284,6 +284,7 @@ function mostrarApp(sesion) {
   window.tesoreriaPuedePagar = Boolean(sesion.permisos?.["tesoreria.pagos.registrar"]);
   navParametros.hidden = !sesion.permisos?.["dimensiones.gestionar"];
   if (window.configurarCarteraDrive) window.configurarCarteraDrive(sesion);
+  window.ASIATI_CARTERA_NAV?.configurarAcceso(sesion);
 
   mostrarModulo("inicio");
   iniciarMonitorDashboard();
