@@ -103,6 +103,7 @@ let carteraOperacionesRows = [];
 let carteraOperacionesPagina = 1;
 const CARTERA_OPERACIONES_PAGE_SIZE = 20;
 let carteraProyeccionSolicitud = 0;
+let carteraDetalleSolicitud = 0;
 let comprasOcsOffset = 0;
 let dashboardVersiones = {};
 let dashboardVersionTimer = null;
@@ -112,6 +113,10 @@ const DASHBOARD_VERSION_POLL_MS = 10000;
 empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
   dashboardVersiones = {};
+  ++carteraDetalleSolicitud;
+  document.getElementById("detalle-operacion").hidden = true;
+  detalleContenido.textContent = "Selecciona una OC.";
+  formComprobante.elements.oc.value = "";
   if (moduloActivo === "inicio") {
     cargarDashboardPrincipal();
   } else if (moduloActivo === "cartera") {
@@ -284,6 +289,7 @@ function mostrarApp(sesion) {
   window.tesoreriaPuedePagar = Boolean(sesion.permisos?.["tesoreria.pagos.registrar"]);
   navParametros.hidden = !sesion.permisos?.["dimensiones.gestionar"];
   if (window.configurarCarteraDrive) window.configurarCarteraDrive(sesion);
+  window.ASIATI_CARTERA_NAV?.configurarAcceso(sesion);
 
   mostrarModulo("inicio");
   iniciarMonitorDashboard();
@@ -1865,12 +1871,18 @@ async function cargarProyeccion() {
 }
 
 async function cargarDetalle(oc) {
+  const consultada = empresaId();
+  const solicitud = ++carteraDetalleSolicitud;
+  const panel = document.getElementById("detalle-operacion");
+  panel.hidden = false;
   detalleTitulo.textContent = oc;
   detalleContenido.textContent = "Consultando…";
+  panel.scrollIntoView({block:"start", behavior:"auto"});
   try {
     const detalle = await api(
-      `/api/v1/cartera/operaciones/${encodeURIComponent(oc)}?empresa_id=${empresaId()}`
+      `/api/v1/cartera/operaciones/${encodeURIComponent(oc)}?empresa_id=${consultada}`
     );
+    if (consultada !== empresaId() || solicitud !== carteraDetalleSolicitud) return;
     detalleContenido.className = "detail-grid";
     detalleContenido.innerHTML = detalle.lineas.map((linea) => `
       <article class="detail-card">
@@ -1893,6 +1905,7 @@ async function cargarDetalle(oc) {
     }
     setEstado(`Detalle ${oc} cargado`, "ok");
   } catch (error) {
+    if (consultada !== empresaId() || solicitud !== carteraDetalleSolicitud) return;
     detalleContenido.className = "empty-block";
     detalleContenido.textContent = error.message;
     setEstado(error.message, "error");

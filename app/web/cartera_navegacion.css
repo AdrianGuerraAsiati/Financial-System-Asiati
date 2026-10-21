@@ -1,0 +1,129 @@
+/* ASIATI · Cartera organizada por tareas (navegación v3)
+ * Solo capa visual: ningún cambio en endpoints ni datos financieros.
+ */
+#vista-cartera .cartera-vistas-barra {
+  position:sticky;top:0;z-index:9;
+  padding:11px 0 12px;margin:10px 0 18px;
+  background:rgba(250,250,249,.98);
+  border-bottom:1px solid #e8e6e5;
+  box-shadow:0 6px 14px rgba(250,250,249,.95);
+  scroll-margin-top:0;
+}
+#vista-cartera .cartera-vistas-nav,
+#vista-cartera .cartera-vistas-subnav {
+  display:flex;align-items:center;flex-wrap:nowrap;
+  gap:7px;overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:thin;scrollbar-color:#d6d3d1 transparent;
+  max-width:100%;padding:2px 0 7px;
+}
+#vista-cartera .cartera-vistas-nav button,
+#vista-cartera .cartera-vistas-subnav button {
+  flex:0 0 auto;min-height:39px;border-radius:9px;
+  border:1px solid transparent;padding:9px 14px;
+  background:transparent;color:#57534e;
+  font-size:12px;font-weight:560;white-space:nowrap;
+  line-height:1.3;transition:background .12s ease,border-color .12s ease;
+}
+#vista-cartera .cartera-vistas-nav button:hover,
+#vista-cartera .cartera-vistas-subnav button:hover {
+  background:#f5f5f4;color:#1c1917;
+}
+#vista-cartera .cartera-vistas-nav button.is-active {
+  color:#fff;background:#1c1917;border-color:#1c1917;
+}
+#vista-cartera .cartera-vistas-subnav {
+  gap:9px;margin:3px 0 18px;padding-bottom:10px;
+  border-bottom:1px solid #e8e6e5;
+}
+#vista-cartera .cartera-vistas-subnav button {
+  color:#57534e;border-color:#e8e6e5;
+  background:#fff;
+}
+#vista-cartera .cartera-vistas-subnav button.is-active {
+  color:#075985;background:#eaf6fe;border-color:#80cbfb;
+}
+#vista-cartera .cartera-vistas-contexto {
+  font-size:12px;line-height:1.45;color:#78716c;
+  margin:2px 4px 0;min-height:18px;
+}
+#vista-cartera .cartera-vistas-panel,
+#vista-cartera .cartera-vistas-subpanel {min-width:0;scroll-margin-top:105px;}
+#vista-cartera .cartera-vistas-panel[hidden],
+#vista-cartera .cartera-vistas-subpanel[hidden],
+#vista-cartera #cartera-drive-panel[hidden],
+#vista-cartera #detalle-operacion[hidden] {display:none!important;}
+#vista-cartera .cartera-vistas-panel > .panel:first-child,
+#vista-cartera .cartera-vistas-subpanel > .panel:first-child {
+  margin-top:0;
+}
+#vista-cartera .cartera-vistas-panel > .grid-two {
+  margin-top:2px;align-items:start;
+}
+#vista-cartera .cartera-vistas-panel > .grid-two .panel {margin-top:0;}
+#vista-cartera .cartera-vistas-panel .panel-heading {
+  align-items:flex-start;flex-wrap:wrap;
+}
+#vista-cartera .cartera-vistas-panel .panel-heading .panel-actions {
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+}
+#vista-cartera .cartera-vistas-panel .panel {
+  padding:clamp(14px,1.6vw,22px);min-width:0;
+}
+#vista-cartera .cartera-vistas-panel .panel-heading h3 {
+  font-weight:620;letter-spacing:-.015em;
+}
+#vista-cartera .cartera-vistas-panel .table-wrap {
+  max-height:min(62vh,640px);
+  overflow:auto;
+  scrollbar-color:#d6d3d1 transparent;
+  border-radius:8px;
+  border:1px solid #f1f0ee;
+}
+#vista-cartera .cartera-vistas-panel .table-wrap table {
+  width:100%;border-collapse:separate;border-spacing:0;
+}
+#vista-cartera .cartera-vistas-panel .table-wrap thead th {
+  position:sticky;top:0;z-index:2;
+  background:#fafaf9;border-bottom:1px solid #e8e6e5;
+  padding:11px 12px;font-size:11px;
+}
+#vista-cartera .cartera-vistas-panel .table-wrap tbody td {
+  padding:10px 12px;font-size:12px;
+  vertical-align:middle;line-height:1.45;
+}
+#vista-cartera .cartera-vistas-panel .table-wrap tbody tr:hover td {
+  background:#f8fafc;
+}
+#vista-cartera .cartera-vistas-panel .table-wrap .empty {
+  padding:28px 12px;
+}
+#vista-cartera .cartera-vistas-panel .table-footer {
+  margin-top:13px;
+}
+#vista-cartera #detalle-operacion {
+  border-color:#bfdbfe;background:#f8fbff;
+}
+#vista-cartera #cartera-vista-proyeccion #cartera-aportes .table-wrap {
+  max-height:420px;
+}
+#vista-cartera #cartera-vista-fuentes .panel + .panel {
+  margin-top:14px;
+}
+@media (max-width:900px) {
+  #vista-cartera .cartera-vistas-nav {gap:5px;}
+  #vista-cartera .cartera-vistas-nav button {padding:9px 12px;font-size:12px;}
+  #vista-cartera .cartera-vistas-barra {top:0;}
+}
+@media (max-width:620px) {
+  #vista-cartera .cartera-vistas-panel .panel {padding:13px;}
+  #vista-cartera .cartera-vistas-barra {
+    margin:6px 0 14px;padding:8px 0 10px;
+  }
+  #vista-cartera .cartera-vistas-contexto {font-size:11px;}
+  #vista-cartera .cartera-vistas-panel .table-wrap {max-height:65vh;}
+  #vista-cartera .cartera-vistas-panel > .grid-two {grid-template-columns:minmax(0,1fr);}
+}
+@media (prefers-reduced-motion: reduce) {
+  #vista-cartera .cartera-vistas-nav button,
+  #vista-cartera .cartera-vistas-subnav button {transition:none;}
+}
