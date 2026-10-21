@@ -1,5 +1,8 @@
 """Consulta del inventario documental. Referencias OC propuestas, no cartera validada."""
 import re
+from datetime import datetime, timezone
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -103,11 +106,50 @@ def _documentos_actuales(session: Session) -> list[DocumentoDriveOC]:
     )
 
 
+def _fecha_drive_utc(valor: object) -> datetime | None:
+    """Interpreta la marca temporal del índice; las fechas ausentes van al final."""
+    if not isinstance(valor, str) or not valor.strip():
+        return None
+    try:
+        fecha = datetime.fromisoformat(valor.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if fecha.tzinfo is None:
+        fecha = fecha.replace(tzinfo=timezone.utc)
+    return fecha.astimezone(timezone.utc)
+
+
+def _ordenar_ordenes_documentales(
+    items: list[dict[str, object]],
+    orden: Literal["fecha_desc", "fecha_asc", "oc_asc"],
+) -> list[dict[str, object]]:
+    """Ordena todas las OC filtradas ANTES de paginar; empates por OC A–Z.
+
+    La fecha corresponde al documento Drive vigente más reciente dentro de
+    cada grupo candidato, no a la fecha jurídica de la orden.
+    """
+    por_oc = sorted(items, key=lambda grupo: str(grupo["numero_oc"]))
+    if orden == "oc_asc":
+        return por_oc
+    con_fecha: list[tuple[dict[str, object], datetime]] = []
+    sin_fecha: list[dict[str, object]] = []
+    for grupo in por_oc:
+        fecha = _fecha_drive_utc(grupo["ultima_modificacion"])
+        if fecha is None:
+            sin_fecha.append(grupo)
+        else:
+            con_fecha.append((grupo, fecha))
+    # sort estable: para igual fecha conserva el orden alfabético por OC.
+    con_fecha.sort(key=lambda par: par[1], reverse=orden == "fecha_desc")
+    return [grupo for grupo, _ in con_fecha] + sin_fecha
+
+
 @router.get("/ordenes")
 def listar_ordenes_documentales(
     buscar: str = Query("", max_length=50),
     limit: int = Query(30, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    orden: Literal["fecha_desc", "fecha_asc", "oc_asc"] = Query("oc_asc"),
     _acceso: Acceso = Depends(_acceso_global_cartera),
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
@@ -136,7 +178,7 @@ def listar_ordenes_documentales(
         grupo for numero, grupo in grupos.items()
         if not patron or patron in numero
     ]
-    items.sort(key=lambda grupo: (grupo["numero_oc"]))
+    items = _ordenar_ordenes_documentales(items, orden)
     # La paginación se aplica a órdenes, nunca a líneas o versiones sueltas.
     return {
         "total": len(items),
@@ -145,6 +187,7 @@ def listar_ordenes_documentales(
         "archivos_vigentes": len(actuales),
         "limit": limit,
         "offset": offset,
+        "orden": orden,
         "items": items[offset:offset + limit],
         "nota": (
             "Referencias GM detectadas únicamente por nombre de archivo. "
