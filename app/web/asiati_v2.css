@@ -370,3 +370,15 @@ body {background:var(--finance-canvas); color:var(--finance-ink);}
 @media(prefers-reduced-motion:reduce){
   #cartera-dispersion .cartera-scatter-punto {transition:none;}
 }
+
+#cartera-dispersion {scroll-margin-top:100px;}
+#cartera-proyeccion .cartera-scatter-enlace {
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:38px;text-decoration:none;padding:8px 13px;
+  border:1px solid var(--finance-border);border-radius:8px;
+  color:var(--finance-ink);background:var(--finance-surface);
+  font-size:12px;font-weight:550;
+}
+#cartera-proyeccion .cartera-scatter-enlace:hover {
+  border-color:var(--finance-signal);color:#075985;
+}
