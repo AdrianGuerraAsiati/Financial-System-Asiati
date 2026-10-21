@@ -1965,6 +1965,59 @@ function actualizarEstadosOperaciones() {
   carteraOperacionesEstado.replaceChildren(new Option("Todos", ""));
   valores.forEach((nombre) => carteraOperacionesEstado.add(new Option(nombre, nombre)));
 }
+function verGmsDelCliente(cliente) {
+  const buscado=normalizarBusquedaCartera(cliente);
+  const asociadas=carteraOperacionesRows.filter((r)=>
+    normalizarBusquedaCartera(r.cliente)===buscado && String(r.oc||"").trim());
+  const grupos=new Map();
+  for(const item of asociadas){
+    const gm=String(item.oc).trim().toUpperCase();
+    if(!grupos.has(gm))grupos.set(gm,{gm,filas:0,estados:new Set()});
+    const grupo=grupos.get(gm);
+    grupo.filas++;
+    if(item.estado)grupo.estados.add(String(item.estado));
+  }
+  const list=[...grupos.values()].sort((a,b)=>
+    new Intl.Collator("es-CO",{numeric:true}).compare(a.gm,b.gm));
+  const contenido=document.createElement("div");
+  const ayuda=document.createElement("p");
+  ayuda.className="table-footnote";
+  ayuda.textContent=list.length+" GM distintas identificadas en OPERACIONES. "+
+    "La coincidencia por cliente no demuestra a cuál GM se aplicó un anticipo o abono.";
+  contenido.appendChild(ayuda);
+  const tabla=document.createElement("table");
+  const cabecera=document.createElement("thead");
+  const tr=document.createElement("tr");
+  for(const label of ["GM","Líneas","Estado observado","Acción"]){
+    const th=document.createElement("th");th.scope="col";th.textContent=label;
+    tr.appendChild(th);
+  }
+  cabecera.appendChild(tr);tabla.appendChild(cabecera);
+  const cuerpo=document.createElement("tbody");
+  for(const grupo of list){
+    const row=document.createElement("tr");
+    for(const valor of [grupo.gm,String(grupo.filas),[...grupo.estados].join(", ")||"Sin estado"]){
+      const celda=document.createElement("td");celda.textContent=valor;row.appendChild(celda);
+    }
+    const td=document.createElement("td");
+    const boton=document.createElement("button");
+    boton.type="button";boton.className="secondary-button";boton.textContent="Ver GM";
+    boton.addEventListener("click",()=>{
+      window.ASIATI_MODAL.close();
+      cargarDetalle(grupo.gm);
+    });
+    td.appendChild(boton);row.appendChild(td);cuerpo.appendChild(row);
+  }
+  tabla.appendChild(cuerpo);
+  const tablaScroll=document.createElement("div");tablaScroll.className="table-wrap";
+  tablaScroll.appendChild(tabla);contenido.appendChild(tablaScroll);
+  window.ASIATI_MODAL.open({
+    title:"GM del cliente · "+cliente,
+    subtitle:"Relaciones observadas en la hoja de Operaciones; pagos aún no asignados.",
+    content:contenido,size:"wide"
+  });
+}
+
 function renderizarOperacionesCartera() {
   const termino = normalizarBusquedaCartera(carteraOperacionesBuscar.value.trim());
   const estadoElegido = carteraOperacionesEstado.value;
@@ -1996,7 +2049,7 @@ function renderizarOperacionesCartera() {
     ? pagina.map((row) => `
         <tr>
           <td class="cartera-cell-primary">${escapar(row.oc)}</td>
-          <td>${escapar(row.cliente)}</td>
+          <td><button type="button" class="cartera-cliente-enlace" data-cliente="${escapar(row.cliente)}" title="Ver todas las GM de este cliente">${escapar(row.cliente)}</button></td>
           <td>${escapar(row.sku)}</td>
           <td>${escapar(row.estado)}</td>
           <td>${escapar(row.etapa)}</td>
@@ -2015,6 +2068,9 @@ function renderizarOperacionesCartera() {
 
   operacionesBody.querySelectorAll("[data-oc]").forEach((button) => {
     button.addEventListener("click", () => cargarDetalle(button.dataset.oc));
+  });
+  operacionesBody.querySelectorAll("[data-cliente]").forEach((button) => {
+    button.addEventListener("click", () => verGmsDelCliente(button.dataset.cliente));
   });
 }
 

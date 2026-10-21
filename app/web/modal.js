@@ -3,6 +3,7 @@
   "use strict";
   let node=null, heading=null, subtitle=null, body=null, returnFocus=null, callback=null;
   let epoch=0;
+  let moved=null, originalParent=null, originalSibling=null;
   let active=false;
   let movedNode=null, originalParent=null, originalNext=null;
   function ensure() {
