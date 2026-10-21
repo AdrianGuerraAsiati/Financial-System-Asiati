@@ -481,6 +481,16 @@
               <tbody id="cartera-dispersion-tabla-body"><tr><td colspan="6" class="empty">Sin datos cargados.</td></tr></tbody>
             </table>
           </div>
+          <div class="cartera-scatter-paginacion" aria-label="Paginación de comerciales">
+            <label for="cartera-dispersion-tamano">Comerciales por página
+              <select id="cartera-dispersion-tamano"><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option></select>
+            </label>
+            <div class="pagination">
+              <button id="cartera-dispersion-prev" type="button" class="secondary-button" disabled>Anterior</button>
+              <span id="cartera-dispersion-pagina" class="table-footnote" aria-live="polite">Página 1 de 1</span>
+              <button id="cartera-dispersion-next" type="button" class="secondary-button" disabled>Siguiente</button>
+            </div>
+          </div>
         </details>
         <p class="table-footnote cartera-scatter-nota">Cada punto representa un comercial tal como aparece en PROYECCIONES. Las OC se cuentan una vez por comercial dentro del período filtrado; una misma OC puede figurar en más de un comercial. Los montos suman registros de pagos esperados, no valores de venta ni cobros confirmados. Las referencias sin OC se mantienen en el monto pero no incrementan el eje X.</p>
       </section>
