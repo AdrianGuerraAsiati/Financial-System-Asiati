@@ -13,6 +13,10 @@
   const origen = document.getElementById("cartera-dispersion-origen");
   const seleccion = document.getElementById("cartera-dispersion-seleccion");
   const tabla = document.getElementById("cartera-dispersion-tabla-body");
+  const tablaTamano = document.getElementById("cartera-dispersion-tamano");
+  const tablaAnterior = document.getElementById("cartera-dispersion-prev");
+  const tablaSiguiente = document.getElementById("cartera-dispersion-next");
+  const tablaPagina = document.getElementById("cartera-dispersion-pagina");
   const desde = document.getElementById("cartera-dispersion-desde");
   const hasta = document.getElementById("cartera-dispersion-hasta");
   const buscar = document.getElementById("cartera-dispersion-buscar");
@@ -27,6 +31,7 @@
   let empresaVisible = null;
   let comercialElegido = null;
   let puntosVisibles = [];
+  let paginaTabla = 1;
 
   function texto(v) {
     return String(v ?? "").trim();
@@ -169,6 +174,12 @@
 
   function renderTabla(puntos) {
     tabla.replaceChildren();
+    const porPagina = Number(tablaTamano.value) || 20;
+    const paginas = Math.max(1, Math.ceil(puntos.length / porPagina));
+    paginaTabla = Math.min(Math.max(1, paginaTabla), paginas);
+    tablaPagina.textContent = "Página " + paginaTabla + " de " + paginas;
+    tablaAnterior.disabled = paginaTabla <= 1;
+    tablaSiguiente.disabled = paginaTabla >= paginas;
     if (!puntos.length) {
       const fila = document.createElement("tr");
       const celda = document.createElement("td");
@@ -179,7 +190,8 @@
       tabla.appendChild(fila);
       return;
     }
-    for (const punto of puntos) {
+    const visibles = puntos.slice((paginaTabla - 1) * porPagina, paginaTabla * porPagina);
+    for (const punto of visibles) {
       const tr = document.createElement("tr");
       for (const valor of [
         punto.comercial,
@@ -338,6 +350,7 @@
     // Quien entrega los registros es cargarProyeccion(), que utiliza la
     // API autenticada y descarta respuestas de otra empresa.
     datos = Array.isArray(filas) ? filas : [];
+    paginaTabla = 1;
     empresaVisible = contexto.empresaId ?? null;
     cargados = true;
     comercialElegido = null;
@@ -349,6 +362,7 @@
 
   function limpiarDatos(mensaje = "Esperando fuente PROYECCIONES…") {
     datos = [];
+    paginaTabla = 1;
     cargados = false;
     empresaVisible = null;
     comercialElegido = null;
@@ -358,8 +372,26 @@
   }
 
   for (const control of [desde, hasta, buscar]) {
-    control.addEventListener(control === buscar ? "input" : "change", dibujar);
+    control.addEventListener(control === buscar ? "input" : "change", () => {
+      paginaTabla = 1;
+      dibujar();
+    });
   }
+  tablaTamano.addEventListener("change", () => {
+    paginaTabla = 1;
+    renderTabla(puntosVisibles);
+    marcarSeleccion();
+  });
+  tablaAnterior.addEventListener("click", () => {
+    paginaTabla = Math.max(1, paginaTabla - 1);
+    renderTabla(puntosVisibles);
+    marcarSeleccion();
+  });
+  tablaSiguiente.addEventListener("click", () => {
+    paginaTabla++;
+    renderTabla(puntosVisibles);
+    marcarSeleccion();
+  });
   limpiar.addEventListener("click", () => {
     desde.value = ""; hasta.value = ""; buscar.value = "";
     dibujar();
