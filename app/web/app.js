@@ -1512,76 +1512,33 @@ async function cargarEstadoFuenteCartera() {
 }
 
 async function cargarDescubrimientoCartera() {
-  carteraDescubrimientoContenido.innerHTML =
-    '<p class="empty">Inspeccionando pestañas y encabezados…</p>';
+  carteraDescubrimientoResumen.textContent = "Inspeccionando pestañas y encabezados…";
+  const consultada = empresaId();
   try {
-    const resultado = await api(
-      `/api/v1/cartera/fuente/descubrir?empresa_id=${empresaId()}`
-    );
+    const resultado = await api("/api/v1/cartera/fuente/descubrir?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return null;
     const hojas = resultado.hojas || [];
     const candidatos = hojas.flatMap((hoja) =>
       (hoja.candidatos || []).map((candidato) => ({
-        ...candidato,
-        hoja: hoja.titulo,
+        ...candidato, hoja: hoja.titulo
       }))
-    );
-    const exactos = candidatos.filter((item) => item.coincide === true);
-    const parciales = candidatos.filter((item) => item.coincide !== true);
-
-    carteraDescubrimientoContenido.innerHTML = `
-      <article class="proof-card">
-        <strong>${escapar(String(resultado.coincidencias_exactas ?? 0))} coincidencia(s) exacta(s)</strong>
-        <p>${escapar(String(hojas.length))} pestaña(s) inspeccionadas · solo lectura</p>
-      </article>
-      ${exactos.map((item) => `
-        <article class="proof-card">
-          <strong>${escapar(item.tipo)} · ${escapar(item.hoja)}</strong>
-          <p>Encabezado en fila ${escapar(String(item.fila_encabezado))}</p>
-          <p>Rango sugerido: <code>${escapar(item.rango_sugerido)}</code></p>
-        </article>
-      `).join("")}
-      ${parciales.map((item) => `
-        <article class="proof-card">
-          <strong>${escapar(item.tipo)} · candidato parcial · ${escapar(item.hoja)}</strong>
-          <p>Encabezado candidato en fila ${escapar(String(item.fila_encabezado))}</p>
-          <p>Faltan: ${(item.campos_faltantes || []).map(escapar).join(", ") || "—"}</p>
-        </article>
-      `).join("")}
-      ${!candidatos.length
-        ? '<p class="empty">No se encontraron encabezados compatibles con los contratos actuales de Cartera.</p>'
-        : ""}
-    `;
+    ).sort((a, b) => Number(b.coincide === true) - Number(a.coincide === true));
+    carteraDescubrimientoResumen.textContent =
+      String(resultado.coincidencias_exactas || 0) + " coincidencias exactas · " +
+      hojas.length + " pestañas inspeccionadas · solo lectura";
+    paginadorDescubrimiento.actualizar(candidatos);
     return resultado;
   } catch (error) {
-    carteraDescubrimientoContenido.innerHTML =
-      `<p class="empty">${escapar(error.message)}</p>`;
+    if (consultada !== empresaId()) return null;
+    carteraDescubrimientoResumen.textContent = "No se pudo inspeccionar la fuente.";
+    paginadorDescubrimiento.fallo(error.message);
     return null;
   }
 }
 
 async function cargarSnapshotsCartera() {
-  carteraSnapshotsLista.innerHTML = '<p class="empty">Cargando capturas…</p>';
-  try {
-    const respuesta = await api(
-      `/api/v1/cartera/snapshots?empresa_id=${empresaId()}&limit=20`
-    );
-    const items = respuesta.items || [];
-    carteraSnapshotsLista.innerHTML = items.length
-      ? items.map((item) => `
-          <article class="proof-card">
-            <strong>Captura #${escapar(String(item.id))}</strong>
-            <p>${escapar(new Date(item.guardado_en).toLocaleString("es-CO"))}</p>
-            <p>${escapar(String(item.operaciones))} operaciones · ${escapar(String(item.registros_mora))} mora · ${escapar(String(item.proyecciones))} proyecciones</p>
-            <p>${escapar(String(item.filas))} filas · hash ${escapar(String(item.contenido_hash).slice(0, 12))}…</p>
-          </article>
-        `).join("")
-      : '<p class="empty">Todavía no hay capturas guardadas.</p>';
-    return respuesta;
-  } catch (error) {
-    carteraSnapshotsLista.innerHTML =
-      `<p class="empty">${escapar(error.message)}</p>`;
-    return null;
-  }
+  // Paginación y búsqueda en PostgreSQL, no solo las primeras 20 capturas.
+  return paginadorSnapshots.cargar();
 }
 
 async function guardarSnapshotCartera() {
@@ -1598,7 +1555,7 @@ async function guardarSnapshotCartera() {
         : `La captura #${respuesta.snapshot.id} ya existía`,
       "ok"
     );
-    await cargarSnapshotsCartera();
+    await paginadorSnapshots.primera();
   } catch (error) {
     setEstado(error.message, "error");
   } finally {
@@ -1619,44 +1576,30 @@ function nombreCasoCalidadCartera(codigo) {
 }
 
 async function cargarCalidadCartera() {
-  carteraCalidadContenido.innerHTML = '<p class="empty">Validando calidad…</p>';
+  carteraCalidadResumen.textContent = "Validando calidad…";
+  const consultada = empresaId();
   try {
-    const calidad = await api(
-      `/api/v1/cartera/calidad?empresa_id=${empresaId()}`
-    );
+    const calidad = await api("/api/v1/cartera/calidad?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return null;
     const detalle = calidad.detalle || [];
-    carteraCalidadContenido.innerHTML = detalle.length
-      ? `
-        <article class="proof-card">
-          <strong>${escapar(String(calidad.casos))} tipos de observación</strong>
-          <p>${escapar(String(calidad.registros))} registros revisados. Una línea puede aparecer en más de una validación.</p>
-        </article>
-        ${detalle.map((caso) => `
-          <article class="proof-card">
-            <strong>${escapar(nombreCasoCalidadCartera(caso.codigo))}</strong>
-            <p>${escapar(String(caso.cantidad))} registro(s) · valor asociado USD ${formatearDecimal(caso.valor)}</p>
-            <p>Código: ${escapar(caso.codigo)}</p>
-          </article>
-        `).join("")}
-      `
-      : `
-        <article class="proof-card">
-          <strong>Sin observaciones de calidad</strong>
-          <p>${escapar(String(calidad.registros))} registros revisados con las cuatro validaciones heredadas.</p>
-        </article>
-      `;
+    carteraCalidadResumen.textContent =
+      String(calidad.casos || 0) + " tipos de observación · " +
+      String(calidad.registros || 0) +
+      " registros revisados. Una línea puede figurar en varias validaciones.";
+    paginadorCalidad.actualizar(detalle);
     return calidad;
   } catch (error) {
-    carteraCalidadContenido.innerHTML =
-      `<p class="empty">${escapar(error.message)}</p>`;
+    if (consultada !== empresaId()) return null;
+    carteraCalidadResumen.textContent = "No se pudo revisar la calidad.";
+    paginadorCalidad.fallo(error.message);
     return null;
   }
 }
 
 function mostrarFuenteNoDisponible(tipo) {
   if (tipo === "OPERACIONES") {
-    carteraCalidadContenido.innerHTML =
-      '<p class="empty">La calidad se valida cuando Operaciones está disponible.</p>';
+    carteraCalidadResumen.textContent = "La calidad se valida cuando Operaciones está disponible.";
+    paginadorCalidad.fallo("La fuente de Operaciones no está disponible.");
     carteraOperacionesRows = [];
     carteraOperacionesPagina = 1;
     renderizarOperacionesCartera();
@@ -1666,13 +1609,11 @@ function mostrarFuenteNoDisponible(tipo) {
     return;
   }
   if (tipo === "MORA") {
-    moraBody.innerHTML =
-      '<tr><td colspan="5" class="empty">La fuente de Mora todavía no está disponible.</td></tr>';
+    paginadorMora.fallo("La fuente de Mora todavía no está disponible.");
     return;
   }
   if (tipo === "PROYECCION") {
-    proyeccionBody.innerHTML =
-      '<tr><td colspan="7" class="empty">La fuente de Proyección todavía no está disponible.</td></tr>';
+    paginadorProyeccion.fallo("La fuente de Proyección todavía no está disponible.");
   }
 }
 
@@ -1721,15 +1662,101 @@ function normalizarBusquedaCartera(valor) {
   return String(valor ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CO");
 }
 
+// Cada listado comparte búsqueda, estado (cuando existe), conteo y navegación.
+// No se generan saldos financieros ni se consultan empresas sin autorización.
+const paginadorMora = window.CarteraPaginacion.crear({
+  id: "mora", destino: "#mora-body", columnas: 5,
+  textoVacio: "No hay registros de mora.",
+  campos: (r) => [r.cliente, r.empresa, r.monto, r.estado, r.observacion],
+  estado: (r) => r.estado,
+  plantilla: (r) => '<tr><td>' + escapar(r.cliente) + '</td><td>' + escapar(r.empresa) +
+    '</td><td>' + formatearDecimal(r.monto) + '</td><td>' + escapar(r.estado) +
+    '</td><td>' + escapar(r.observacion) + '</td></tr>',
+});
+const paginadorProyeccion = window.CarteraPaginacion.crear({
+  id: "proyeccion", destino: "#proyeccion-body", columnas: 7,
+  textoVacio: "No hay proyecciones.",
+  campos: (r) => [r.fecha, r.oc, r.cliente, r.pais, r.monto, r.comercial, r.estado],
+  estado: (r) => r.estado,
+  plantilla: (r) => '<tr><td>' + escapar(r.fecha) + '</td><td>' + escapar(r.oc) +
+    '</td><td>' + escapar(r.cliente) + '</td><td>' + escapar(r.pais) +
+    '</td><td>' + formatearDecimal(r.monto) + '</td><td>' +
+    escapar(r.comercial) + '</td><td>' + escapar(r.estado) + '</td></tr>',
+});
+const paginadorPendientes = window.CarteraPaginacion.crear({
+  id: "pendientes", destino: "#pendientes-lista",
+  textoVacio: "No hay comprobantes pendientes.",
+  campos: (r) => [r.oc, r.cliente, r.pais, r.comercial, r.nombre_archivo, r.estado_auditoria, r.monto_esperado],
+  estado: (r) => r.estado_auditoria,
+  plantilla: (r) => '<article class="proof-card"><strong>' +
+    escapar(r.oc) + ' · ' + escapar(r.cliente) + '</strong><p>' +
+    escapar(r.nombre_archivo) + '</p><p>USD ' +
+    formatearDecimal(r.monto_esperado) + ' · ' + escapar(r.estado_auditoria) +
+    '</p><p><a href="/api/v1/cartera/comprobantes/' + encodeURIComponent(r.id) +
+    '/archivo?empresa_id=' + encodeURIComponent(empresaId()) +
+    '" target="_blank" rel="noopener noreferrer">Ver soporte</a></p></article>',
+});
+const paginadorSnapshots = window.CarteraPaginacion.crear({
+  id: "snapshots", destino: "#cartera-snapshots-lista",
+  textoVacio: "Todavía no hay capturas guardadas.",
+  remoto: true, contexto: () => empresaId(),
+  campos: (r) => [r.id, r.contenido_hash],
+  consulta: async ({limit, offset, buscar}) =>
+    api('/api/v1/cartera/snapshots?' + new URLSearchParams({
+      empresa_id: String(empresaId()), limit: String(limit), offset: String(offset), buscar
+    })),
+  plantilla: (r) => '<article class="proof-card"><strong>Captura #' +
+    escapar(String(r.id)) + '</strong><p>' +
+    escapar(r.guardado_en ? new Date(r.guardado_en).toLocaleString("es-CO") : "Sin fecha") +
+    '</p><p>' + escapar(String(r.operaciones)) + ' operaciones · ' +
+    escapar(String(r.registros_mora)) + ' mora · ' + escapar(String(r.proyecciones)) +
+    ' proyecciones</p><p>' + escapar(String(r.filas)) + ' filas · hash ' +
+    escapar(String(r.contenido_hash).slice(0, 12)) + '…</p></article>',
+});
+const carteraDescubrimientoResumen = document.createElement("div");
+carteraDescubrimientoContenido.before(carteraDescubrimientoResumen);
+const paginadorDescubrimiento = window.CarteraPaginacion.crear({
+  id: "descubrimiento", destino: "#cartera-descubrimiento-contenido",
+  textoVacio: "No se encontraron encabezados compatibles con los contratos actuales.",
+  campos: (r) => [r.tipo, r.hoja, r.rango_sugerido, r.campos_faltantes?.join(" "), r.fila_encabezado],
+  estado: (r) => r.coincide === true ? "Coincidencia exacta" : "Candidato parcial",
+  plantilla: (r) => '<article class="proof-card"><strong>' +
+    escapar(r.tipo) + ' · ' + escapar(r.hoja) + ' · ' +
+    (r.coincide === true ? "Coincidencia exacta" : "Candidato parcial") +
+    '</strong><p>Encabezado en fila ' + escapar(String(r.fila_encabezado)) +
+    '</p>' + (r.coincide === true
+      ? '<p>Rango sugerido: <code>' + escapar(r.rango_sugerido) + '</code></p>'
+      : '<p>Faltan: ' + (r.campos_faltantes || []).map(escapar).join(", ") + '</p>') +
+    '</article>',
+});
+const carteraCalidadResumen = document.createElement("div");
+carteraCalidadContenido.before(carteraCalidadResumen);
+const paginadorCalidad = window.CarteraPaginacion.crear({
+  id: "calidad", destino: "#cartera-calidad-contenido", tamaño: 10,
+  textoVacio: "No hay observaciones de calidad.",
+  campos: (r) => [r.codigo, nombreCasoCalidadCartera(r.codigo), r.cantidad, r.valor],
+  plantilla: (r) => '<article class="proof-card"><strong>' +
+    escapar(nombreCasoCalidadCartera(r.codigo)) + '</strong><p>' +
+    escapar(String(r.cantidad)) + ' registro(s) · valor asociado USD ' +
+    formatearDecimal(r.valor) + '</p><p>Código: ' + escapar(r.codigo) + '</p></article>',
+});
+
+const carteraOperacionesEstado = document.querySelector("#cartera-operaciones-estado");
+function actualizarEstadosOperaciones() {
+  const valores = [...new Set(carteraOperacionesRows.map((row) => String(row.estado || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "es"));
+  carteraOperacionesEstado.replaceChildren(new Option("Todos", ""));
+  valores.forEach((nombre) => carteraOperacionesEstado.add(new Option(nombre, nombre)));
+}
 function renderizarOperacionesCartera() {
   const termino = normalizarBusquedaCartera(carteraOperacionesBuscar.value.trim());
-  const carteraOperacionesFiltradas = termino
-    ? carteraOperacionesRows.filter((row) =>
-        [row.oc, row.cliente, row.sku, row.estado, row.etapa].some(
-          (valor) => normalizarBusquedaCartera(valor).includes(termino)
-        )
-      )
-    : carteraOperacionesRows;
+  const estadoElegido = carteraOperacionesEstado.value;
+  const carteraOperacionesFiltradas = carteraOperacionesRows.filter((row) =>
+    (!estadoElegido || row.estado === estadoElegido) &&
+    (!termino || [row.oc, row.cliente, row.sku, row.estado, row.etapa].some(
+      (valor) => normalizarBusquedaCartera(valor).includes(termino)
+    ))
+  );
 
   const porPagina = Number(carteraOperacionesPorPagina.value) || CARTERA_OPERACIONES_PAGE_SIZE;
   const paginas = Math.max(1, Math.ceil(carteraOperacionesFiltradas.length / porPagina));
@@ -1751,7 +1778,7 @@ function renderizarOperacionesCartera() {
       `).join("")
     : `<tr><td colspan="7" class="empty">${carteraOperacionesRows.length ? "No se encontraron operaciones con ese filtro." : "No hay operaciones."}</td></tr>`;
 
-  carteraOperacionesTotal.textContent = termino
+  carteraOperacionesTotal.textContent = (termino || estadoElegido)
     ? `${carteraOperacionesFiltradas.length.toLocaleString("es-CO")} de ${carteraOperacionesRows.length.toLocaleString("es-CO")} operaciones`
     : `${carteraOperacionesRows.length.toLocaleString("es-CO")} operaciones`;
   carteraOperacionesPaginaTexto.textContent = `Página ${carteraOperacionesPagina} de ${paginas}`;
@@ -1774,6 +1801,7 @@ async function cargarOperaciones() {
     const rows = await api(`/api/v1/cartera/operaciones?empresa_id=${empresaConsultada}`);
     if (empresaConsultada !== empresaId()) return;
     carteraOperacionesRows = Array.isArray(rows) ? rows : [];
+    actualizarEstadosOperaciones();
     carteraOperacionesPagina = 1;
     renderizarOperacionesCartera();
     setEstado("Operaciones actualizadas", "ok");
@@ -1789,48 +1817,30 @@ async function cargarOperaciones() {
 
 async function cargarMora() {
   setEstado("Consultando mora…");
-  moraBody.innerHTML = '<tr><td colspan="5" class="empty">Consultando…</td></tr>';
+  const consultada = empresaId();
   try {
-    const rows = await api(`/api/v1/cartera/mora?empresa_id=${empresaId()}`);
-    moraBody.innerHTML = rows.length
-      ? rows.map((row) => `
-          <tr>
-            <td>${escapar(row.cliente)}</td>
-            <td>${escapar(row.empresa)}</td>
-            <td>${formatearDecimal(row.monto)}</td>
-            <td>${escapar(row.estado)}</td>
-            <td>${escapar(row.observacion)}</td>
-          </tr>
-        `).join("")
-      : '<tr><td colspan="5" class="empty">No hay registros de mora.</td></tr>';
+    const rows = await api("/api/v1/cartera/mora?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return;
+    paginadorMora.actualizar(rows);
     setEstado("Mora actualizada", "ok");
   } catch (error) {
-    moraBody.innerHTML = `<tr><td colspan="5" class="empty">${escapar(error.message)}</td></tr>`;
+    if (consultada !== empresaId()) return;
+    paginadorMora.fallo(error.message);
     setEstado(error.message, "error");
   }
 }
 
 async function cargarProyeccion() {
   setEstado("Consultando proyección…");
-  proyeccionBody.innerHTML = '<tr><td colspan="7" class="empty">Consultando…</td></tr>';
+  const consultada = empresaId();
   try {
-    const rows = await api(`/api/v1/cartera/proyeccion?empresa_id=${empresaId()}`);
-    proyeccionBody.innerHTML = rows.length
-      ? rows.map((row) => `
-          <tr>
-            <td>${escapar(row.fecha)}</td>
-            <td>${escapar(row.oc)}</td>
-            <td>${escapar(row.cliente)}</td>
-            <td>${escapar(row.pais)}</td>
-            <td>${formatearDecimal(row.monto)}</td>
-            <td>${escapar(row.comercial)}</td>
-            <td>${escapar(row.estado)}</td>
-          </tr>
-        `).join("")
-      : '<tr><td colspan="7" class="empty">No hay proyecciones.</td></tr>';
+    const rows = await api("/api/v1/cartera/proyeccion?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return;
+    paginadorProyeccion.actualizar(rows);
     setEstado("Proyección actualizada", "ok");
   } catch (error) {
-    proyeccionBody.innerHTML = `<tr><td colspan="7" class="empty">${escapar(error.message)}</td></tr>`;
+    if (consultada !== empresaId()) return;
+    paginadorProyeccion.fallo(error.message);
     setEstado(error.message, "error");
   }
 }
@@ -1869,24 +1879,15 @@ async function cargarDetalle(oc) {
 }
 
 async function cargarPendientes() {
-  pendientesLista.innerHTML = '<p class="empty">Consultando…</p>';
+  const consultada = empresaId();
   try {
-    const rows = await api(
-      `/api/v1/cartera/comprobantes/pendientes?empresa_id=${empresaId()}`
-    );
-    pendientesLista.innerHTML = rows.length
-      ? rows.map((item) => `
-          <article class="proof-card">
-            <strong>${escapar(item.oc)} · ${escapar(item.cliente)}</strong>
-            <p>${escapar(item.nombre_archivo)}</p>
-            <p>USD ${formatearDecimal(item.monto_esperado)} · ${escapar(item.estado_auditoria)}</p>
-            <p><a href="/api/v1/cartera/comprobantes/${item.id}/archivo?empresa_id=${empresaId()}" target="_blank" rel="noopener">Ver soporte</a></p>
-          </article>
-        `).join("")
-      : '<p class="empty">No hay comprobantes pendientes.</p>';
+    const rows = await api("/api/v1/cartera/comprobantes/pendientes?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return;
+    paginadorPendientes.actualizar(rows);
     setEstado("Bandeja actualizada", "ok");
   } catch (error) {
-    pendientesLista.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    if (consultada !== empresaId()) return;
+    paginadorPendientes.fallo(error.message);
     setEstado(error.message, "error");
   }
 }
@@ -1912,6 +1913,10 @@ formComprobante.addEventListener("submit", async (event) => {
 
 document.querySelector("#cargar-operaciones").addEventListener("click", cargarOperaciones);
 carteraOperacionesBuscar.addEventListener("input", () => {
+  carteraOperacionesPagina = 1;
+  renderizarOperacionesCartera();
+});
+carteraOperacionesEstado.addEventListener("change", () => {
   carteraOperacionesPagina = 1;
   renderizarOperacionesCartera();
 });

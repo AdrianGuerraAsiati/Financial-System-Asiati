@@ -8,7 +8,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any, Mapping
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .google_sheets import (
@@ -319,21 +319,51 @@ def guardar_snapshot_cartera(
     return persistido, True
 
 
+def _filtro_snapshots_cartera(empresa_id: int, buscar: str):
+    """Búsqueda de ID exacto o prefijo hexadecimal de contenido_hash."""
+    condiciones = [CarteraSnapshot.empresa_id == empresa_id]
+    termino = buscar.strip().lower()
+    if termino:
+        if termino.isdecimal():
+            condiciones.append(CarteraSnapshot.id == int(termino))
+        elif all(c in "0123456789abcdef" for c in termino):
+            condiciones.append(CarteraSnapshot.contenido_hash.startswith(termino))
+        else:
+            # Ningún hash tiene caracteres no hexadecimales.
+            condiciones.append(CarteraSnapshot.id == -1)
+    return condiciones
+
+
+def contar_snapshots_cartera(
+    session: Session, *, empresa_id: int, buscar: str = ""
+) -> int:
+    return int(
+        session.scalar(
+            select(func.count(CarteraSnapshot.id)).where(
+                *_filtro_snapshots_cartera(empresa_id, buscar)
+            )
+        ) or 0
+    )
+
+
 def listar_snapshots_cartera(
     session: Session,
     *,
     empresa_id: int,
     limite: int = 100,
+    offset: int = 0,
+    buscar: str = "",
 ) -> tuple[CarteraSnapshot, ...]:
     return tuple(
         session.scalars(
             select(CarteraSnapshot)
-            .where(CarteraSnapshot.empresa_id == empresa_id)
+            .where(*_filtro_snapshots_cartera(empresa_id, buscar))
             .order_by(
                 CarteraSnapshot.guardado_en.desc(),
                 CarteraSnapshot.id.desc(),
             )
             .limit(limite)
+            .offset(offset)
         )
     )
 

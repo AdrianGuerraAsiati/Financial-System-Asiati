@@ -311,6 +311,10 @@
             Buscar operaciones
             <input id="cartera-operaciones-buscar" type="search" placeholder="OC, cliente, SKU o estado" autocomplete="off">
           </label>
+          <label class="cartera-page-size-label" for="cartera-operaciones-estado">
+            Estado
+            <select id="cartera-operaciones-estado"><option value="">Todos</option></select>
+          </label>
           <label class="cartera-page-size-label" for="cartera-operaciones-por-pagina">
             Filas por página
             <select id="cartera-operaciones-por-pagina">
@@ -1302,6 +1306,7 @@
   </div>
 
   <script src="/static/financial_charts.js" defer></script>
+  <script src="/static/cartera_paginacion.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/cartera_drive.js" defer></script>
   <script src="/static/wallets.js" defer></script>

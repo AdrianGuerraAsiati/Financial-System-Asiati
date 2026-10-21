@@ -1,7 +1,7 @@
 """Consulta del inventario documental. Referencias OC propuestas, no cartera validada."""
 import re
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencias import Acceso, requiere
@@ -16,6 +16,7 @@ router = APIRouter(prefix="/cartera/ocs/drive", tags=["cartera-drive"])
 def consultar_inventario_drive(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    buscar: str = Query("", max_length=100),
     _acceso: Acceso = Depends(requiere("cartera.ver")),
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
@@ -26,10 +27,23 @@ def consultar_inventario_drive(
             status_code=403,
             detail="El inventario sin asignación jurídica solo está disponible para administración global.",
         )
-    total = session.scalar(select(func.count()).select_from(DocumentoDriveOC)) or 0
+    termino = buscar.strip()
+    filtros = []
+    if termino:
+        # Tratar comodines ingresados como texto literal, no como patrones SQL.
+        literal = termino.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        patron = f"%{literal}%"
+        filtros.append(or_(
+            DocumentoDriveOC.nombre_original.ilike(patron, escape="\\"),
+            DocumentoDriveOC.ruta_carpetas.ilike(patron, escape="\\"),
+            DocumentoDriveOC.numero_oc_candidato.ilike(patron, escape="\\"),
+        ))
+    total = session.scalar(
+        select(func.count()).select_from(DocumentoDriveOC).where(*filtros)
+    ) or 0
     registros = session.scalars(
-        select(DocumentoDriveOC).order_by(DocumentoDriveOC.id.desc())
-        .offset(offset).limit(limit)
+        select(DocumentoDriveOC).where(*filtros)
+        .order_by(DocumentoDriveOC.id.desc()).offset(offset).limit(limit)
     ).all()
     return {
         "total": total,

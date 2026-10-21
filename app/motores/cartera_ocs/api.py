@@ -67,6 +67,7 @@ from app.motores.cartera_ocs.snapshots import (
     capturar_snapshot_cartera_desde_entorno,
     guardar_snapshot_cartera,
     listar_snapshots_cartera,
+    contar_snapshots_cartera,
     snapshot_cartera_como_dict,
 )
 from app.motores.cartera_ocs.persistencia import (
@@ -324,6 +325,8 @@ def capturar_snapshot_cartera(
 def consultar_snapshots_cartera(
     empresa_id: int,
     limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    buscar: str = Query("", max_length=80),
     _acceso: Acceso = Depends(ver_cartera),
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
@@ -331,9 +334,13 @@ def consultar_snapshots_cartera(
         session,
         empresa_id=empresa_id,
         limite=limit,
+        offset=offset,
+        buscar=buscar,
     )
     return {
-        "total": len(snapshots),
+        "total": contar_snapshots_cartera(session, empresa_id=empresa_id, buscar=buscar),
+        "limit": limit,
+        "offset": offset,
         "items": [
             snapshot_cartera_como_dict(item)
             for item in snapshots
