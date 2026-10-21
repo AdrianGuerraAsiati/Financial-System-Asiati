@@ -65,6 +65,10 @@
     ];
   }
 
+  // El detalle individual solo aparece tras escoger una OC.
+  const detalleOperacion = document.getElementById("detalle-operacion");
+  if (detalleOperacion) detalleOperacion.hidden = true;
+
   const intro = root.querySelector(".intro");
   const barra = crear("div", "cartera-vistas-barra");
   barra.id = "cartera-vistas-barra";
