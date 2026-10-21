@@ -282,6 +282,7 @@ function mostrarApp(sesion) {
   window.tesoreriaPuedeEditar = Boolean(sesion.permisos?.["tesoreria.facturas.gestionar"]);
   window.tesoreriaPuedePagar = Boolean(sesion.permisos?.["tesoreria.pagos.registrar"]);
   navParametros.hidden = !sesion.permisos?.["dimensiones.gestionar"];
+  if (window.configurarCarteraDrive) window.configurarCarteraDrive(sesion);
 
   mostrarModulo("inicio");
   iniciarMonitorDashboard();
@@ -1671,6 +1672,8 @@ function mostrarFuenteNoDisponible(tipo) {
 async function cargarCarteraTodo() {
   const estadoFuente = await cargarEstadoFuenteCartera();
   const tareas = [cargarPendientes(), cargarSnapshotsCartera()];
+  // El índice documental está en PostgreSQL y funciona aunque Google Sheets esté caído.
+  if (window.cargarCarteraDrive) tareas.push(window.cargarCarteraDrive());
 
   if (!estadoFuente) {
     mostrarFuenteNoDisponible("OPERACIONES");

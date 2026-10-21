@@ -343,6 +343,47 @@
         </div>
       </section>
 
+      <section class="panel" id="cartera-drive-panel" hidden aria-label="Órdenes y soportes de Drive">
+        <div class="panel-heading">
+          <div>
+            <h3>Órdenes y soportes · Google Drive</h3>
+            <p>Inventario documental de todas las empresas para administración global. Las referencias GM son candidatas; no representan saldos ni asociaciones jurídicas aprobadas.</p>
+          </div>
+          <button id="cartera-drive-refrescar" type="button" class="secondary-button">Consultar índice</button>
+        </div>
+        <form id="cartera-drive-form" class="panel-actions" style="margin-bottom:14px">
+          <label for="cartera-drive-buscar">Buscar número de OC
+            <input id="cartera-drive-buscar" placeholder="Ej. GM607" maxlength="50" autocomplete="off">
+          </label>
+          <button type="submit">Buscar</button>
+        </form>
+        <p id="cartera-drive-resumen" class="table-footnote">El inventario se lee desde PostgreSQL, no directamente desde Google Drive.</p>
+        <p class="table-footnote"><a href="/static/ocs_drive.html" target="_blank" rel="noopener noreferrer">Ver inventario completo, incluidos archivos sin número GM</a></p>
+        <p id="cartera-drive-mensaje" class="muted" role="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>OC candidata</th><th>Soportes actuales</th><th>Última modificación</th><th>Validación</th><th></th></tr></thead>
+            <tbody id="cartera-drive-body"><tr><td colspan="5" class="empty">Sin consultar.</td></tr></tbody>
+          </table>
+        </div>
+        <div class="panel-actions" style="justify-content:flex-end;gap:12px;margin-top:14px">
+          <button id="cartera-drive-anterior" type="button" class="secondary-button" disabled>Anterior</button>
+          <span id="cartera-drive-pagina" class="table-footnote"></span>
+          <button id="cartera-drive-siguiente" type="button" class="secondary-button" disabled>Siguiente</button>
+        </div>
+        <div id="cartera-drive-soportes" class="stack" hidden style="margin-top:22px">
+          <h4 id="cartera-drive-titulo">Soportes de la orden</h4>
+          <p class="table-footnote">Relación sugerida por el nombre del archivo. Abrir el original requiere permisos en Google Drive.</p>
+          <p id="cartera-drive-soportes-estado" class="muted" role="status" aria-live="polite"></p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Archivo</th><th>Carpeta</th><th>Versión registrada</th><th>Origen</th></tr></thead>
+              <tbody id="cartera-drive-soportes-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <section class="panel" id="cartera-mora">
         <div class="panel-heading">
           <div>
@@ -1256,6 +1297,7 @@
   </div>
 
   <script src="/static/app.js" defer></script>
+  <script src="/static/cartera_drive.js" defer></script>
   <script src="/static/wallets.js" defer></script>
   <script src="/static/tesoreria.js" defer></script>
   <script src="/static/recaudos.js" defer></script>

@@ -1,4 +1,5 @@
-"""Consulta protegida del inventario documental, no de cartera real."""
+"""Consulta del inventario documental. Referencias OC propuestas, no cartera validada."""
+import re
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -58,4 +59,123 @@ def consultar_inventario_drive(
             "Los números GM tomados del nombre son candidatos, no identificadores validados. "
             "Actualizar la página no ejecuta sincronización de Drive."
         ),
+    }
+
+
+def _acceso_global_cartera(
+    acceso: Acceso = Depends(requiere("cartera.ver")),
+) -> Acceso:
+    """Nombres y enlaces de O.C. sin atribución jurídica solo para alcance global."""
+    if acceso.alcance is not Alcance.TODAS:
+        raise HTTPException(
+            status_code=403,
+            detail="Las O.C. sin empresa validada requieren permiso global de Cartera.",
+        )
+    return acceso
+
+
+def _documentos_actuales(session: Session) -> list[DocumentoDriveOC]:
+    """Una revisión visible por archivo físico; conserva su histórico en la tabla."""
+    ultimos = (
+        select(func.max(DocumentoDriveOC.id))
+        .group_by(DocumentoDriveOC.drive_file_id)
+    )
+    return list(
+        session.scalars(
+            select(DocumentoDriveOC)
+            .where(DocumentoDriveOC.id.in_(ultimos))
+            .order_by(DocumentoDriveOC.id.desc())
+        )
+    )
+
+
+@router.get("/ordenes")
+def listar_ordenes_documentales(
+    buscar: str = Query("", max_length=50),
+    limit: int = Query(30, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    _acceso: Acceso = Depends(_acceso_global_cartera),
+    session: Session = Depends(obtener_session),
+) -> dict[str, object]:
+    """Lista agrupaciones candidatas GM con soporte, no O.C. jurídicas confirmadas."""
+    actuales = _documentos_actuales(session)
+    grupos: dict[str, dict[str, object]] = {}
+    sin_oc = 0
+    for documento in actuales:
+        numero = documento.numero_oc_candidato
+        if not numero:
+            sin_oc += 1
+            continue
+        grupo = grupos.setdefault(numero, {
+            "numero_oc": numero,
+            "soportes": 0,
+            "ultima_modificacion": None,
+            "estado": "SIN_VALIDAR",
+        })
+        grupo["soportes"] += 1
+        fecha = documento.modificado_drive
+        if fecha and (grupo["ultima_modificacion"] is None or fecha > grupo["ultima_modificacion"]):
+            grupo["ultima_modificacion"] = fecha
+
+    patron = buscar.strip().upper()
+    items = [
+        grupo for numero, grupo in grupos.items()
+        if not patron or patron in numero
+    ]
+    items.sort(key=lambda grupo: (grupo["numero_oc"]))
+    # La paginación se aplica a órdenes, nunca a líneas o versiones sueltas.
+    return {
+        "total": len(items),
+        "total_ocs_detectadas": len(grupos),
+        "archivos_sin_oc": sin_oc,
+        "archivos_vigentes": len(actuales),
+        "limit": limit,
+        "offset": offset,
+        "items": items[offset:offset + limit],
+        "nota": (
+            "Referencias GM detectadas únicamente por nombre de archivo. "
+            "Sin asignación jurídica, sin cálculo de cartera y sin acceso a PDFs desde el servidor. "
+            "Los enlaces de Google Drive requieren permisos del usuario en Google."
+        ),
+    }
+
+
+@router.get("/ordenes/{numero_oc}/soportes")
+def soportes_de_orden_documental(
+    numero_oc: str,
+    _acceso: Acceso = Depends(_acceso_global_cartera),
+    session: Session = Depends(obtener_session),
+) -> dict[str, object]:
+    """Devuelve solo la revisión actual de cada soporte identificado por GM."""
+    limpio = numero_oc.strip().upper()
+    if not re.fullmatch(r"GM\d{1,6}", limpio):
+        raise HTTPException(status_code=422, detail="Número de O.C. no válido.")
+    normalizado = f"GM{int(limpio[2:])}"
+    archivos = [
+        documento for documento in _documentos_actuales(session)
+        if documento.numero_oc_candidato == normalizado
+    ]
+    if not archivos:
+        raise HTTPException(status_code=404, detail="No hay soportes indexados para esa referencia.")
+    return {
+        "numero_oc": normalizado,
+        "estado": "SIN_VALIDAR",
+        "total": len(archivos),
+        "items": [
+            {
+                "id": documento.id,
+                "nombre": documento.nombre_original,
+                "ruta": documento.ruta_carpetas,
+                "tipo_mime": documento.mime_type,
+                "revision": documento.drive_version,
+                "ultima_modificacion": documento.modificado_drive,
+                "url_origen": (
+                    "https://drive.google.com/file/d/"
+                    + validar_id(documento.drive_file_id)
+                    + "/view"
+                ),
+            }
+            for documento in archivos
+        ],
+        "nota": "Relación sugerida por nombre de archivo; no confirma propiedad, empresa ni saldo.",
     }

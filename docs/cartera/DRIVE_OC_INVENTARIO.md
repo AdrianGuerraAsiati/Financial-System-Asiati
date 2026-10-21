@@ -70,6 +70,50 @@ El proceso es manual y debe ejecutarse de forma **exclusiva** para evitar dos
 sincronizaciones simultáneas. El índice conserva todas las versiones observadas;
 no elimina filas cuando un archivo desaparece de Drive.
 
+## Órdenes y soportes dentro de Cartera
+
+La sección **«Órdenes y soportes · Google Drive»** está integrada al módulo Cartera.
+No depende de que la fuente Google Sheets de operaciones, mora o proyección esté
+disponible. Consulta **PostgreSQL**, no Google Drive en vivo.
+
+APIs bajo `/api/v1`:
+
+- `GET /cartera/ocs/drive/ordenes?buscar=GM607&limit=30&offset=0`:
+  lista OC **candidatas** por coincidencia inequívoca de referencia GM en el
+  nombre del documento, agrupa por OC y pagina grupos, no archivos.
+- `GET /cartera/ocs/drive/ordenes/GM607/soportes`:
+  presenta la última revisión indexada por ID de archivo, con enlace original.
+- `GET /cartera/ocs/drive/inventario`:
+  conserva el inventario administrativo plano y todo el histórico.
+
+**Seguridad:** los documentos todavía no están asociados jurídicamente a una
+empresa; los dos endpoints nuevos solo permiten roles con alcance global
+`cartera.ver`. El panel se oculta para perfiles limitados a empresas, pero
+la seguridad efectiva está en FastAPI (403). Los enlaces originales exigen
+que el usuario tenga permisos en Google Drive; no se exponen contenidos PDF
+desde ASIATI.
+
+**Límites:** no se infiere la empresa por carpeta, nombre de cliente o
+selección actual del usuario. No se calculan saldos, conciliaciones, vencimientos
+ni resultados a partir del PDF o sus metadatos. Si un documento no contiene una
+referencia GM válida en el nombre, queda contabilizado como
+`archivos_sin_oc` y disponible en el inventario global, sin imputación forzada.
+No se sincroniza al pulsar `Consultar índice`: la carga real se hace desde
+Lightsail según la sección anterior.
+
+### Aceptación del hito de visibilidad
+
+1. PR de vista aprobado con CI unit/integration/security en verde.
+2. Carpeta raíz configurada en el contenedor y preflight real exitoso.
+3. Primer inventario supervisado, con conteos no nulos comprobados.
+4. Vista de Cartera para administrador global muestra GM y soportes sin
+   duplicar versiones de un mismo archivo; usuario de empresa recibe 403.
+5. Evidencia de al menos dos OC reales con enlaces de Drive comprobados
+   por un usuario autorizado. Si no hay archivos indexados, la vista muestra
+   estado vacío, no datos inventados.
+6. Juanfe valida la atribución jurídica antes de habilitar consulta por empresa,
+   asociación definitiva con órdenes financieras o cálculos de cartera.
+
 ## Criterios de aceptación
 
 - API sin sesión responde 401 por el núcleo.
