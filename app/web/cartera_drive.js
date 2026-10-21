@@ -13,6 +13,7 @@
   const anterior = byId("cartera-drive-anterior");
   const siguiente = byId("cartera-drive-siguiente");
   const campo = byId("cartera-drive-buscar");
+  const orden = byId("cartera-drive-orden");
   let limite = 30;
   let offset = 0;
   let total = 0;
@@ -28,9 +29,13 @@
   labelOrdenes.htmlFor = tamanoOrdenes.id;
   labelOrdenes.textContent = "Órdenes por página";
   labelOrdenes.appendChild(tamanoOrdenes);
-  formulario.insertBefore(labelOrdenes, formulario.lastElementChild);
+  formulario.insertBefore(labelOrdenes, orden.closest("label"));
   tamanoOrdenes.addEventListener("change", () => {
     limite = Number(tamanoOrdenes.value) || 30;
+    offset = 0;
+    cargar();
+  });
+  orden.addEventListener("change", () => {
     offset = 0;
     cargar();
   });
@@ -166,6 +171,7 @@
     soportePanel.hidden = true;
     const qs = new URLSearchParams({
       buscar: campo.value.trim(),
+      orden: orden.value,
       limit: String(limite),
       offset: String(offset),
     });
@@ -173,6 +179,12 @@
       const data = await obtenerJson("/api/v1/cartera/ocs/drive/ordenes?" + qs);
       if (version !== consultaActual || panel.hidden) return;
       total = data.total;
+      // Si cambió el índice mientras se navegaba, evitar página vacía huérfana.
+      if (offset > 0 && data.items.length === 0 && total > 0) {
+        offset = Math.max(0, Math.ceil(total / limite) - 1) * limite;
+        cargar();
+        return;
+      }
       resumen.textContent =
         data.total_ocs_detectadas + " OC candidatas · " +
         data.archivos_vigentes + " archivos actuales · " +
@@ -259,7 +271,7 @@
     cargar();
   });
   siguiente.addEventListener("click", () => {
-    if (offset + LIMITE < total) {
+    if (offset + limite < total) {
       offset += limite;
       cargar();
     }
