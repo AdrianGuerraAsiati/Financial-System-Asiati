@@ -469,10 +469,15 @@
         </div>
         <p class="table-footnote" id="cartera-dispersion-origen">Fuente: hoja PROYECCIONES de Cartera · empresa seleccionada · sin datos cargados.</p>
         <p id="cartera-dispersion-estado" class="table-footnote" role="status" aria-live="polite">Los puntos aparecerán al cargar la proyección de pagos.</p>
+        <div class="cartera-scatter-metricas" aria-label="Resumen del período filtrado">
+          <div class="cartera-scatter-metrica"><span>Comerciales visibles</span><strong id="cartera-dispersion-kpi-comerciales">—</strong></div>
+          <div class="cartera-scatter-metrica"><span>Pagos esperados · USD</span><strong id="cartera-dispersion-kpi-monto">—</strong></div>
+          <div class="cartera-scatter-metrica"><span>Registros de proyección</span><strong id="cartera-dispersion-kpi-registros">—</strong></div>
+        </div>
         <div class="cartera-scatter-grafica" id="cartera-dispersion-grafica" aria-label="Dispersión de órdenes de compra y montos esperados por comercial"></div>
         <div id="cartera-dispersion-seleccion" class="cartera-scatter-seleccion" role="status" aria-live="polite">Selecciona un punto para ver el detalle del comercial.</div>
-        <details class="cartera-scatter-tabla" open>
-          <summary>Tabla de valores por comercial</summary>
+        <details class="cartera-scatter-tabla">
+          <summary id="cartera-dispersion-tabla-titulo">Ver datos exactos por comercial</summary>
           <div class="table-wrap">
             <table aria-label="Valores utilizados en la dispersión por comercial">
               <thead>
