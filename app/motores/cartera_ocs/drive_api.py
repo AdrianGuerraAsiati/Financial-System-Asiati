@@ -121,16 +121,25 @@ def _fecha_drive_utc(valor: object) -> datetime | None:
 
 def _ordenar_ordenes_documentales(
     items: list[dict[str, object]],
-    orden: Literal["fecha_desc", "fecha_asc", "oc_asc"],
+    orden: Literal["fecha_desc", "fecha_asc", "oc_asc", "oc_desc"],
 ) -> list[dict[str, object]]:
     """Ordena todas las OC filtradas ANTES de paginar; empates por OC A–Z.
 
     La fecha corresponde al documento Drive vigente más reciente dentro de
     cada grupo candidato, no a la fecha jurídica de la orden.
     """
-    por_oc = sorted(items, key=lambda grupo: str(grupo["numero_oc"]))
+    def clave_gm(grupo: dict[str, object]) -> tuple[object, ...]:
+        numero = str(grupo["numero_oc"]).strip().upper()
+        encontrado = re.fullmatch(r"GM(\d+)", numero)
+        if encontrado:
+            return (0, int(encontrado.group(1)), numero)
+        return (1, numero)
+
+    por_oc = sorted(items, key=clave_gm)
     if orden == "oc_asc":
         return por_oc
+    if orden == "oc_desc":
+        return list(reversed(por_oc))
     con_fecha: list[tuple[dict[str, object], datetime]] = []
     sin_fecha: list[dict[str, object]] = []
     for grupo in por_oc:
@@ -149,7 +158,7 @@ def listar_ordenes_documentales(
     buscar: str = Query("", max_length=50),
     limit: int = Query(30, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    orden: Literal["fecha_desc", "fecha_asc", "oc_asc"] = Query("oc_asc"),
+    orden: Literal["fecha_desc", "fecha_asc", "oc_asc", "oc_desc"] = Query("oc_asc"),
     _acceso: Acceso = Depends(_acceso_global_cartera),
     session: Session = Depends(obtener_session),
 ) -> dict[str, object]:
