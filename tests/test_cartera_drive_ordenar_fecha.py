@@ -1,6 +1,8 @@
 """Ordenamiento cronológico global del índice de O.C. documentales."""
+import os
 import uuid
 
+import pytest
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
@@ -36,6 +38,9 @@ def test_fechas_ordena_antes_de_paginar_y_fechas_ausentes_al_final():
     assert items[0]["numero_oc"] == "GM9"  # No altera la lista original.
 
 
+@pytest.mark.skipif(
+    not os.getenv("DATABASE_URL"), reason="PostgreSQL solo está disponible en integración"
+)
 def test_api_ordena_todas_las_oc_antes_del_offset_y_restringe_acceso():
     prefijo = str(uuid.uuid4().int % 8000 + 1000)
     ocs = ["GM" + prefijo + sufijo for sufijo in ("1", "2", "3", "4")]
