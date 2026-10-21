@@ -17,6 +17,7 @@
   let offset = 0;
   let total = 0;
   let consultaActual = 0;
+  let consultaSoporte = 0;
   let soportesActuales = [];
   let paginaSoportes = 1;
   const formulario = byId("cartera-drive-form");
@@ -158,6 +159,7 @@
   async function cargar() {
     if (panel.hidden) return;
     const version = ++consultaActual;
+    ++consultaSoporte;
     byId("cartera-drive-refrescar").disabled = true;
     mensaje.textContent = "Consultando el índice documental…";
     vaciarConMensaje(body, 5, "Consultando…");
@@ -211,6 +213,7 @@
   async function cargarSoportes(oc) {
     if (panel.hidden) return;
     const version = consultaActual;
+    const solicitudSoporte = ++consultaSoporte;
     soportePanel.hidden = false;
     soportesActuales = [];
     paginaSoportes = 1;
@@ -222,12 +225,12 @@
       const data = await obtenerJson(
         "/api/v1/cartera/ocs/drive/ordenes/" + encodeURIComponent(oc) + "/soportes"
       );
-      if (version !== consultaActual || panel.hidden) return;
+      if (version !== consultaActual || solicitudSoporte !== consultaSoporte || panel.hidden) return;
       soportesActuales = Array.isArray(data.items) ? data.items : [];
       renderSoportes();
       soporteEstado.textContent = data.total + " soporte(s) indexado(s), revisión más reciente por archivo.";
     } catch (error) {
-      if (version !== consultaActual || panel.hidden) return;
+      if (version !== consultaActual || solicitudSoporte !== consultaSoporte || panel.hidden) return;
       vaciarConMensaje(soporteBody, 4, error.message);
       soporteEstado.textContent = error.message;
     }
@@ -237,6 +240,7 @@
     const global = sesion?.permisos?.["cartera.ver"] === "TODAS";
     panel.hidden = !global;
     ++consultaActual;
+    ++consultaSoporte;
     if (!global) {
       vaciarConMensaje(body, 5, "Sin acceso al inventario multiempresa.");
       soportePanel.hidden = true;
