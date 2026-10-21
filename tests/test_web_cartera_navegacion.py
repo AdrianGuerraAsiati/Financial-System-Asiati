@@ -108,8 +108,13 @@ for(const id of ["cartera-fuente","cartera-snapshots","cartera-calidad",
  "cartera-dispersion"])panel(id);
 const grid=new E("section");grid.classNames.add("grid-two");root.appendChild(grid);
 const pending=new E("section","comprobantes-pendientes");grid.appendChild(pending);
+function findById(node,id) {
+ if(node.id===id)return node;
+ for(const child of node.children){const found=findById(child,id);if(found)return found;}
+ return null;
+}
 const document={
- getElementById:(id)=>lookup.get(id)||null,
+ getElementById:(id)=>lookup.get(id)||findById(root,id),
  createElement:(tag)=>new E(tag)
 };
 const window={events:{},addEventListener(k,fn){this.events[k]=fn}};
