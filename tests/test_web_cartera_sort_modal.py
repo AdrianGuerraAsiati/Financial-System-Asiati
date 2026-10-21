@@ -42,7 +42,8 @@ def test_todos_los_detalles_usan_un_solo_dialog_y_limpian_por_empresa():
     assert 'document.createElement("dialog")' in modal
     assert 'node.showModal()' in modal
     assert 'node.addEventListener("close"' in modal
-    assert 'if(event.target===node)node.close()' in modal
+    assert 'if(event.target===node)close()' in modal
+    assert 'closeButton.addEventListener("click",()=>close())' in modal
     assert 'returnFocus.focus({preventScroll:true})' in modal
     assert "originalParent.insertBefore(" in modal  # Restaurar IDs/handlers.
     assert "document.body.classList.add" in modal
