@@ -226,7 +226,6 @@
   async function cargarSoportes(oc) {
     if (panel.hidden) return;
     const version = consultaActual;
-    const solicitudSoporte = ++consultaSoporte;
     soportesActuales = [];
     paginaSoportes = 1;
     filtroSoportes.value = "";
@@ -241,6 +240,7 @@
         soportePanel.hidden = true;
       },
     });
+    const solicitudSoporte = ++consultaSoporte;
     soporteEstado.textContent = "Consultando soportes…";
     vaciarConMensaje(soporteBody, 4, "Consultando…");
     try {
