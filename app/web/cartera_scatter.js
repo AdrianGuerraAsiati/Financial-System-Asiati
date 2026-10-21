@@ -239,6 +239,7 @@
       const activo = button.getAttribute("data-seleccionar") === comercialElegido;
       button.setAttribute("aria-pressed", String(activo));
       button.textContent = activo ? "Seleccionado" : "Seleccionar";
+      button.closest("tr")?.classList.toggle("is-selected", activo);
     }
     const p = puntosVisibles.find((item) => item.comercial === comercialElegido);
     if (!p) {
