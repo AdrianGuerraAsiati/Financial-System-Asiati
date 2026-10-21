@@ -35,17 +35,32 @@ desde `compose.production.yml`. No guardar ni subir nuevas claves a Git.
    ejecución. Raíz facilitada por negocio:
    `<ID_CARPETA_CONFIGURADO_EN_LIGHTSAIL>`.
 3. Aplicar las migraciones con el flujo habitual de despliegue. No usar SQL manual
-   ni `create_all()`.
-4. **Con el PR fusionado y la base migrada**, lanzar una primera carga controlada
-   desde el host de Lightsail, en ventana supervisada:
+   ni `create_all()`. Recrear el contenedor `api` mediante el despliegue habitual
+   para que lea la variable nueva de `.env.production`.
+4. **Con el código desplegado y antes de escribir en PostgreSQL**, verificar que
+   la identidad de servicio usada realmente puede leer la carpeta raíz y listar
+   sus hijos. El acceso de ChatGPT o de un usuario humano **no** sirve como prueba:
 
 ```bash
 cd /opt/financial-system
-export CARPETA_OC='<ID_CARPETA_CONFIGURADO_EN_LIGHTSAIL>'
 docker compose --env-file .env.production -f compose.production.yml \
-  exec -e CARTERA_OC_DRIVE_FOLDER_ID="$CARPETA_OC" api \
-  python -m app.motores.cartera_ocs.drive_sync
+  exec api python -m app.motores.cartera_ocs.drive_sync --preflight
 ```
+
+Debe responder `{"estado": "OK", "acceso": "SOLO_LECTURA"}`.
+Un HTTP 403/404 implica revisar permisos de la identidad de servicio; no iniciar
+la carga ni atribuir documentos manualmente por el nombre de la carpeta.
+
+5. **Solo después del preflight OK**, lanzar la primera carga supervisada:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec api python -m app.motores.cartera_ocs.drive_sync
+```
+
+6. Validar el conteo de archivos en la respuesta y consultar la bandeja de
+`/static/ocs_drive.html` con un usuario global con permiso `cartera.ver`.
+No confundir un inventario correcto con conciliación o saldo de cartera.
 
 Se imprimen solo conteos, nunca nombres, tokens ni valores contractuales.
 Una falla de Drive aborta la transacción de metadata; los documentos de
