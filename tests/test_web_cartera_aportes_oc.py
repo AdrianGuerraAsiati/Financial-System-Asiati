@@ -18,6 +18,8 @@ def test_aportes_vista_de_cartera_y_sin_fuentes_de_recaudos():
         "cartera-aportes-desde", "cartera-aportes-hasta",
         "cartera-aportes-lista", "cartera-aportes-detalle-contenido",
         "cartera-aportes-monto", "cartera-aportes-anterior",
+        "cartera-aportes-meses", "cartera-aportes-orden",
+        "cartera-aportes-multiples",
     ):
         assert 'id="' + campo + '"' in pagina
     assert pagina.index('src="/static/cartera_aportes.js"') < pagina.index(
@@ -33,7 +35,8 @@ def test_proyeccion_alimenta_aportes_sin_llamadas_extra():
     assert "window.ASIATI_APORTES?.limpiarDatos" in js.text
     aportes = TestClient(app).get("/static/cartera_aportes.js")
     assert aportes.status_code == 200
-    for marca in ("BigInt(", "agrupar(", "setData(", "limpiarDatos(", "porFecha"):
+    for marca in ("BigInt(", "agrupar(", "setData(", "limpiarDatos(", "porFecha",
+                  "resumirMeses(", "ordenarOcs(", "pintarMeses(", "porcentajeTexto("):
         assert marca in aportes.text
     assert "fetch(" not in aportes.text
     assert "Math.random()" not in aportes.text
@@ -94,12 +97,40 @@ assert.equal(filtered.items[0].monto,3030n);
 const other=agg(rows,{comercial:"SEBASTIAN"});
 assert.equal(other.items.length,1);
 assert.equal(other.items[0].monto,500n);
+const meses = window.ASIATI_APORTES.resumirMeses(all.items);
+assert.equal(meses.length,2);
+assert.equal(meses[0].mes,"2026-10");
+assert.equal(meses[0].monto,3530n);
+assert.equal(meses[0].ocs,2);
+assert.equal(meses[0].registros,3);
+assert.equal(meses[1].mes,"2026-11");
+assert.equal(meses[1].monto,470n);
+assert.equal(meses[1].ocs,1);
+const temporal = window.ASIATI_APORTES.ordenarOcs(all.items,"fecha_desc");
+assert.equal(temporal[0].oc,"OC-001");
+const primera = window.ASIATI_APORTES.ordenarOcs(all.items,"fecha_asc");
+assert.equal(primera[0].oc,"OC-001");
+const invertidas = [
+ {oc:"OC-009",aportes:[{fecha:"2026-10-25",monto:100n}],monto:100n},
+ {oc:"OC-008",aportes:[{fecha:"2026-10-01",monto:200n}],monto:200n}
+];
+assert.equal(window.ASIATI_APORTES.ordenarOcs(invertidas,"fecha_asc")[0].oc,"OC-008");
+assert.equal(window.ASIATI_APORTES.ordenarOcs(invertidas,"fecha_desc")[0].oc,"OC-009");
 window.ASIATI_APORTES.setData(rows,{empresaId:22});
 assert.equal(elements.get("cartera-aportes-ocs").textContent,"2");
 assert.equal(elements.get("cartera-aportes-registros").textContent,"4");
 assert.equal(elements.get("cartera-aportes-monto").textContent,"40,00");
+assert.equal(elements.get("cartera-aportes-meses").children.length,1);
+assert.equal(elements.get("cartera-aportes-detalle-contenido").children.length > 3,true);
+const multi = elements.get("cartera-aportes-multiples");
+multi.checked=true;
+window.ASIATI_APORTES.setData(rows,{empresaId:22});
+assert.equal(elements.get("cartera-aportes-ocs").textContent,"1");
+assert.equal(elements.get("cartera-aportes-monto").textContent,"35,00");
+multi.checked=false;
 window.ASIATI_APORTES.limpiarDatos();
 assert.equal(elements.get("cartera-aportes-ocs").textContent,"—");
+assert.equal(elements.get("cartera-aportes-monto").textContent,"—");
 '''
     p = subprocess.run(
         ["node", "-e", harness, str(ROOT / "app/web/cartera_aportes.js")],

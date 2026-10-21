@@ -487,9 +487,33 @@
           <article><span>Registros programados</span><strong id="cartera-aportes-registros">—</strong></article>
           <article><span>Total esperado · USD</span><strong id="cartera-aportes-monto">—</strong></article>
         </div>
+        <div class="cartera-aportes-flujo" aria-labelledby="cartera-aportes-flujo-titulo">
+          <div class="cartera-aportes-flujo-cabecera">
+            <div>
+              <h4 id="cartera-aportes-flujo-titulo">Calendario mensual de pagos esperados</h4>
+              <p>Importe y número de OC con previsiones en cada mes, según los filtros actuales.</p>
+            </div>
+          </div>
+          <div id="cartera-aportes-meses" class="cartera-aportes-meses" aria-live="polite">
+            <p class="empty">Sin proyecciones consultadas.</p>
+          </div>
+        </div>
         <div class="cartera-aportes-layout">
           <div class="cartera-aportes-principal">
-            <div class="cartera-aportes-subtitulo"><strong>Distribución por OC</strong><small>Barras proporcionales al total proyectado; cada segmento es una fecha prevista.</small></div>
+            <div class="cartera-aportes-subtitulo"><strong>Órdenes con aportes programados</strong><small>Las barras comparan el importe esperado de cada OC con la OC de mayor importe. Los colores separan fechas previstas, no pagos realizados.</small></div>
+            <div class="cartera-aportes-opciones">
+              <label for="cartera-aportes-orden">Ordenar OC por
+                <select id="cartera-aportes-orden">
+                  <option value="monto_desc" selected>Mayor importe esperado</option>
+                  <option value="fecha_asc">Primera fecha prevista</option>
+                  <option value="fecha_desc">Última fecha prevista</option>
+                  <option value="aportes_desc">Más fechas programadas</option>
+                </select>
+              </label>
+              <label class="cartera-aportes-check" for="cartera-aportes-multiples">
+                <input id="cartera-aportes-multiples" type="checkbox"> Solo OC con varias fechas
+              </label>
+            </div>
             <div id="cartera-aportes-lista" class="cartera-aportes-lista" aria-label="Órdenes con aportes programados"></div>
             <div class="cartera-aportes-paginacion">
               <span id="cartera-aportes-pagina" class="table-footnote" aria-live="polite">Página 1 de 1</span>
@@ -506,7 +530,7 @@
             </div>
           </aside>
         </div>
-        <p class="table-footnote cartera-aportes-advertencia">Las cifras representan registros de pago <strong>esperado</strong> de PROYECCIONES. Varias filas de una OC con la misma fecha se agrupan solo para visualización, conservando su cantidad. No se descuentan pagos reales ni se calcula saldo por cobrar porque aún no existe una conciliación por OC.</p>
+        <p class="table-footnote cartera-aportes-advertencia">La vista desglosa <strong>registros previstos</strong> de PROYECCIONES; varias filas en una fecha pueden corresponder a líneas de una misma operación y no necesariamente a pagos independientes. Las cifras representan registros de pago <strong>esperado</strong> de PROYECCIONES. Varias filas de una OC con la misma fecha se agrupan solo para visualización, conservando su cantidad. No se descuentan pagos reales ni se calcula saldo por cobrar porque aún no existe una conciliación por OC.</p>
       </section>
 
       <section class="panel cartera-scatter-panel" id="cartera-dispersion" aria-labelledby="cartera-dispersion-titulo">
