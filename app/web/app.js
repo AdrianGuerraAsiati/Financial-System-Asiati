@@ -697,7 +697,7 @@ function renderInicioCartera(modulo) {
     ? new Date(modulo.actualizado_en).toLocaleString("es-CO")
     : "Aún sin captura";
   if (!datos) {
-    inicioCarteraVision.innerHTML = \`
+    inicioCarteraVision.innerHTML = `
       <div class="inicio-cartera-cabecera">
         <div>
           <p class="eyebrow">Cartera · Corte auditable</p>
@@ -708,7 +708,7 @@ function renderInicioCartera(modulo) {
       </div>
       <p id="inicio-cartera-accion-estado" class="table-footnote" role="status" aria-live="polite">
         Se guardará una captura auditable de la empresa seleccionada. No modifica Google Sheets ni registra pagos.
-      </p>\`;
+      </p>`;
     enlazarCapturaCarteraInicio();
     return;
   }
@@ -716,7 +716,7 @@ function renderInicioCartera(modulo) {
   const kpi = (titulo, valor, nota) => '<article class="inicio-cartera-kpi"><span>' +
     escapar(titulo) + '</span><strong>' + valor +
     '</strong><small>' + escapar(nota) + '</small></article>';
-  inicioCarteraVision.innerHTML = \`
+  inicioCarteraVision.innerHTML = `
     <div class="inicio-cartera-cabecera">
       <div>
         <p class="eyebrow">Cartera · Indicadores desde snapshot</p>
@@ -724,15 +724,15 @@ function renderInicioCartera(modulo) {
         <p>Importes esperados de PROYECCIONES y mora informada de MORA: fuentes independientes, no se suman entre sí ni representan cobros confirmados.</p>
       </div>
       <div class="inicio-cartera-cabecera-acciones">
-        <span class="inicio-cartera-fecha">Corte: \${escapar(fuente)}</span>
+        <span class="inicio-cartera-fecha">Corte: ${escapar(fuente)}</span>
         <button type="button" class="secondary-button" id="inicio-cartera-capturar">Actualizar captura</button>
       </div>
     </div>
     <div class="inicio-cartera-kpis">
-      \${kpi("OC con pagos previstos",numeroInicio(datos.ocs_proyectadas),"Órdenes distintas identificadas en PROYECCIONES")}
-      \${kpi("Total proyectado · USD",valor("monto_proyectado_usd"),"Suma de registros previstos, no dinero recibido")}
-      \${kpi("Próximos 30 días · USD",valor("proximos_30_dias_usd"),"Fechas previstas desde hoy")}
-      \${kpi("Mora informada · USD",valor("monto_mora_usd"),"Importe declarado en MORA; no se descuenta")}
+      ${kpi("OC con pagos previstos",numeroInicio(datos.ocs_proyectadas),"Órdenes distintas identificadas en PROYECCIONES")}
+      ${kpi("Total proyectado · USD",valor("monto_proyectado_usd"),"Suma de registros previstos, no dinero recibido")}
+      ${kpi("Próximos 30 días · USD",valor("proximos_30_dias_usd"),"Fechas previstas desde hoy")}
+      ${kpi("Mora informada · USD",valor("monto_mora_usd"),"Importe declarado en MORA; no se descuenta")}
     </div>
     <div class="inicio-cartera-lecturas">
       <div class="inicio-cartera-horizonte">
@@ -740,7 +740,7 @@ function renderInicioCartera(modulo) {
           <strong>Flujo previsto · próximos seis meses</strong>
           <span>Por mes de fecha esperada · USD</span>
         </div>
-        \${renderCarteraMesesInicio(datos)}
+        ${renderCarteraMesesInicio(datos)}
       </div>
       <div class="inicio-cartera-accesos">
         <strong>Explorar Cartera</strong>
@@ -748,12 +748,12 @@ function renderInicioCartera(modulo) {
         <button type="button" class="secondary-button" data-home-cartera-tab="proyeccion" data-home-cartera-sub="aportes">Aportes por OC <span aria-hidden="true">→</span></button>
         <button type="button" class="secondary-button" data-home-cartera-tab="mora">Ver mora <span aria-hidden="true">→</span></button>
         <button type="button" class="secondary-button" data-home-cartera-tab="operaciones">Ver operaciones <span aria-hidden="true">→</span></button>
-        <p class="inicio-cartera-leyenda">Montos con fecha prevista anterior al corte actual: <strong>\${valor("fechas_anteriores_usd")}</strong>. No implica automáticamente impago.</p>
+        <p class="inicio-cartera-leyenda">Montos con fecha prevista anterior al corte actual: <strong>${valor("fechas_anteriores_usd")}</strong>. No implica automáticamente impago.</p>
       </div>
     </div>
     <p id="inicio-cartera-accion-estado" class="table-footnote" role="status" aria-live="polite">
       Fuente: última captura persistida · empresa seleccionada · solo lecturas válidas.
-    </p>\`;
+    </p>`;
   enlazarCapturaCarteraInicio();
   inicioCarteraVision.querySelectorAll("[data-home-cartera-tab]").forEach((boton) => {
     boton.addEventListener("click", () => {
