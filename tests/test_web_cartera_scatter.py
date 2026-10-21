@@ -24,6 +24,10 @@ def test_panel_y_script_estan_en_cartera_sin_dependencias_cdn():
     assert 'id="cartera-dispersion-tabla-body"' in html
     assert 'id="cartera-dispersion-prev"' in html
     assert 'id="cartera-dispersion-next"' in html
+    assert 'id="cartera-dispersion-kpi-comerciales"' in html
+    assert 'id="cartera-dispersion-kpi-monto"' in html
+    assert 'id="cartera-dispersion-kpi-registros"' in html
+    assert '<details class="cartera-scatter-tabla">' in html
     assert html.index('src="/static/cartera_scatter.js"') < html.index(
         'src="/static/app.js"'
     )
@@ -40,6 +44,9 @@ def test_componente_con_datos_reales_y_respaldo_accesible():
         "comercialElegido", "aria-label", "cartera-dispersion-tabla-body"
     ):
         assert fragmento in javascript
+    for nombre in ("colocarEtiquetas(", "actualizarMetricas(", "pasoMonto("):
+        assert nombre in javascript
+    assert "const width = 960, height = 316" in javascript
     assert "Math.random()" not in javascript
     assert "fetch(" not in javascript
     source = (BASE / "app" / "web" / "app.js").read_text("utf-8")
@@ -110,6 +117,20 @@ assert.equal(big.puntos[0].montoExacto, "USD 9.007.199.254.740.993,11");
 const unassigned = all.puntos.find((p) => p.comercial === "SIN ASIGNAR");
 assert.equal(unassigned.ocs, 1);
 assert.equal(unassigned.monto, "3.00");
+// Escala de 125,7 mil debe finalizar en 150 mil, no desperdiciar espacio hasta 250 mil.
+assert.equal(window.ASIATI_SCATTER.pasoMonto(125694.90) * 5, 150000);
+assert.equal(window.ASIATI_SCATTER.pasoMonto(40908.70) * 5, 50000);
+// Los resúmenes siempre se derivan de los registros reales que alimentan el gráfico.
+window.ASIATI_SCATTER.setData(rows, {empresaId: 17});
+assert.equal(dom.get("cartera-dispersion-kpi-comerciales").textContent, "3");
+assert.equal(dom.get("cartera-dispersion-kpi-monto").textContent, "11,35");
+assert.equal(dom.get("cartera-dispersion-kpi-registros").textContent, "6");
+assert.equal(dom.get("cartera-dispersion-tabla-titulo").textContent,
+  "Ver datos exactos por comercial (3)");
+window.ASIATI_SCATTER.limpiarDatos();
+assert.equal(dom.get("cartera-dispersion-kpi-comerciales").textContent, "—");
+assert.equal(dom.get("cartera-dispersion-kpi-monto").textContent, "—");
+assert.equal(dom.get("cartera-dispersion-kpi-registros").textContent, "—");
 '''
     result = subprocess.run(
         ["node", "-e", harness, str(JS)],
