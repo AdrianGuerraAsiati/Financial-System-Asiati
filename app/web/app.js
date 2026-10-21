@@ -1871,12 +1871,18 @@ async function cargarProyeccion() {
 }
 
 async function cargarDetalle(oc) {
+  const consultada = empresaId();
+  const solicitud = ++carteraDetalleSolicitud;
+  const panel = document.getElementById("detalle-operacion");
+  panel.hidden = false;
   detalleTitulo.textContent = oc;
   detalleContenido.textContent = "Consultando…";
+  panel.scrollIntoView({block:"start", behavior:"auto"});
   try {
     const detalle = await api(
-      `/api/v1/cartera/operaciones/${encodeURIComponent(oc)}?empresa_id=${empresaId()}`
+      `/api/v1/cartera/operaciones/${encodeURIComponent(oc)}?empresa_id=${consultada}`
     );
+    if (consultada !== empresaId() || solicitud !== carteraDetalleSolicitud) return;
     detalleContenido.className = "detail-grid";
     detalleContenido.innerHTML = detalle.lineas.map((linea) => `
       <article class="detail-card">
@@ -1899,6 +1905,7 @@ async function cargarDetalle(oc) {
     }
     setEstado(`Detalle ${oc} cargado`, "ok");
   } catch (error) {
+    if (consultada !== empresaId() || solicitud !== carteraDetalleSolicitud) return;
     detalleContenido.className = "empty-block";
     detalleContenido.textContent = error.message;
     setEstado(error.message, "error");
