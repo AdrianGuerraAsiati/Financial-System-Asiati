@@ -102,6 +102,7 @@ let moduloActivo = "inicio";
 let carteraOperacionesRows = [];
 let carteraOperacionesPagina = 1;
 const CARTERA_OPERACIONES_PAGE_SIZE = 20;
+let carteraProyeccionSolicitud = 0;
 let comprasOcsOffset = 0;
 let dashboardVersiones = {};
 let dashboardVersionTimer = null;
@@ -1613,11 +1614,16 @@ function mostrarFuenteNoDisponible(tipo) {
     return;
   }
   if (tipo === "PROYECCION") {
+    ++carteraProyeccionSolicitud;
+    window.ASIATI_SCATTER?.limpiarDatos("La fuente PROYECCIONES no está disponible.");
     paginadorProyeccion.fallo("La fuente de Proyección todavía no está disponible.");
   }
 }
 
 async function cargarCarteraTodo() {
+  // Ocultar valores antiguos al cambiar de empresa antes de consultar Sheets.
+  ++carteraProyeccionSolicitud;
+  window.ASIATI_SCATTER?.limpiarDatos("Validando fuente PROYECCIONES…");
   const estadoFuente = await cargarEstadoFuenteCartera();
   const tareas = [cargarPendientes(), cargarSnapshotsCartera()];
   // El índice documental está en PostgreSQL y funciona aunque Google Sheets esté caído.
@@ -1833,14 +1839,18 @@ async function cargarMora() {
 async function cargarProyeccion() {
   setEstado("Consultando proyección…");
   const consultada = empresaId();
+  const solicitud = ++carteraProyeccionSolicitud;
+  window.ASIATI_SCATTER?.limpiarDatos("Consultando proyecciones de la empresa seleccionada…");
   try {
     const rows = await api("/api/v1/cartera/proyeccion?empresa_id=" + consultada);
-    if (consultada !== empresaId()) return;
+    if (consultada !== empresaId() || solicitud !== carteraProyeccionSolicitud) return;
     paginadorProyeccion.actualizar(rows);
+    window.ASIATI_SCATTER?.setData(rows, {empresaId: consultada});
     setEstado("Proyección actualizada", "ok");
   } catch (error) {
-    if (consultada !== empresaId()) return;
+    if (consultada !== empresaId() || solicitud !== carteraProyeccionSolicitud) return;
     paginadorProyeccion.fallo(error.message);
+    window.ASIATI_SCATTER?.limpiarDatos("No se pudo consultar PROYECCIONES: " + error.message);
     setEstado(error.message, "error");
   }
 }
