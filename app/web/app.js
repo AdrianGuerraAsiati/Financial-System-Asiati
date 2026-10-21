@@ -1748,15 +1748,22 @@ const paginadorCalidad = window.CarteraPaginacion.crear({
     formatearDecimal(r.valor) + '</p><p>Código: ' + escapar(r.codigo) + '</p></article>',
 });
 
+const carteraOperacionesEstado = document.querySelector("#cartera-operaciones-estado");
+function actualizarEstadosOperaciones() {
+  const valores = [...new Set(carteraOperacionesRows.map((row) => String(row.estado || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "es"));
+  carteraOperacionesEstado.replaceChildren(new Option("Todos", ""));
+  valores.forEach((nombre) => carteraOperacionesEstado.add(new Option(nombre, nombre)));
+}
 function renderizarOperacionesCartera() {
   const termino = normalizarBusquedaCartera(carteraOperacionesBuscar.value.trim());
-  const carteraOperacionesFiltradas = termino
-    ? carteraOperacionesRows.filter((row) =>
-        [row.oc, row.cliente, row.sku, row.estado, row.etapa].some(
-          (valor) => normalizarBusquedaCartera(valor).includes(termino)
-        )
-      )
-    : carteraOperacionesRows;
+  const estadoElegido = carteraOperacionesEstado.value;
+  const carteraOperacionesFiltradas = carteraOperacionesRows.filter((row) =>
+    (!estadoElegido || row.estado === estadoElegido) &&
+    (!termino || [row.oc, row.cliente, row.sku, row.estado, row.etapa].some(
+      (valor) => normalizarBusquedaCartera(valor).includes(termino)
+    ))
+  );
 
   const porPagina = Number(carteraOperacionesPorPagina.value) || CARTERA_OPERACIONES_PAGE_SIZE;
   const paginas = Math.max(1, Math.ceil(carteraOperacionesFiltradas.length / porPagina));
@@ -1778,7 +1785,7 @@ function renderizarOperacionesCartera() {
       `).join("")
     : `<tr><td colspan="7" class="empty">${carteraOperacionesRows.length ? "No se encontraron operaciones con ese filtro." : "No hay operaciones."}</td></tr>`;
 
-  carteraOperacionesTotal.textContent = termino
+  carteraOperacionesTotal.textContent = (termino || estadoElegido)
     ? `${carteraOperacionesFiltradas.length.toLocaleString("es-CO")} de ${carteraOperacionesRows.length.toLocaleString("es-CO")} operaciones`
     : `${carteraOperacionesRows.length.toLocaleString("es-CO")} operaciones`;
   carteraOperacionesPaginaTexto.textContent = `Página ${carteraOperacionesPagina} de ${paginas}`;
@@ -1801,6 +1808,7 @@ async function cargarOperaciones() {
     const rows = await api(`/api/v1/cartera/operaciones?empresa_id=${empresaConsultada}`);
     if (empresaConsultada !== empresaId()) return;
     carteraOperacionesRows = Array.isArray(rows) ? rows : [];
+    actualizarEstadosOperaciones();
     carteraOperacionesPagina = 1;
     renderizarOperacionesCartera();
     setEstado("Operaciones actualizadas", "ok");
@@ -1912,6 +1920,10 @@ formComprobante.addEventListener("submit", async (event) => {
 
 document.querySelector("#cargar-operaciones").addEventListener("click", cargarOperaciones);
 carteraOperacionesBuscar.addEventListener("input", () => {
+  carteraOperacionesPagina = 1;
+  renderizarOperacionesCartera();
+});
+carteraOperacionesEstado.addEventListener("change", () => {
   carteraOperacionesPagina = 1;
   renderizarOperacionesCartera();
 });
