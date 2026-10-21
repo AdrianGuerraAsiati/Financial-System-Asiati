@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import Session
 
 from app.core.empresas import Empresa
@@ -20,6 +20,22 @@ def _empresa() -> int:
         session.add(empresa)
         session.commit()
         return empresa.id
+
+
+def _limpiar_comprobantes_de_prueba(empresa_id: int) -> None:
+    """No dejar expedientes incompletos en la BD global de los tests.
+
+    El runner comparte BD entre pruebas, incluidas pruebas de downgrade.
+    Limpiamos únicamente las filas creadas bajo esta empresa de prueba.
+    """
+    engine = create_engine(os.environ["DATABASE_URL"])
+    with Session(engine) as session:
+        session.execute(
+            delete(ComprobantePagoPersistido).where(
+                ComprobantePagoPersistido.empresa_id == empresa_id
+            )
+        )
+        session.commit()
 
 
 def test_radicacion_simple_conserva_estado_e_importes_desconocidos(tmp_path: Path) -> None:
@@ -62,6 +78,7 @@ def test_radicacion_simple_conserva_estado_e_importes_desconocidos(tmp_path: Pat
         assert guardado[0].read_bytes() == b"contenido de soporte"
     finally:
         app.dependency_overrides.clear()
+        _limpiar_comprobantes_de_prueba(empresa)
 
 
 def test_radicacion_rechaza_datos_financieros_parciales(tmp_path: Path) -> None:
@@ -79,6 +96,7 @@ def test_radicacion_rechaza_datos_financieros_parciales(tmp_path: Path) -> None:
         assert not list(tmp_path.rglob("*.pdf"))
     finally:
         app.dependency_overrides.clear()
+        _limpiar_comprobantes_de_prueba(empresa)
 
 
 def test_radicacion_simple_sigue_rechazando_duplicados(tmp_path: Path) -> None:
@@ -101,6 +119,7 @@ def test_radicacion_simple_sigue_rechazando_duplicados(tmp_path: Path) -> None:
         assert second.status_code == 409
     finally:
         app.dependency_overrides.clear()
+        _limpiar_comprobantes_de_prueba(empresa)
 
 
 def test_pagina_muestra_modo_rapido_y_completo():
