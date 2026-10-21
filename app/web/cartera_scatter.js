@@ -13,6 +13,10 @@
   const origen = document.getElementById("cartera-dispersion-origen");
   const seleccion = document.getElementById("cartera-dispersion-seleccion");
   const tabla = document.getElementById("cartera-dispersion-tabla-body");
+  const totalComerciales = document.getElementById("cartera-dispersion-kpi-comerciales");
+  const totalMonto = document.getElementById("cartera-dispersion-kpi-monto");
+  const totalRegistros = document.getElementById("cartera-dispersion-kpi-registros");
+  const tituloTabla = document.getElementById("cartera-dispersion-tabla-titulo");
   const tablaTamano = document.getElementById("cartera-dispersion-tamano");
   const tablaAnterior = document.getElementById("cartera-dispersion-prev");
   const tablaSiguiente = document.getElementById("cartera-dispersion-next");
@@ -137,12 +141,84 @@
   }
 
   function pasoMonto(maximo) {
-    if (maximo <= 0) return 1;
-    const base = 10 ** Math.floor(Math.log10(maximo / 4));
-    for (const multiplo of [1, 2, 5, 10]) {
-      if (multiplo * base * 5 >= maximo) return multiplo * base;
+    // Cinco intervalos con escala redondeada: 125.695 -> tope 150.000,
+    // en vez de 250.000 como el algoritmo anterior.
+    if (!(maximo > 0) || !Number.isFinite(maximo)) return 1;
+    const base = 10 ** Math.floor(Math.log10(maximo / 5));
+    for (const multiplo of [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10]) {
+      const paso = multiplo * base;
+      if (paso * 5 >= maximo * (1 + 1e-12)) return paso;
     }
     return 10 * base;
+  }
+
+  function actualizarMetricas(puntos) {
+    if (!cargados) {
+      totalComerciales.textContent = "—";
+      totalMonto.textContent = "—";
+      totalRegistros.textContent = "—";
+    } else {
+      const total = puntos.reduce(
+        (acum, punto) => sumar(acum, decimal(punto.monto)),
+        {entero: 0n, escala: 0}
+      );
+      totalComerciales.textContent = formatoEntero.format(puntos.length);
+      totalMonto.textContent = usdExacto(total).replace(/^USD /, "");
+      totalRegistros.textContent = formatoEntero.format(
+        puntos.reduce((n, punto) => n + punto.registros, 0)
+      );
+    }
+    tituloTabla.textContent = "Ver datos exactos por comercial (" +
+      formatoEntero.format(puntos.length) + ")";
+  }
+
+  function colocarEtiquetas(puntos, coordenadas, svg, limites) {
+    const ocupados = [];
+    const densa = puntos.length > 12;
+    for (const punto of puntos) {
+      const posicion = coordenadas.get(punto.comercial);
+      if (!posicion) continue;
+      const visible = punto.comercial.length > 20
+        ? punto.comercial.slice(0, 19) + "…"
+        : punto.comercial;
+      const ancho = Math.max(55, visible.length * 7.3 + 20);
+      const alto = 23;
+      const x = posicion.x, y = posicion.y;
+      const candidatos = [
+        {x: x - ancho / 2, y: y - 36},
+        {x: x + 17, y: y - alto / 2},
+        {x: x - ancho - 17, y: y - alto / 2},
+        {x: x - ancho / 2, y: y + 16},
+        {x: x + 16, y: y - alto - 15},
+        {x: x - ancho - 16, y: y - alto - 15},
+        {x: x + 16, y: y + 15},
+        {x: x - ancho - 16, y: y + 15}
+      ];
+      const cabe = (r) => r.x >= limites.left && r.x + ancho <= limites.right
+        && r.y >= limites.top && r.y + alto <= limites.bottom;
+      const choca = (r) => ocupados.some((o) =>
+        r.x < o.x + o.w + 5 && r.x + ancho + 5 > o.x &&
+        r.y < o.y + o.h + 5 && r.y + alto + 5 > o.y);
+      const chocaPunto = (r) => [...coordenadas.values()].some((otro) =>
+        otro !== posicion && otro.x >= r.x - 11 && otro.x <= r.x + ancho + 11 &&
+        otro.y >= r.y - 11 && otro.y <= r.y + alto + 11);
+      const lugar = candidatos.find((r) => cabe(r) && !choca(r) && !chocaPunto(r));
+      if (!lugar) continue;
+      ocupados.push({x: lugar.x, y: lugar.y, w: ancho, h: alto});
+      const grupo = svgEl("g", {
+        class: "cartera-scatter-etiqueta" + (densa ? " is-dense" : ""),
+        "data-etiqueta-comercial": punto.comercial,
+        "aria-hidden": "true"
+      });
+      grupo.appendChild(svgEl("rect", {
+        x: lugar.x, y: lugar.y, width: ancho, height: alto, rx: 6
+      }));
+      grupo.appendChild(svgEl("text", {
+        x: lugar.x + ancho / 2, y: lugar.y + 15.5,
+        "text-anchor": "middle"
+      }, visible));
+      svg.appendChild(grupo);
+    }
   }
 
   function marcarSeleccion() {
@@ -151,10 +227,19 @@
       node.setAttribute("aria-pressed", String(activo));
       node.classList.toggle("is-selected", activo);
     }
+    for (const node of grafica.querySelectorAll("[data-guia-comercial]")) {
+      node.classList.toggle("is-selected",
+        node.getAttribute("data-guia-comercial") === comercialElegido);
+    }
+    for (const node of grafica.querySelectorAll("[data-etiqueta-comercial]")) {
+      node.classList.toggle("is-selected",
+        node.getAttribute("data-etiqueta-comercial") === comercialElegido);
+    }
     for (const button of tabla.querySelectorAll("[data-seleccionar]")) {
       const activo = button.getAttribute("data-seleccionar") === comercialElegido;
       button.setAttribute("aria-pressed", String(activo));
       button.textContent = activo ? "Seleccionado" : "Seleccionar";
+      button.closest("tr")?.classList.toggle("is-selected", activo);
     }
     const p = puntosVisibles.find((item) => item.comercial === comercialElegido);
     if (!p) {
@@ -228,10 +313,10 @@
       return;
     }
     // SVG escalable sin dependencias ni fuentes externas.
-    const width = 960, height = 390, left = 98, right = 36, top = 25, bottom = 76;
+    const width = 960, height = 316, left = 91, right = 42, top = 32, bottom = 57;
     const plotWidth = width - left - right, plotHeight = height - top - bottom;
     const maxOcs = Math.max(1, ...puntos.map((p) => p.ocs));
-    const xStep = Math.max(1, Math.ceil(maxOcs / 6));
+    const xStep = Math.max(1, Math.ceil(maxOcs / 5));
     const xMax = Math.max(1, Math.ceil(maxOcs / xStep) * xStep);
     const maxMonto = Math.max(1, ...puntos.map((p) => p.montoNumerico));
     const yStep = pasoMonto(maxMonto);
@@ -274,10 +359,23 @@
     }, "Monto total de pagos esperados (USD)"));
 
     const coincidencias = new Map();
+    const coordenadas = new Map();
     for (const p of puntos) {
       if (!Number.isFinite(p.montoNumerico)) continue;
       const x = xCoord(p.ocs), y = yCoord(p.montoNumerico);
+      coordenadas.set(p.comercial, {x, y});
       const clave = x.toFixed(3) + ":" + y.toFixed(3);
+      // Guías ligeras: solo aparecen para el punto seleccionado.
+      svg.appendChild(svgEl("line", {
+        x1: x, y1: y, x2: x, y2: top + plotHeight,
+        class: "cartera-scatter-guia",
+        "data-guia-comercial": p.comercial
+      }));
+      svg.appendChild(svgEl("line", {
+        x1: left, y1: y, x2: x, y2: y,
+        class: "cartera-scatter-guia",
+        "data-guia-comercial": p.comercial
+      }));
       coincidencias.set(clave, (coincidencias.get(clave) || 0) + 1);
       const circle = svgEl("circle", {
         cx: x, cy: y, r: 8, tabindex: 0, role: "button",
@@ -306,12 +404,17 @@
         x: x + 12, y: y - 9, class: "cartera-scatter-colision"
       }, "×" + cantidad));
     }
+    colocarEtiquetas(puntos, coordenadas, svg, {
+      left: left + 4, right: width - right - 4,
+      top: 3, bottom: top + plotHeight - 5
+    });
     grafica.appendChild(svg);
   }
 
   function dibujar() {
     if (desde.value && hasta.value && desde.value > hasta.value) {
       puntosVisibles = [];
+      actualizarMetricas([]);
       estado.textContent = "El mes inicial no puede ser posterior al mes final.";
       renderGrafica([]);
       renderTabla([]);
@@ -321,6 +424,7 @@
     }
     if (!cargados) {
       puntosVisibles = [];
+      actualizarMetricas([]);
       renderGrafica([]);
       renderTabla([]);
       comercialElegido = null;
@@ -331,6 +435,7 @@
       desde: desde.value, hasta: hasta.value, buscar: buscar.value
     });
     puntosVisibles = resumen.puntos;
+    actualizarMetricas(puntosVisibles);
     const ocSinReferencia = resumen.puntos.reduce((n, p) => n + p.sinOc, 0);
     estado.textContent = formatoEntero.format(resumen.puntos.length) +
       " comerciales representados · " +
@@ -396,6 +501,6 @@
     desde.value = ""; hasta.value = ""; buscar.value = "";
     dibujar();
   });
-  window.ASIATI_SCATTER = Object.freeze({setData, limpiarDatos, agruparFilas});
+  window.ASIATI_SCATTER = Object.freeze({setData, limpiarDatos, agruparFilas, pasoMonto});
   limpiarDatos("La gráfica se activa con la fuente PROYECCIONES de Cartera.");
 })();
