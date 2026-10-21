@@ -79,3 +79,49 @@ def test_errores_proveedor_no_exponen_credenciales():
             return Respuesta({}, 403)
     with pytest.raises(DriveInventarioError, match="HTTP 403"):
         GoogleDriveInventario(ClienteDenegado()).recorrer("folder_root_0001")
+
+
+def test_preflight_comprueba_carpeta_y_listado_sin_guardar():
+    class ClientePreflight:
+        def __init__(self):
+            self.llamadas = []
+
+        def get(self, url, *, params, timeout):
+            self.llamadas.append((url, params))
+            if url.endswith("/folder_root_0001"):
+                return Respuesta({
+                    "id": "folder_root_0001",
+                    "mimeType": "application/vnd.google-apps.folder",
+                    "trashed": False,
+                })
+            return Respuesta({"files": []})
+
+    cliente = ClientePreflight()
+    GoogleDriveInventario(cliente).verificar_acceso_raiz("folder_root_0001")
+    assert len(cliente.llamadas) == 2
+    assert cliente.llamadas[0][1]["fields"] == "id,mimeType,trashed"
+    assert cliente.llamadas[1][1]["q"] == "'folder_root_0001' in parents and trashed = false"
+
+
+def test_preflight_rechaza_falta_de_permiso_y_archivo_en_lugar_de_carpeta():
+    class ClientePreflight:
+        def __init__(self, codigo, mime):
+            self.codigo = codigo
+            self.mime = mime
+
+        def get(self, url, *, params, timeout):
+            return Respuesta({
+                "id": "folder_root_0001",
+                "mimeType": self.mime,
+                "trashed": False,
+            }, self.codigo)
+
+    with pytest.raises(DriveInventarioError, match="HTTP 403"):
+        GoogleDriveInventario(
+            ClientePreflight(403, "application/vnd.google-apps.folder")
+        ).verificar_acceso_raiz("folder_root_0001")
+
+    with pytest.raises(DriveInventarioError, match="no es una carpeta activa"):
+        GoogleDriveInventario(
+            ClientePreflight(200, "application/pdf")
+        ).verificar_acceso_raiz("folder_root_0001")
