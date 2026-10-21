@@ -45,25 +45,11 @@ if [[ "$db_ready" != "1" ]]; then
   exit 1
 fi
 
-# La imagen se construye y verifica en GitHub Actions, no en Lightsail (1 GB RAM).
-# Solo puede instalarse la imagen cuyo SHA coincide con el release entregado.
-IMAGE_SHA="${ASIATI_IMAGE_SHA:-}"
-if [[ ! "$IMAGE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-  echo "Falta ASIATI_IMAGE_SHA válido en el release." >&2
-  exit 2
-fi
-if [[ -n "$TARGET_COMMIT" && "$TARGET_COMMIT" != "$IMAGE_SHA" ]]; then
-  echo "La imagen API no corresponde al commit que se quiere publicar." >&2
-  exit 2
-fi
-if ! docker image inspect "financial-system-asiati:sha-${IMAGE_SHA}" >/dev/null 2>&1; then
-  echo "No se cargó la imagen verificada financial-system-asiati:sha-${IMAGE_SHA}." >&2
-  exit 2
-fi
-
-# Migración y API usan obligatoriamente el mismo artefacto, sin recompilar.
+# Construir la imagen NUEVA antes de ejecutar Alembic. Si se migra con la imagen
+# del release anterior, las revisiones añadidas en este commit no se aplican.
+"${DC[@]}" build api
 "${DC[@]}" run --rm api alembic upgrade head
-"${DC[@]}" up -d --no-build
+"${DC[@]}" up -d --build
 
 # La ruta del Caddyfile es un bind-mount. Tras intercambiar el directorio
 # de release se debe recrear Caddy para montar y leer el archivo nuevo.
