@@ -28,7 +28,7 @@ def test_operaciones_ordenables_antes_de_paginacion_y_enlaces_modal():
     assert html.index('src="/static/cartera_sort.js"') < html.index('src="/static/app.js"')
     assert "const filasOrdenadas = window.ASIATI_CARTERA_SORT.ordenar(" in js
     assert "filasOrdenadas.slice(inicio, inicio + porPagina)" in js
-    assert 'button.dataset.carteraSort' in js
+    assert 'boton.dataset.carteraSort' in js
     assert 'aria-sort' in js
     assert 'class="cartera-aportes-detalle" id="cartera-aportes-detalle" hidden' in html
 
