@@ -3,6 +3,7 @@
   "use strict";
   let node=null, heading=null, subtitle=null, body=null, returnFocus=null, callback=null;
   let epoch=0;
+  let active=false;
   function ensure() {
     if(node)return;
     node=document.createElement("dialog");
@@ -31,21 +32,26 @@
       if(event.target===node)node.close();
     });
     node.addEventListener("close",()=>{
-      ++epoch;
-      const done=callback;callback=null;
-      body.replaceChildren();
-      node.classList.remove("asiati-modal-wide");
-      document.body.classList.remove("asiati-modal-open");
-      if(typeof done==="function")done();
-      if(returnFocus?.isConnected && typeof returnFocus.focus==="function"){
-        returnFocus.focus({preventScroll:true});
-      }
-      returnFocus=null;
+      // Evitar que el evento close del modal anterior limpie uno ya abierto.
+      if(!node.open) teardown();
     });
+  }
+  function teardown(){
+    if(!active)return;
+    active=false;++epoch;
+    const done=callback;callback=null;
+    body.replaceChildren();
+    node.classList.remove("asiati-modal-wide");
+    document.body.classList.remove("asiati-modal-open");
+    if(typeof done==="function")done();
+    if(returnFocus?.isConnected && typeof returnFocus.focus==="function") {
+      returnFocus.focus({preventScroll:true});
+    }
+    returnFocus=null;
   }
   function open({title="Detalle",subtitle:description="",content=null,size="wide",onClose}={}) {
     ensure();
-    if(node.open)node.close();
+    if(node.open) {node.close();teardown();}
     returnFocus=document.activeElement;
     callback=onClose||null;
     heading.textContent=title;
@@ -60,10 +66,11 @@
     }
     if(size==="wide")node.classList.add("asiati-modal-wide");
     node.showModal();
+    active=true;
     document.body.classList.add("asiati-modal-open");
     return ++epoch;
   }
-  function close() {if(node?.open)node.close();}
+  function close() {if(node?.open){node.close();teardown();}}
   function isOpen(){return Boolean(node?.open);}
   function current(){return epoch;}
   window.ASIATI_MODAL=Object.freeze({open,close,isOpen,current});
