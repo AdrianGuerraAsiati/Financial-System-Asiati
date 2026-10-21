@@ -29,7 +29,7 @@ def test_graficas_usar_solo_datos_del_dashboard_y_revelar_procedencia():
     assert respuesta.status_code == 200
     js = respuesta.text
     assert "renderDashboard(respuesta)" in js
-    assert "ultimo snapshot de Cartera" in js
+    assert "último snapshot de Cartera" in js
     assert "hallazgos de conciliación" in js
     assert "Sin snapshot de Cartera" in js
     assert "aria-pressed" in js
