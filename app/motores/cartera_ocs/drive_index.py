@@ -254,5 +254,6 @@ def sincronizar_desde_entorno(session: Session) -> dict[str, int]:
     if not raiz:
         raise ValueError("Configura CARTERA_OC_DRIVE_FOLDER_ID antes de sincronizar.")
     lector = GoogleDriveInventario()
+    lector.verificar_acceso_raiz(raiz)
     archivos = lector.recorrer(raiz)
     return registrar_inventario(session, archivos)
