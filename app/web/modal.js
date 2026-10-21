@@ -3,7 +3,6 @@
   "use strict";
   let node=null, heading=null, subtitle=null, body=null, returnFocus=null, callback=null;
   let epoch=0;
-  let moved=null, originalParent=null, originalSibling=null;
   let active=false;
   let movedNode=null, originalParent=null, originalNext=null;
   function ensure() {
@@ -20,18 +19,18 @@
     heading=document.createElement("h2");heading.id="asiati-modal-title";
     subtitle=document.createElement("p");subtitle.id="asiati-modal-subtitle";
     names.append(heading,subtitle);
-    const close=document.createElement("button");
-    close.type="button";close.className="asiati-modal-close";
-    close.textContent="Cerrar ×";close.setAttribute("aria-label","Cerrar detalle");
-    close.addEventListener("click",()=>node.close());
-    top.append(names,close);
+    const closeButton=document.createElement("button");
+    closeButton.type="button";closeButton.className="asiati-modal-close";
+    closeButton.textContent="Cerrar ×";closeButton.setAttribute("aria-label","Cerrar detalle");
+    closeButton.addEventListener("click",()=>close());
+    top.append(names,closeButton);
     body=document.createElement("div");body.id="asiati-modal-body";
     body.className="asiati-modal-body";
     container.append(top,body);node.appendChild(container);
     document.body.appendChild(node);
     // No cerrar si el clic sucede dentro del área de contenido.
     node.addEventListener("click",event=>{
-      if(event.target===node)node.close();
+      if(event.target===node)close();
     });
     node.addEventListener("close",()=>{
       // Evitar que el evento close del modal anterior limpie uno ya abierto.
@@ -62,7 +61,12 @@
   }
   function open({title="Detalle",subtitle:description="",content=null,size="wide",onClose}={}) {
     ensure();
-    if(node.open) {node.close();teardown();}
+    // La tecla Escape puede cerrar <dialog> antes de que el evento close se despache.
+    // Limpiar igualmente la vista anterior antes de abrir una nueva.
+    if(active) {
+      if(node.open) node.close();
+      teardown();
+    }
     returnFocus=document.activeElement;
     callback=onClose||null;
     heading.textContent=title;
