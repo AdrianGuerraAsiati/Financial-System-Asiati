@@ -266,3 +266,18 @@ body {background:var(--finance-canvas); color:var(--finance-ink);}
 @media(prefers-reduced-motion:reduce) {
   #cartera-dispersion .cartera-scatter-punto {transition:none;}
 }
+
+#cartera-dispersion .cartera-scatter-paginacion {
+  display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;
+  gap:12px;margin:14px 0 3px;
+}
+#cartera-dispersion .cartera-scatter-paginacion label {
+  display:grid;gap:5px;color:var(--finance-muted);font-size:12px;
+}
+#cartera-dispersion .cartera-scatter-paginacion select {
+  padding:8px 10px;border:1px solid var(--finance-border);
+  border-radius:7px;background:var(--finance-surface);color:var(--finance-ink);
+}
+#cartera-dispersion .cartera-scatter-paginacion .pagination {
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
