@@ -15,6 +15,9 @@
   const totalOcs = porId("ocs");
   const totalRegistros = porId("registros");
   const totalMonto = porId("monto");
+  const meses = porId("meses");
+  const orden = porId("orden");
+  const multiples = porId("multiples");
   const buscar = porId("buscar");
   const comercial = porId("comercial");
   const desde = porId("desde");
@@ -52,6 +55,81 @@
   function fechaLegible(valor) {
     const partes = texto(valor).slice(0, 10).split("-");
     return partes.length === 3 ? partes.reverse().join("/") : texto(valor);
+  }
+  function porcentaje(parte, total) {
+    return total > 0n ? Number(parte * 1000n / total) / 10 : 0;
+  }
+  function porcentajeTexto(parte, total) {
+    return porcentaje(parte, total).toLocaleString("es-CO", {
+      minimumFractionDigits: 1, maximumFractionDigits: 1
+    }) + " %";
+  }
+  function mesLegible(valor) {
+    const partes = texto(valor).split("-");
+    const nombre = ["ene", "feb", "mar", "abr", "may", "jun",
+      "jul", "ago", "sep", "oct", "nov", "dic"][Number(partes[1]) - 1];
+    return nombre ? nombre + " " + partes[0] : valor;
+  }
+  function resumirMeses(items) {
+    const resumen = new Map();
+    for (const item of items) {
+      for (const aporte of item.aportes) {
+        const mes = aporte.fecha.slice(0, 7);
+        if (!resumen.has(mes)) resumen.set(mes, {
+          mes, monto: 0n, ocs: new Set(), registros: 0
+        });
+        const entrada = resumen.get(mes);
+        entrada.monto += aporte.monto;
+        entrada.ocs.add(item.oc);
+        entrada.registros += aporte.filas;
+      }
+    }
+    return [...resumen.values()].sort((a, b) => a.mes.localeCompare(b.mes))
+      .map((m) => ({
+        mes: m.mes, monto: m.monto, ocs: m.ocs.size, registros: m.registros
+      }));
+  }
+  function ordenarOcs(items, criterio) {
+    const resultado = [...items];
+    if (criterio === "fecha_asc") {
+      resultado.sort((a,b)=> a.aportes[0].fecha.localeCompare(b.aportes[0].fecha) ||
+        a.oc.localeCompare(b.oc,"es"));
+    } else if (criterio === "fecha_desc") {
+      resultado.sort((a,b)=> b.aportes[b.aportes.length - 1].fecha.localeCompare(
+        a.aportes[a.aportes.length - 1].fecha) || a.oc.localeCompare(b.oc,"es"));
+    } else if (criterio === "aportes_desc") {
+      resultado.sort((a,b)=> b.aportes.length - a.aportes.length ||
+        a.oc.localeCompare(b.oc,"es"));
+    }
+    // monto_desc es el orden de origen de agrupar (BigInt exacto).
+    return resultado;
+  }
+  function pintarMeses(items) {
+    meses.replaceChildren();
+    const resumen = resumirMeses(items);
+    if (!resumen.length) {
+      meses.appendChild(nodo("p", "empty", "No hay meses previstos con estos filtros."));
+      return;
+    }
+    const maximo = resumen.reduce((m,r)=>r.monto > m ? r.monto : m, 1n);
+    const contenedor = nodo("div","cartera-aportes-meses-lista");
+    for (const mes of resumen) {
+      const fila = nodo("div","cartera-aportes-mes");
+      const encabezado = nodo("div","cartera-aportes-mes-encabezado");
+      encabezado.append(nodo("strong",null,mesLegible(mes.mes)),
+        nodo("strong",null,moneda(mes.monto)));
+      const texto = nodo("small",null,mes.ocs + " OC · " +
+        mes.registros + (mes.registros === 1 ? " registro" : " registros") +
+        " · " + porcentajeTexto(mes.monto,
+          resumen.reduce((acum,r)=>acum+r.monto,0n)) + " del total filtrado");
+      const pista = nodo("span","cartera-aportes-mes-pista");
+      const barra = nodo("span","cartera-aportes-mes-barra");
+      barra.style.width = porcentaje(mes.monto,maximo) + "%";
+      pista.appendChild(barra);
+      fila.append(encabezado,pista,texto);
+      contenedor.appendChild(fila);
+    }
+    meses.appendChild(contenedor);
   }
   function nodo(tag, css, contenido) {
     const elemento = document.createElement(tag);
@@ -120,15 +198,32 @@
       (actual.clientes.join(", ") || "Cliente no informado") + " · " +
       actual.comerciales.join(", ")));
     detalle.appendChild(nodo("strong","cartera-aportes-total-oc",
-      moneda(actual.monto) + " proyectados"));
+      moneda(actual.monto) + " previstos"));
+    const metadatos = nodo("div","cartera-aportes-detalle-metricas");
+    const metrica = (titulo, valor) => {
+      const ficha = nodo("div","cartera-aportes-detalle-metrica");
+      ficha.append(nodo("span",null,titulo),nodo("strong",null,valor));
+      return ficha;
+    };
+    metadatos.append(
+      metrica("Primera fecha prevista",fechaLegible(actual.aportes[0].fecha)),
+      metrica("Última fecha prevista",fechaLegible(
+        actual.aportes[actual.aportes.length - 1].fecha)),
+      metrica("Participación en el total filtrado",
+        porcentajeTexto(actual.monto,listaActual.reduce((n,i)=>n+i.monto,0n))),
+      metrica("Fechas / registros",actual.aportes.length + " / " + actual.filas)
+    );
+    detalle.appendChild(metadatos);
+
+    detalle.appendChild(nodo("h5","cartera-aportes-detalle-subtitulo",
+      "Cronograma previsto por fecha"));
     detalle.appendChild(nodo("p","table-footnote",
-      formatoConteo.format(actual.filas) + " registros agrupados en " +
-      formatoConteo.format(actual.aportes.length) + " fechas previstas."));
+      "Cada barra representa la proporción de esa fecha sobre el importe esperado de esta OC."));
 
     const tabla = nodo("table","cartera-aportes-fechas");
     tabla.setAttribute("aria-label","Aportes proyectados por fecha para " + actual.oc);
     const head = nodo("thead"); const encabezado = nodo("tr");
-    for (const col of ["Fecha prevista","Monto USD","Acumulado"]) {
+    for (const col of ["Fecha prevista","Monto USD","Parte de OC","Acumulado"]) {
       const th = nodo("th",null,col); th.scope = "col"; encabezado.appendChild(th);
     }
     head.appendChild(encabezado); tabla.appendChild(head);
@@ -141,16 +236,24 @@
       const cMonto = nodo("td");
       cMonto.appendChild(nodo("strong",null,moneda(aporte.monto)));
       if (aporte.filas > 1) cMonto.appendChild(nodo(
-        "small","cartera-aportes-filas",aporte.filas + " registros"
+        "small","cartera-aportes-filas",aporte.filas + " registros de origen"
       ));
+      const cPorcentaje = nodo("td","cartera-aportes-proporcion");
+      cPorcentaje.appendChild(nodo("span",null,porcentajeTexto(aporte.monto,actual.monto)));
+      const carril = nodo("span","cartera-aportes-fecha-pista");
+      const barra = nodo("span","cartera-aportes-fecha-barra");
+      barra.style.width = porcentaje(aporte.monto,actual.monto) + "%";
+      carril.appendChild(barra);
+      cPorcentaje.appendChild(carril);
       const cAcumulado = nodo("td",null,moneda(acumulado));
-      tr.append(cFecha,cMonto,cAcumulado);body.appendChild(tr);
+      tr.append(cFecha,cMonto,cPorcentaje,cAcumulado);
+      body.appendChild(tr);
     }
     tabla.appendChild(body);
     const scroller = nodo("div","table-wrap");scroller.appendChild(tabla);
     detalle.appendChild(scroller);
     detalle.appendChild(nodo("p","table-footnote",
-      "Acumulado proyectado, no abonado real. Sin conciliación bancaria por OC."));
+      "El acumulado suma previsiones, no abonos confirmados. Una fecha con varias filas puede corresponder a líneas de una misma operación."));
   }
 
   function pintarLista() {
