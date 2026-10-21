@@ -270,7 +270,8 @@
         cargado ? "No se encontraron OC con proyecciones para estos filtros." :
         "No hay proyecciones consultadas."));
     }
-    const mayor = listaActual.length ? listaActual[0].monto : 1n;
+    const mayor = listaActual.reduce((mayor,oc) => oc.monto > mayor ? oc.monto : mayor,1n);
+    const totalFiltrado = listaActual.reduce((acum,oc)=>acum+oc.monto,0n);
     for (const oc of visibles) {
       const boton = nodo("button","cartera-aportes-oc");
       boton.type = "button";
@@ -280,8 +281,14 @@
       linea.append(nodo("strong",null,oc.oc),nodo("span",null,moneda(oc.monto)));
       const subtitulo = nodo("small",null,
         (oc.clientes.join(", ") || "Cliente no informado") + " · " +
-        oc.aportes.length + (oc.aportes.length === 1 ? " fecha" : " fechas") +
-        " · " + oc.filas + " registros");
+        oc.filas + (oc.filas === 1 ? " registro de origen" : " registros de origen"));
+      const cronograma = nodo("span","cartera-aportes-oc-cronograma");
+      cronograma.append(nodo("span",null,
+        "Primera fecha: " + fechaLegible(oc.aportes[0].fecha)),
+        nodo("span",null,oc.aportes.length + (oc.aportes.length === 1 ?
+          " fecha programada" : " fechas programadas")),
+        nodo("span",null,porcentajeTexto(oc.monto,totalFiltrado) +
+          " del importe filtrado"));
       const pista = nodo("span","cartera-aportes-pista");
       const barra = nodo("span","cartera-aportes-barra");
       barra.style.width = String(Number(oc.monto * 10000n / (mayor || 1n)) / 100) + "%";
@@ -294,7 +301,7 @@
         barra.appendChild(segmento);
       }
       pista.appendChild(barra);
-      boton.append(linea,subtitulo,pista);
+      boton.append(linea,subtitulo,cronograma,pista);
       boton.addEventListener("click",()=>seleccionar(oc.oc));
       lista.appendChild(boton);
     }
@@ -313,26 +320,33 @@
   function refrescar() {
     if (desde.value && hasta.value && desde.value > hasta.value) {
       listaActual = [];
+      pintarMeses([]);
       estado.textContent = "La fecha inicial no puede ser posterior a la final.";
       totalOcs.textContent="—";totalRegistros.textContent="—";totalMonto.textContent="—";
       pintarLista();seleccionar("");return;
     }
     if (!cargado) {
       listaActual = [];
+      pintarMeses([]);
       estado.textContent = "Esperando datos de PROYECCIONES.";
       totalOcs.textContent="—";totalRegistros.textContent="—";totalMonto.textContent="—";
       pintarLista();seleccionar("");return;
     }
-    const {items,sinOC,omitidos,total} = agrupar(registros,{
+    const {items,sinOC,omitidos} = agrupar(registros,{
       buscar:buscar.value,comercial:comercial.value,
       desde:desde.value,hasta:hasta.value
     });
-    listaActual=items;
-    totalOcs.textContent=formatoConteo.format(items.length);
+    const elegibles = multiples.checked
+      ? items.filter((item)=>item.aportes.length > 1) : items;
+    listaActual = ordenarOcs(elegibles,orden.value);
+    const total = listaActual.reduce((acum,item)=>acum+item.monto,0n);
+    totalOcs.textContent=formatoConteo.format(listaActual.length);
     totalRegistros.textContent=formatoConteo.format(
-      items.reduce((a,b)=>a+b.filas,0));
+      listaActual.reduce((a,b)=>a+b.filas,0));
     totalMonto.textContent=moneda(total).replace(/^USD /,"");
-    estado.textContent=items.length + " OC con pagos esperados" +
+    pintarMeses(listaActual);
+    estado.textContent=listaActual.length + " OC con importes esperados" +
+      (multiples.checked ? " en varias fechas" : "") +
       (sinOC ? " · " + sinOC + " registros sin OC excluidos de la agrupación" : "") +
       (omitidos ? " · " + omitidos + " importes inválidos omitidos" : "") + ".";
     if (!items.some((oc)=>oc.oc===seleccionado)) seleccionado=items[0]?.oc || "";
@@ -363,11 +377,14 @@
     estado.textContent=mensaje;
   }
 
-  for (const input of [buscar,comercial,desde,hasta]) {
-    input.addEventListener(input===buscar?"input":"change",()=>{pagina=1;seleccionado="";refrescar();});
+  for (const input of [buscar,comercial,desde,hasta,orden,multiples]) {
+    input.addEventListener(input===buscar?"input":"change",()=>{
+      pagina=1;seleccionado="";refrescar();
+    });
   }
   limpiar.addEventListener("click",()=>{
     buscar.value="";comercial.value="";desde.value="";hasta.value="";
+    orden.value="monto_desc";multiples.checked=false;
     pagina=1;seleccionado="";refrescar();
   });
   anterior.addEventListener("click",()=>{pagina=Math.max(1,pagina-1);pintarLista();});
@@ -375,6 +392,8 @@
     pagina=Math.min(Math.ceil(listaActual.length/LIMITE),pagina+1);
     pintarLista();
   });
-  window.ASIATI_APORTES = Object.freeze({setData,limpiarDatos,agrupar});
+  window.ASIATI_APORTES = Object.freeze({
+    setData,limpiarDatos,agrupar,resumirMeses,ordenarOcs
+  });
   limpiarDatos();
 })();
