@@ -112,6 +112,7 @@
       return;
     }
     const maximo = resumen.reduce((m,r)=>r.monto > m ? r.monto : m, 1n);
+    const totalMensual = resumen.reduce((acum,r)=>acum+r.monto,0n);
     const contenedor = nodo("div","cartera-aportes-meses-lista");
     for (const mes of resumen) {
       const fila = nodo("div","cartera-aportes-mes");
@@ -120,8 +121,7 @@
         nodo("strong",null,moneda(mes.monto)));
       const texto = nodo("small",null,mes.ocs + " OC · " +
         mes.registros + (mes.registros === 1 ? " registro" : " registros") +
-        " · " + porcentajeTexto(mes.monto,
-          resumen.reduce((acum,r)=>acum+r.monto,0n)) + " del total filtrado");
+        " · " + porcentajeTexto(mes.monto,totalMensual) + " del total filtrado");
       const pista = nodo("span","cartera-aportes-mes-pista");
       const barra = nodo("span","cartera-aportes-mes-barra");
       barra.style.width = porcentaje(mes.monto,maximo) + "%";
