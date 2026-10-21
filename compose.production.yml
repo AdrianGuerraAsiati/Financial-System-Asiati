@@ -1,5 +1,6 @@
 services:
   api:
+    image: financial-system-asiati:sha-${ASIATI_IMAGE_SHA:-local}
     build: .
     restart: unless-stopped
     env_file:
