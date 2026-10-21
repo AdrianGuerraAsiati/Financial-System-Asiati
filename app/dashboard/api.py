@@ -21,7 +21,8 @@ from app.integrations.google_sheets.service import (
     reclamar_refresco_si_corresponde,
 )
 from app.motores.cartera_ocs.bandeja import listar_comprobantes_pendientes
-from app.motores.cartera_ocs.snapshot_model import CarteraSnapshot
+from app.motores.cartera_ocs.snapshot_model import CarteraSnapshot, CarteraSnapshotFila
+from app.dashboard.cartera_indicadores import indicadores_cartera
 from app.motores.compras_supply_chain.atencion import evaluar_puntos_atencion
 from app.motores.compras_supply_chain.contrato import DiagnosticoEsquema
 from app.motores.compras_supply_chain.dominio import LineaCompra
@@ -160,6 +161,28 @@ def _leer_cartera(
                 "registros": int(diagnostico.get("filas_datos") or 0),
             }
 
+    indicadores: dict[str, object] | None = None
+    if snapshot is not None:
+        validos = {
+            str(item.get("tipo") or "").upper()
+            for item in snapshot.diagnosticos
+            if item.get("valido") is True
+            and str(item.get("tipo") or "").upper() in {"OPERACIONES", "MORA", "PROYECCION"}
+        }
+        filas = session.execute(
+            select(CarteraSnapshotFila.tipo, CarteraSnapshotFila.normalizado)
+            .where(
+                CarteraSnapshotFila.snapshot_id == snapshot.id,
+                CarteraSnapshotFila.tipo.in_(validos),
+            )
+        ).all() if validos else []
+        indicadores = indicadores_cartera(
+            ((tipo, normalizado) for tipo, normalizado in filas),
+            tipos_validos=validos,
+            hoy=datetime.now(timezone.utc).date(),
+        )
+        resumen["indicadores"] = indicadores
+
     atencion = [
         {
             "modulo": "cartera",
@@ -167,7 +190,7 @@ def _leer_cartera(
             "categoria": "PENDIENTE",
             "titulo": "Comprobante pendiente de auditoría",
             "descripcion": (
-                f"{pendiente.cliente} · OC {pendiente.oc} · "
+                f"{pendiente.cliente or 'Cliente pendiente de asociación'} · OC {pendiente.oc} · "
                 f"{pendiente.nombre_archivo}"
             ),
             "referencia": pendiente.oc,
@@ -181,6 +204,11 @@ def _leer_cartera(
             "codigo": "cartera",
             "titulo": "Cartera",
             "disponible": snapshot is not None or bool(pendientes),
+            "estado_resumen": (
+                "CON_CAPTURA" if snapshot is not None
+                else "SOLO_COMPROBANTES" if pendientes
+                else "SIN_CAPTURA"
+            ),
             "resumen": resumen,
             "estado_datos": fuentes,
             "actualizado_en": (

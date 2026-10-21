@@ -525,6 +525,12 @@ function numeroInicio(valor) {
 }
 
 function moduloEstadoDisponible(modulo) {
+  if (modulo.codigo === "cartera" && modulo.estado_resumen === "SIN_CAPTURA") {
+    return '<span class="home-status-pill home-status-muted">Sin captura</span>';
+  }
+  if (modulo.codigo === "cartera" && modulo.estado_resumen === "SOLO_COMPROBANTES") {
+    return '<span class="home-status-pill home-status-muted">Sin corte de hojas</span>';
+  }
   return modulo.disponible
     ? '<span class="home-status-pill home-status-ok">Disponible</span>'
     : '<span class="home-status-pill home-status-muted">No disponible</span>';
@@ -633,6 +639,154 @@ function renderEstadoModulo(modulo) {
   `;
 }
 
+const inicioCarteraVision = document.querySelector("#inicio-cartera-vision");
+const INICIO_MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic"];
+
+function centavosInicio(valor) {
+  if (typeof valor !== "string" || !/^-?\d+\.\d{2}$/.test(valor)) return null;
+  const negativo = valor.startsWith("-");
+  const normal = negativo ? valor.slice(1) : valor;
+  const [entero, decimal] = normal.split(".");
+  const cents = BigInt(entero) * 100n + BigInt(decimal);
+  return negativo ? -cents : cents;
+}
+
+function monedaInicioExacta(valor) {
+  const centavos = centavosInicio(valor);
+  if (centavos === null) return "—";
+  const absoluto = centavos < 0n ? -centavos : centavos;
+  const grupo = absoluto / 100n;
+  const decimal = String(absoluto % 100n).padStart(2, "0");
+  const miles = String(grupo).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return (centavos < 0n ? "−" : "") + "USD " + miles + "," + decimal;
+}
+
+function renderCarteraMesesInicio(indicadores) {
+  const meses = Array.isArray(indicadores.meses_futuros) ? indicadores.meses_futuros : [];
+  if (!meses.length) {
+    return '<p class="inicio-cartera-vacio">No hay proyecciones válidas para construir el calendario.</p>';
+  }
+  const observado = meses.map((m) => centavosInicio(m.monto_usd) ?? 0n);
+  const maximo = observado.reduce((max, monto) => monto > max ? monto : max, 0n);
+  return meses.map((mes, index) => {
+    const partes = String(mes.mes).match(/^(\d{4})-(0[1-9]|1[012])$/);
+    const etiqueta = partes
+      ? INICIO_MESES_CORTOS[Number(partes[2]) - 1] + " " + partes[1]
+      : "Mes sin validar";
+    const porcentaje = maximo > 0n
+      ? Number(observado[index] * 1000n / maximo) / 10 : 0;
+    return '<div class="inicio-cartera-mes">' +
+      '<span class="inicio-cartera-mes-nombre">' + escapar(etiqueta) + '</span>' +
+      '<span class="inicio-cartera-mes-pista" role="img" aria-label="' +
+        escapar(etiqueta + ": " + monedaInicioExacta(mes.monto_usd)) + '">' +
+        '<span style="width:' + porcentaje + '%"></span></span>' +
+      '<strong>' + monedaInicioExacta(mes.monto_usd) + '</strong></div>';
+  }).join("");
+}
+
+function renderInicioCartera(modulo) {
+  if (!modulo) {
+    inicioCarteraVision.hidden = true;
+    inicioCarteraVision.replaceChildren();
+    return;
+  }
+  inicioCarteraVision.hidden = false;
+  const datos = modulo.resumen?.indicadores;
+  const fuente = modulo.actualizado_en
+    ? new Date(modulo.actualizado_en).toLocaleString("es-CO")
+    : "Aún sin captura";
+  if (!datos) {
+    inicioCarteraVision.innerHTML = `
+      <div class="inicio-cartera-cabecera">
+        <div>
+          <p class="eyebrow">Cartera · Corte auditable</p>
+          <h3>Tu Cartera, en una sola vista</h3>
+          <p>Las hojas operativas pueden estar disponibles aunque Inicio todavía no tenga una captura guardada. Genera el primer corte para consultar montos y fechas sin volver a leer Sheets cada vez que abras Inicio.</p>
+        </div>
+        <button type="button" id="inicio-cartera-capturar">Generar resumen de Cartera</button>
+      </div>
+      <p id="inicio-cartera-accion-estado" class="table-footnote" role="status" aria-live="polite">
+        Se guardará una captura auditable de la empresa seleccionada. No modifica Google Sheets ni registra pagos.
+      </p>`;
+    enlazarCapturaCarteraInicio();
+    return;
+  }
+  const valor = (campo) => monedaInicioExacta(datos[campo]);
+  const kpi = (titulo, valor, nota) => '<article class="inicio-cartera-kpi"><span>' +
+    escapar(titulo) + '</span><strong>' + valor +
+    '</strong><small>' + escapar(nota) + '</small></article>';
+  inicioCarteraVision.innerHTML = `
+    <div class="inicio-cartera-cabecera">
+      <div>
+        <p class="eyebrow">Cartera · Indicadores desde snapshot</p>
+        <h3>Panorama financiero de Cartera</h3>
+        <p>Importes esperados de PROYECCIONES y mora informada de MORA: fuentes independientes, no se suman entre sí ni representan cobros confirmados.</p>
+      </div>
+      <div class="inicio-cartera-cabecera-acciones">
+        <span class="inicio-cartera-fecha">Corte: ${escapar(fuente)}</span>
+        <button type="button" class="secondary-button" id="inicio-cartera-capturar">Actualizar captura</button>
+      </div>
+    </div>
+    <div class="inicio-cartera-kpis">
+      ${kpi("OC con pagos previstos",numeroInicio(datos.ocs_proyectadas),"Órdenes distintas identificadas en PROYECCIONES")}
+      ${kpi("Total proyectado · USD",valor("monto_proyectado_usd"),"Suma de registros previstos, no dinero recibido")}
+      ${kpi("Próximos 30 días · USD",valor("proximos_30_dias_usd"),"Fechas previstas desde hoy")}
+      ${kpi("Mora informada · USD",valor("monto_mora_usd"),"Importe declarado en MORA; no se descuenta")}
+    </div>
+    <div class="inicio-cartera-lecturas">
+      <div class="inicio-cartera-horizonte">
+        <div class="inicio-cartera-horizonte-titulo">
+          <strong>Flujo previsto · próximos seis meses</strong>
+          <span>Por mes de fecha esperada · USD</span>
+        </div>
+        ${renderCarteraMesesInicio(datos)}
+      </div>
+      <div class="inicio-cartera-accesos">
+        <strong>Explorar Cartera</strong>
+        <p>Consulta el detalle sin perder el contexto.</p>
+        <button type="button" class="secondary-button" data-home-cartera-tab="proyeccion" data-home-cartera-sub="aportes">Aportes por OC <span aria-hidden="true">→</span></button>
+        <button type="button" class="secondary-button" data-home-cartera-tab="mora">Ver mora <span aria-hidden="true">→</span></button>
+        <button type="button" class="secondary-button" data-home-cartera-tab="operaciones">Ver operaciones <span aria-hidden="true">→</span></button>
+        <p class="inicio-cartera-leyenda">Montos con fecha prevista anterior al corte actual: <strong>${valor("fechas_anteriores_usd")}</strong>. No implica automáticamente impago.</p>
+      </div>
+    </div>
+    <p id="inicio-cartera-accion-estado" class="table-footnote" role="status" aria-live="polite">
+      Fuente: última captura persistida · empresa seleccionada · solo lecturas válidas.
+    </p>`;
+  enlazarCapturaCarteraInicio();
+  inicioCarteraVision.querySelectorAll("[data-home-cartera-tab]").forEach((boton) => {
+    boton.addEventListener("click", () => {
+      mostrarModulo("cartera");
+      window.ASIATI_CARTERA_NAV?.activar(boton.dataset.homeCarteraTab);
+      if (boton.dataset.homeCarteraSub) {
+        window.ASIATI_CARTERA_NAV?.activarSubvista(boton.dataset.homeCarteraSub);
+      }
+    });
+  });
+}
+
+function enlazarCapturaCarteraInicio() {
+  const boton = document.getElementById("inicio-cartera-capturar");
+  if (!boton) return;
+  boton.addEventListener("click", async () => {
+    if (boton.disabled) return;
+    const empresaConsultada = empresaId();
+    const estado = document.getElementById("inicio-cartera-accion-estado");
+    boton.disabled = true;
+    estado.textContent = "Capturando las hojas configuradas para Cartera…";
+    try {
+      await api("/api/v1/cartera/snapshots?empresa_id=" + empresaConsultada, {method:"POST"});
+      if (empresaConsultada !== empresaId()) return;
+      await cargarDashboardPrincipal();
+    } catch (error) {
+      if (empresaConsultada !== empresaId()) return;
+      estado.textContent = error.message;
+      boton.disabled = false;
+    }
+  });
+}
+
 function renderAtencionInicio(item) {
   const accion = item.url_destino
     ? `<button type="button" class="secondary-button" data-home-view="${escapar(item.url_destino)}">Abrir</button>`
@@ -681,6 +835,7 @@ async function cargarDashboardPrincipal({preservar = false} = {}) {
     inicioModulos.innerHTML = data.modulos?.length
       ? data.modulos.map(renderModuloInicio).join("")
       : '<article class="home-module-card"><p class="empty">Tu rol todavía no tiene módulos de consulta habilitados.</p></article>';
+    renderInicioCartera(data.modulos?.find((modulo) => modulo.codigo === "cartera"));
 
     inicioAtencion.innerHTML = data.atencion?.length
       ? data.atencion.map(renderAtencionInicio).join("")
@@ -698,6 +853,8 @@ async function cargarDashboardPrincipal({preservar = false} = {}) {
   } catch (error) {
     if (empresaConsultada !== empresaId()) return;
     if (!preservar || !tieneDatos) {
+      inicioCarteraVision.hidden = true;
+      inicioCarteraVision.replaceChildren();
       const graficas = document.getElementById("inicio-analitica");
       if (graficas) graficas.textContent = "No fue posible consultar los indicadores. No se muestran datos no verificados.";
       inicioModulos.innerHTML = `<article class="home-module-card"><p class="empty">${escapar(error.message)}</p></article>`;
