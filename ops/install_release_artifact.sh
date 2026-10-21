@@ -39,13 +39,6 @@ for required in compose.production.yml ops/deploy_production.sh; do
 done
 
 cp "$APP_DIR/.env.production" "$STAGE_DIR/.env.production"
-# Referenciar el artefacto Python verificado que GitHub transfirió por separado.
-# Modificar solo la copia del nuevo release; el árbol anterior queda intacto.
-if grep -q '^ASIATI_IMAGE_SHA=' "$STAGE_DIR/.env.production"; then
-  sed -i "s/^ASIATI_IMAGE_SHA=.*/ASIATI_IMAGE_SHA=$TARGET_COMMIT/" "$STAGE_DIR/.env.production"
-else
-  printf 'ASIATI_IMAGE_SHA=%s\n' "$TARGET_COMMIT" >> "$STAGE_DIR/.env.production"
-fi
 chmod 600 "$STAGE_DIR/.env.production"
 
 if [[ -d "$APP_DIR/secrets" ]]; then
