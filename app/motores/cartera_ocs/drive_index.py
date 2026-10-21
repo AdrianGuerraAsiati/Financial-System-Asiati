@@ -16,6 +16,8 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, 
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.core.db import Base
+# Registrar el modelo padre antes de resolver la FK en procesos CLI aislados.
+from app.core import empresas as _empresas  # noqa: F401
 
 
 DRIVE_ID = re.compile(r"^[A-Za-z0-9_-]{10,150}$")
