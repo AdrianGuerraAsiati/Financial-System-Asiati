@@ -55,6 +55,9 @@ def test_todos_los_detalles_usan_un_solo_dialog_y_limpian_por_empresa():
     assert "const solicitud = ++carteraDetalleSolicitud;" in appjs
     assert "if (consultada !== empresaId() || solicitud !== carteraDetalleSolicitud)" in appjs
     assert "Pagado confirmado: sin verificar" in aportes
+    assert "verGmsDelCliente" in appjs
+    assert 'data-cliente=' in appjs
+    assert "La coincidencia por cliente no demuestra a cuál GM" in appjs
     assert "Faltante real: no calculable" in aportes
 
 
