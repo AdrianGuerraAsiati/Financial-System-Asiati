@@ -364,6 +364,13 @@
           <label for="cartera-drive-buscar">Buscar número de OC
             <input id="cartera-drive-buscar" placeholder="Ej. GM607" maxlength="50" autocomplete="off">
           </label>
+          <label for="cartera-drive-orden">Ordenar por
+            <select id="cartera-drive-orden" name="orden" aria-label="Ordenar órdenes por última modificación">
+              <option value="fecha_desc" selected>Más recientes primero</option>
+              <option value="fecha_asc">Más antiguas primero</option>
+              <option value="oc_asc">Número de OC (A–Z)</option>
+            </select>
+          </label>
           <button type="submit">Buscar</button>
         </form>
         <p id="cartera-drive-resumen" class="table-footnote">El inventario se lee desde PostgreSQL, no directamente desde Google Drive.</p>
