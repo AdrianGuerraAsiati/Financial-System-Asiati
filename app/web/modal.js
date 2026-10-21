@@ -61,7 +61,12 @@
   }
   function open({title="Detalle",subtitle:description="",content=null,size="wide",onClose}={}) {
     ensure();
-    if(node.open) {node.close();teardown();}
+    // La tecla Escape puede cerrar <dialog> antes de que el evento close se despache.
+    // Limpiar igualmente la vista anterior antes de abrir una nueva.
+    if(active) {
+      if(node.open) node.close();
+      teardown();
+    }
     returnFocus=document.activeElement;
     callback=onClose||null;
     heading.textContent=title;
