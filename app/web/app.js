@@ -1721,6 +1721,69 @@ function normalizarBusquedaCartera(valor) {
   return String(valor ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CO");
 }
 
+// Cada listado comparte búsqueda, estado (cuando existe), conteo y navegación.
+// No se generan saldos financieros ni se consultan empresas sin autorización.
+const paginadorMora = window.CarteraPaginacion.crear({
+  id: "mora", destino: "#mora-body", columnas: 5,
+  textoVacio: "No hay registros de mora.",
+  campos: (r) => [r.cliente, r.empresa, r.monto, r.estado, r.observacion],
+  estado: (r) => r.estado,
+  plantilla: (r) => '<tr><td>' + escapar(r.cliente) + '</td><td>' + escapar(r.empresa) +
+    '</td><td>' + formatearDecimal(r.monto) + '</td><td>' + escapar(r.estado) +
+    '</td><td>' + escapar(r.observacion) + '</td></tr>',
+});
+const paginadorProyeccion = window.CarteraPaginacion.crear({
+  id: "proyeccion", destino: "#proyeccion-body", columnas: 7,
+  textoVacio: "No hay proyecciones.",
+  campos: (r) => [r.fecha, r.oc, r.cliente, r.pais, r.monto, r.comercial, r.estado],
+  estado: (r) => r.estado,
+  plantilla: (r) => '<tr><td>' + escapar(r.fecha) + '</td><td>' + escapar(r.oc) +
+    '</td><td>' + escapar(r.cliente) + '</td><td>' + escapar(r.pais) +
+    '</td><td>' + formatearDecimal(r.monto) + '</td><td>' +
+    escapar(r.comercial) + '</td><td>' + escapar(r.estado) + '</td></tr>',
+});
+const paginadorPendientes = window.CarteraPaginacion.crear({
+  id: "pendientes", destino: "#pendientes-lista",
+  textoVacio: "No hay comprobantes pendientes.",
+  campos: (r) => [r.oc, r.cliente, r.pais, r.comercial, r.nombre_archivo, r.estado_auditoria, r.monto_esperado],
+  estado: (r) => r.estado_auditoria,
+  plantilla: (r) => '<article class="proof-card"><strong>' +
+    escapar(r.oc) + ' · ' + escapar(r.cliente) + '</strong><p>' +
+    escapar(r.nombre_archivo) + '</p><p>USD ' +
+    formatearDecimal(r.monto_esperado) + ' · ' + escapar(r.estado_auditoria) +
+    '</p><p><a href="/api/v1/cartera/comprobantes/' + encodeURIComponent(r.id) +
+    '/archivo?empresa_id=' + encodeURIComponent(empresaId()) +
+    '" target="_blank" rel="noopener noreferrer">Ver soporte</a></p></article>',
+});
+const paginadorSnapshots = window.CarteraPaginacion.crear({
+  id: "snapshots", destino: "#cartera-snapshots-lista",
+  textoVacio: "Todavía no hay capturas guardadas.",
+  remoto: true, contexto: () => empresaId(),
+  campos: (r) => [r.id, r.contenido_hash],
+  consulta: async ({limit, offset, buscar}) =>
+    api('/api/v1/cartera/snapshots?' + new URLSearchParams({
+      empresa_id: String(empresaId()), limit: String(limit), offset: String(offset), buscar
+    })),
+  plantilla: (r) => '<article class="proof-card"><strong>Captura #' +
+    escapar(String(r.id)) + '</strong><p>' +
+    escapar(r.guardado_en ? new Date(r.guardado_en).toLocaleString("es-CO") : "Sin fecha") +
+    '</p><p>' + escapar(String(r.operaciones)) + ' operaciones · ' +
+    escapar(String(r.registros_mora)) + ' mora · ' + escapar(String(r.proyecciones)) +
+    ' proyecciones</p><p>' + escapar(String(r.filas)) + ' filas · hash ' +
+    escapar(String(r.contenido_hash).slice(0, 12)) + '…</p></article>',
+});
+const carteraCalidadResumen = document.createElement("div");
+carteraCalidadContenido.before(carteraCalidadResumen);
+const paginadorCalidad = window.CarteraPaginacion.crear({
+  id: "calidad", destino: "#cartera-calidad-contenido", tamaño: 10,
+  textoVacio: "No hay observaciones de calidad.",
+  campos: (r) => [r.codigo, nombreCasoCalidadCartera(r.codigo), r.cantidad, r.valor],
+  plantilla: (r) => '<article class="proof-card"><strong>' +
+    escapar(nombreCasoCalidadCartera(r.codigo)) + '</strong><p>' +
+    escapar(String(r.cantidad)) + ' registro(s) · valor asociado USD ' +
+    formatearDecimal(r.valor) + '</p><p>Código: ' + escapar(r.codigo) + '</p></article>',
+});
+
 function renderizarOperacionesCartera() {
   const termino = normalizarBusquedaCartera(carteraOperacionesBuscar.value.trim());
   const carteraOperacionesFiltradas = termino
