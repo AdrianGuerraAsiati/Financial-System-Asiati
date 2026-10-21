@@ -1,4 +1,4 @@
-{$ASIATI_DOMAIN} {
+{$ASIATI_DOMAIN}, financial.asiaticorp.com {
     encode zstd gzip
     reverse_proxy api:8000
 }

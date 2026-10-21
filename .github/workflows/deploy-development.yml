@@ -24,6 +24,7 @@ env:
   LIGHTSAIL_INSTANCE: financial-system-asiati-dev
   LIGHTSAIL_HOST: 3.141.226.208
   DEVELOPMENT_DOMAIN: 3-141-226-208.sslip.io
+  CORPORATE_DOMAIN: financial.asiaticorp.com
   DEV_DATA_BUCKET: financial-system-asiati-dev-data-890876258895
   DEV_COMPRAS_S3_KEY: dev/compras/source/INFORME_COMPRAS_2024_2026.xlsx
   DEV_COMPRAS_LOCAL_NAME: INFORME_COMPRAS_2024_2026_DEV.xlsx
@@ -559,15 +560,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for _ in $(seq 1 30); do
-            if curl -fsS "https://$DEVELOPMENT_DOMAIN/ready" | grep -q '"ready"'; then
-              curl -fsS "https://$DEVELOPMENT_DOMAIN/health"
-              exit 0
+          for domain in "$DEVELOPMENT_DOMAIN" "$CORPORATE_DOMAIN"; do
+            ready=0
+            for _ in $(seq 1 30); do
+              if curl -fsS --connect-timeout 5 --max-time 15 "https://$domain/ready" | grep -q '"ready"'; then
+                curl -fsS --connect-timeout 5 --max-time 15 "https://$domain/health"
+                ready=1
+                break
+              fi
+              sleep 5
+            done
+            if [[ "$ready" != "1" ]]; then
+              echo "HTTPS no respondió correctamente para $domain." >&2
+              exit 1
             fi
-            sleep 5
           done
-          echo "El entorno de desarrollo no pasó el healthcheck HTTPS." >&2
-          exit 1
 
       - name: Deployment summary
         if: always()
@@ -579,4 +586,5 @@ jobs:
             printf '%s\n' "- Instance: $LIGHTSAIL_INSTANCE"
             printf '%s\n' "- Host: ${{ steps.ssh.outputs.host }}"
             printf '%s\n' "- URL: https://$DEVELOPMENT_DOMAIN/"
+            printf '%s\n' "- URL corporativa: https://$CORPORATE_DOMAIN/"
           } >> "$GITHUB_STEP_SUMMARY"
