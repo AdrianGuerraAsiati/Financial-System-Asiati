@@ -1512,49 +1512,26 @@ async function cargarEstadoFuenteCartera() {
 }
 
 async function cargarDescubrimientoCartera() {
-  carteraDescubrimientoContenido.innerHTML =
-    '<p class="empty">Inspeccionando pestañas y encabezados…</p>';
+  carteraDescubrimientoResumen.textContent = "Inspeccionando pestañas y encabezados…";
+  const consultada = empresaId();
   try {
-    const resultado = await api(
-      `/api/v1/cartera/fuente/descubrir?empresa_id=${empresaId()}`
-    );
+    const resultado = await api("/api/v1/cartera/fuente/descubrir?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return null;
     const hojas = resultado.hojas || [];
     const candidatos = hojas.flatMap((hoja) =>
       (hoja.candidatos || []).map((candidato) => ({
-        ...candidato,
-        hoja: hoja.titulo,
+        ...candidato, hoja: hoja.titulo
       }))
-    );
-    const exactos = candidatos.filter((item) => item.coincide === true);
-    const parciales = candidatos.filter((item) => item.coincide !== true);
-
-    carteraDescubrimientoContenido.innerHTML = `
-      <article class="proof-card">
-        <strong>${escapar(String(resultado.coincidencias_exactas ?? 0))} coincidencia(s) exacta(s)</strong>
-        <p>${escapar(String(hojas.length))} pestaña(s) inspeccionadas · solo lectura</p>
-      </article>
-      ${exactos.map((item) => `
-        <article class="proof-card">
-          <strong>${escapar(item.tipo)} · ${escapar(item.hoja)}</strong>
-          <p>Encabezado en fila ${escapar(String(item.fila_encabezado))}</p>
-          <p>Rango sugerido: <code>${escapar(item.rango_sugerido)}</code></p>
-        </article>
-      `).join("")}
-      ${parciales.map((item) => `
-        <article class="proof-card">
-          <strong>${escapar(item.tipo)} · candidato parcial · ${escapar(item.hoja)}</strong>
-          <p>Encabezado candidato en fila ${escapar(String(item.fila_encabezado))}</p>
-          <p>Faltan: ${(item.campos_faltantes || []).map(escapar).join(", ") || "—"}</p>
-        </article>
-      `).join("")}
-      ${!candidatos.length
-        ? '<p class="empty">No se encontraron encabezados compatibles con los contratos actuales de Cartera.</p>'
-        : ""}
-    `;
+    ).sort((a, b) => Number(b.coincide === true) - Number(a.coincide === true));
+    carteraDescubrimientoResumen.textContent =
+      String(resultado.coincidencias_exactas || 0) + " coincidencias exactas · " +
+      hojas.length + " pestañas inspeccionadas · solo lectura";
+    paginadorDescubrimiento.actualizar(candidatos);
     return resultado;
   } catch (error) {
-    carteraDescubrimientoContenido.innerHTML =
-      `<p class="empty">${escapar(error.message)}</p>`;
+    if (consultada !== empresaId()) return null;
+    carteraDescubrimientoResumen.textContent = "No se pudo inspeccionar la fuente.";
+    paginadorDescubrimiento.fallo(error.message);
     return null;
   }
 }
@@ -1735,6 +1712,22 @@ const paginadorSnapshots = window.CarteraPaginacion.crear({
     escapar(String(r.registros_mora)) + ' mora · ' + escapar(String(r.proyecciones)) +
     ' proyecciones</p><p>' + escapar(String(r.filas)) + ' filas · hash ' +
     escapar(String(r.contenido_hash).slice(0, 12)) + '…</p></article>',
+});
+const carteraDescubrimientoResumen = document.createElement("div");
+carteraDescubrimientoContenido.before(carteraDescubrimientoResumen);
+const paginadorDescubrimiento = window.CarteraPaginacion.crear({
+  id: "descubrimiento", destino: "#cartera-descubrimiento-contenido",
+  textoVacio: "No se encontraron encabezados compatibles con los contratos actuales.",
+  campos: (r) => [r.tipo, r.hoja, r.rango_sugerido, r.campos_faltantes?.join(" "), r.fila_encabezado],
+  estado: (r) => r.coincide === true ? "Coincidencia exacta" : "Candidato parcial",
+  plantilla: (r) => '<article class="proof-card"><strong>' +
+    escapar(r.tipo) + ' · ' + escapar(r.hoja) + ' · ' +
+    (r.coincide === true ? "Coincidencia exacta" : "Candidato parcial") +
+    '</strong><p>Encabezado en fila ' + escapar(String(r.fila_encabezado)) +
+    '</p>' + (r.coincide === true
+      ? '<p>Rango sugerido: <code>' + escapar(r.rango_sugerido) + '</code></p>'
+      : '<p>Faltan: ' + (r.campos_faltantes || []).map(escapar).join(", ") + '</p>') +
+    '</article>',
 });
 const carteraCalidadResumen = document.createElement("div");
 carteraCalidadContenido.before(carteraCalidadResumen);
