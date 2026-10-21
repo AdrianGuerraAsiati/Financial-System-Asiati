@@ -125,3 +125,23 @@ def test_preflight_rechaza_falta_de_permiso_y_archivo_en_lugar_de_carpeta():
         GoogleDriveInventario(
             ClientePreflight(200, "application/pdf")
         ).verificar_acceso_raiz("folder_root_0001")
+
+def test_modelo_documental_resuelve_empresa_en_proceso_cli_aislado():
+    """La sincronización no importa app.main; debe registrar por sí misma la FK."""
+    import subprocess
+    import sys
+
+    codigo = (
+        "from app.motores.cartera_ocs.drive_index import DocumentoDriveOC; "
+        "from app.core.db import Base; "
+        "assert 'empresas' in Base.metadata.tables; "
+        "assert {fk.column.table.name for fk in "
+        "DocumentoDriveOC.__table__.c.empresa_id.foreign_keys} == {'empresas'}"
+    )
+    resultado = subprocess.run(
+        [sys.executable, "-c", codigo],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert resultado.returncode == 0, resultado.stderr
