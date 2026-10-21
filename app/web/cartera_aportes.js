@@ -211,8 +211,7 @@
       metrica("Primera fecha prevista",fechaLegible(actual.aportes[0].fecha)),
       metrica("Última fecha prevista",fechaLegible(
         actual.aportes[actual.aportes.length - 1].fecha)),
-      metrica("Participación en el total filtrado",
-        porcentajeTexto(actual.monto,listaActual.reduce((n,i)=>n+i.monto,0n))),
+      metrica("Importe previsto en esta GM",moneda(actual.monto)),
       metrica("Fechas / registros",actual.aportes.length + " / " + actual.filas)
     );
     detalle.appendChild(metadatos);
@@ -272,14 +271,13 @@
         cargado ? "No se encontraron OC con proyecciones para estos filtros." :
         "No hay proyecciones consultadas."));
     }
-    const totalFiltrado = listaActual.reduce((acum,oc)=>acum+oc.monto,0n);
     for (const oc of visibles) {
       const boton = nodo("button","cartera-aportes-oc");
       boton.type = "button";
       boton.setAttribute("aria-pressed",String(oc.oc === seleccionado));
       if (oc.oc === seleccionado) boton.classList.add("is-selected");
       const linea = nodo("span","cartera-aportes-oc-titular");
-      linea.append(nodo("strong",null,oc.oc),nodo("span",null,moneda(oc.monto)));
+      linea.append(nodo("strong",null,oc.oc),nodo("span",null,"Programado " + moneda(oc.monto)));
       const subtitulo = nodo("small",null,
         (oc.clientes.join(", ") || "Cliente no informado") + " · " +
         oc.filas + (oc.filas === 1 ? " registro de origen" : " registros de origen"));
@@ -287,9 +285,7 @@
       cronograma.append(nodo("span",null,
         "Primera fecha: " + fechaLegible(oc.aportes[0].fecha)),
         nodo("span",null,oc.aportes.length + (oc.aportes.length === 1 ?
-          " fecha programada" : " fechas programadas")),
-        nodo("span",null,porcentajeTexto(oc.monto,totalFiltrado) +
-          " del importe filtrado"));
+          " fecha programada" : " fechas programadas")));
       const progreso = nodo("span","cartera-avance-sin-conciliar");
       progreso.append(
         nodo("span",null,"Pagado confirmado: sin verificar"),
