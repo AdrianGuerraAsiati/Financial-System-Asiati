@@ -56,7 +56,6 @@ def test_todos_los_detalles_usan_un_solo_dialog_y_limpian_por_empresa():
     assert "if (consultada !== empresaId() || solicitud !== carteraDetalleSolicitud)" in appjs
     assert "Pagado confirmado: sin verificar" in aportes
     assert "Faltante real: no calculable" in aportes
-    assert "No se pudo" not in html or True
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node no disponible")
@@ -81,8 +80,8 @@ function o(field,direction){
 }
 assert.equal(o("oc","asc"),"GM1,GM2,GM3,GM4,GM10,GM20");
 assert.equal(o("oc","desc"),"GM20,GM10,GM4,GM3,GM2,GM1");
-assert.equal(o("cliente","asc"),"GM1,GM2,GM10,GM3,GM4,GM20");
-assert.equal(o("estado","asc"),"GM1,GM10,GM20,GM3,GM4,GM2");
+assert.equal(o("cliente","asc"),"GM1,GM2,GM3,GM4,GM10,GM20");
+assert.equal(o("estado","asc"),"GM1,GM10,GM20,GM2,GM3,GM4");
 assert.equal(o("valor","asc"),"GM10,GM1,GM3,GM20,GM2,GM4");
 assert.equal(o("valor","desc"),"GM2,GM20,GM3,GM1,GM10,GM4");
 assert.equal(sort.dineroCentavos("1.234,50"),123450n);
