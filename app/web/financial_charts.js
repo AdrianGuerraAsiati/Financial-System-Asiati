@@ -26,7 +26,7 @@
       : null;
   }
 
-  function crearGrafica({ titulo, subtitulo, fuente, sello, filas, sinDatos }) {
+  function crearGrafica({ titulo, subtitulo, fuente, sello, filas, sinDatos, unidad = "registros" }) {
     const card = elemento("article", "finance-chart-card");
     const header = elemento("div", "finance-chart-header");
     const name = elemento("div");
@@ -54,7 +54,7 @@
       row.appendChild(elemento("span", "finance-bar-label", fila.etiqueta));
       const control = elemento("button", "finance-bar-track");
       control.type = "button";
-      control.setAttribute("aria-label", fila.etiqueta + ": " + numero.format(fila.valor) + " registros");
+      control.setAttribute("aria-label", fila.etiqueta + ": " + numero.format(fila.valor) + " " + unidad);
       control.setAttribute("aria-pressed", "false");
       control.title = fila.etiqueta + " · " + numero.format(fila.valor);
       const relleno = elemento("span", "finance-bar-fill");
@@ -63,7 +63,7 @@
       control.addEventListener("click", () => {
         botones.forEach((b) => b.setAttribute("aria-pressed", "false"));
         control.setAttribute("aria-pressed", "true");
-        foco.textContent = fila.etiqueta + ": " + numero.format(fila.valor) + " registros. " + (fila.nota || "");
+        foco.textContent = fila.etiqueta + ": " + numero.format(fila.valor) + " " + unidad + ". " + (fila.nota || "");
       });
       botones.push(control);
       row.appendChild(control);
@@ -137,6 +137,7 @@
       const periodo = s.ultimo_periodo;
       grid.appendChild(crearGrafica({
         titulo: "Hallazgos · Conciliación",
+        unidad: "hallazgos",
         subtitulo: "Críticos abiertos es un subconjunto de hallazgos abiertos; no sumar las barras.",
         sello: "Último período",
         fuente: "Origen: hallazgos de conciliación" +
@@ -153,6 +154,7 @@
     const visibles = modulos.filter((m) => typeof m.disponible === "boolean");
     grid.appendChild(crearGrafica({
       titulo: "Cobertura de información",
+      unidad: "módulos",
       subtitulo: "Módulos permitidos para esta sesión, separados por disponibilidad de datos.",
       sello: "Acceso actual",
       fuente: "Origen: dashboard/principal · empresa seleccionada · consulta actual",
