@@ -1560,28 +1560,8 @@ async function cargarDescubrimientoCartera() {
 }
 
 async function cargarSnapshotsCartera() {
-  carteraSnapshotsLista.innerHTML = '<p class="empty">Cargando capturas…</p>';
-  try {
-    const respuesta = await api(
-      `/api/v1/cartera/snapshots?empresa_id=${empresaId()}&limit=20`
-    );
-    const items = respuesta.items || [];
-    carteraSnapshotsLista.innerHTML = items.length
-      ? items.map((item) => `
-          <article class="proof-card">
-            <strong>Captura #${escapar(String(item.id))}</strong>
-            <p>${escapar(new Date(item.guardado_en).toLocaleString("es-CO"))}</p>
-            <p>${escapar(String(item.operaciones))} operaciones · ${escapar(String(item.registros_mora))} mora · ${escapar(String(item.proyecciones))} proyecciones</p>
-            <p>${escapar(String(item.filas))} filas · hash ${escapar(String(item.contenido_hash).slice(0, 12))}…</p>
-          </article>
-        `).join("")
-      : '<p class="empty">Todavía no hay capturas guardadas.</p>';
-    return respuesta;
-  } catch (error) {
-    carteraSnapshotsLista.innerHTML =
-      `<p class="empty">${escapar(error.message)}</p>`;
-    return null;
-  }
+  // Paginación y búsqueda en PostgreSQL, no solo las primeras 20 capturas.
+  return paginadorSnapshots.cargar();
 }
 
 async function guardarSnapshotCartera() {
@@ -1598,7 +1578,7 @@ async function guardarSnapshotCartera() {
         : `La captura #${respuesta.snapshot.id} ya existía`,
       "ok"
     );
-    await cargarSnapshotsCartera();
+    await paginadorSnapshots.primera();
   } catch (error) {
     setEstado(error.message, "error");
   } finally {
@@ -1619,44 +1599,30 @@ function nombreCasoCalidadCartera(codigo) {
 }
 
 async function cargarCalidadCartera() {
-  carteraCalidadContenido.innerHTML = '<p class="empty">Validando calidad…</p>';
+  carteraCalidadResumen.textContent = "Validando calidad…";
+  const consultada = empresaId();
   try {
-    const calidad = await api(
-      `/api/v1/cartera/calidad?empresa_id=${empresaId()}`
-    );
+    const calidad = await api("/api/v1/cartera/calidad?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return null;
     const detalle = calidad.detalle || [];
-    carteraCalidadContenido.innerHTML = detalle.length
-      ? `
-        <article class="proof-card">
-          <strong>${escapar(String(calidad.casos))} tipos de observación</strong>
-          <p>${escapar(String(calidad.registros))} registros revisados. Una línea puede aparecer en más de una validación.</p>
-        </article>
-        ${detalle.map((caso) => `
-          <article class="proof-card">
-            <strong>${escapar(nombreCasoCalidadCartera(caso.codigo))}</strong>
-            <p>${escapar(String(caso.cantidad))} registro(s) · valor asociado USD ${formatearDecimal(caso.valor)}</p>
-            <p>Código: ${escapar(caso.codigo)}</p>
-          </article>
-        `).join("")}
-      `
-      : `
-        <article class="proof-card">
-          <strong>Sin observaciones de calidad</strong>
-          <p>${escapar(String(calidad.registros))} registros revisados con las cuatro validaciones heredadas.</p>
-        </article>
-      `;
+    carteraCalidadResumen.textContent =
+      String(calidad.casos || 0) + " tipos de observación · " +
+      String(calidad.registros || 0) +
+      " registros revisados. Una línea puede figurar en varias validaciones.";
+    paginadorCalidad.actualizar(detalle);
     return calidad;
   } catch (error) {
-    carteraCalidadContenido.innerHTML =
-      `<p class="empty">${escapar(error.message)}</p>`;
+    if (consultada !== empresaId()) return null;
+    carteraCalidadResumen.textContent = "No se pudo revisar la calidad.";
+    paginadorCalidad.fallo(error.message);
     return null;
   }
 }
 
 function mostrarFuenteNoDisponible(tipo) {
   if (tipo === "OPERACIONES") {
-    carteraCalidadContenido.innerHTML =
-      '<p class="empty">La calidad se valida cuando Operaciones está disponible.</p>';
+    carteraCalidadResumen.textContent = "La calidad se valida cuando Operaciones está disponible.";
+    paginadorCalidad.fallo("La fuente de Operaciones no está disponible.");
     carteraOperacionesRows = [];
     carteraOperacionesPagina = 1;
     renderizarOperacionesCartera();
@@ -1666,13 +1632,11 @@ function mostrarFuenteNoDisponible(tipo) {
     return;
   }
   if (tipo === "MORA") {
-    moraBody.innerHTML =
-      '<tr><td colspan="5" class="empty">La fuente de Mora todavía no está disponible.</td></tr>';
+    paginadorMora.fallo("La fuente de Mora todavía no está disponible.");
     return;
   }
   if (tipo === "PROYECCION") {
-    proyeccionBody.innerHTML =
-      '<tr><td colspan="7" class="empty">La fuente de Proyección todavía no está disponible.</td></tr>';
+    paginadorProyeccion.fallo("La fuente de Proyección todavía no está disponible.");
   }
 }
 
@@ -1852,48 +1816,30 @@ async function cargarOperaciones() {
 
 async function cargarMora() {
   setEstado("Consultando mora…");
-  moraBody.innerHTML = '<tr><td colspan="5" class="empty">Consultando…</td></tr>';
+  const consultada = empresaId();
   try {
-    const rows = await api(`/api/v1/cartera/mora?empresa_id=${empresaId()}`);
-    moraBody.innerHTML = rows.length
-      ? rows.map((row) => `
-          <tr>
-            <td>${escapar(row.cliente)}</td>
-            <td>${escapar(row.empresa)}</td>
-            <td>${formatearDecimal(row.monto)}</td>
-            <td>${escapar(row.estado)}</td>
-            <td>${escapar(row.observacion)}</td>
-          </tr>
-        `).join("")
-      : '<tr><td colspan="5" class="empty">No hay registros de mora.</td></tr>';
+    const rows = await api("/api/v1/cartera/mora?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return;
+    paginadorMora.actualizar(rows);
     setEstado("Mora actualizada", "ok");
   } catch (error) {
-    moraBody.innerHTML = `<tr><td colspan="5" class="empty">${escapar(error.message)}</td></tr>`;
+    if (consultada !== empresaId()) return;
+    paginadorMora.fallo(error.message);
     setEstado(error.message, "error");
   }
 }
 
 async function cargarProyeccion() {
   setEstado("Consultando proyección…");
-  proyeccionBody.innerHTML = '<tr><td colspan="7" class="empty">Consultando…</td></tr>';
+  const consultada = empresaId();
   try {
-    const rows = await api(`/api/v1/cartera/proyeccion?empresa_id=${empresaId()}`);
-    proyeccionBody.innerHTML = rows.length
-      ? rows.map((row) => `
-          <tr>
-            <td>${escapar(row.fecha)}</td>
-            <td>${escapar(row.oc)}</td>
-            <td>${escapar(row.cliente)}</td>
-            <td>${escapar(row.pais)}</td>
-            <td>${formatearDecimal(row.monto)}</td>
-            <td>${escapar(row.comercial)}</td>
-            <td>${escapar(row.estado)}</td>
-          </tr>
-        `).join("")
-      : '<tr><td colspan="7" class="empty">No hay proyecciones.</td></tr>';
+    const rows = await api("/api/v1/cartera/proyeccion?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return;
+    paginadorProyeccion.actualizar(rows);
     setEstado("Proyección actualizada", "ok");
   } catch (error) {
-    proyeccionBody.innerHTML = `<tr><td colspan="7" class="empty">${escapar(error.message)}</td></tr>`;
+    if (consultada !== empresaId()) return;
+    paginadorProyeccion.fallo(error.message);
     setEstado(error.message, "error");
   }
 }
@@ -1932,24 +1878,15 @@ async function cargarDetalle(oc) {
 }
 
 async function cargarPendientes() {
-  pendientesLista.innerHTML = '<p class="empty">Consultando…</p>';
+  const consultada = empresaId();
   try {
-    const rows = await api(
-      `/api/v1/cartera/comprobantes/pendientes?empresa_id=${empresaId()}`
-    );
-    pendientesLista.innerHTML = rows.length
-      ? rows.map((item) => `
-          <article class="proof-card">
-            <strong>${escapar(item.oc)} · ${escapar(item.cliente)}</strong>
-            <p>${escapar(item.nombre_archivo)}</p>
-            <p>USD ${formatearDecimal(item.monto_esperado)} · ${escapar(item.estado_auditoria)}</p>
-            <p><a href="/api/v1/cartera/comprobantes/${item.id}/archivo?empresa_id=${empresaId()}" target="_blank" rel="noopener">Ver soporte</a></p>
-          </article>
-        `).join("")
-      : '<p class="empty">No hay comprobantes pendientes.</p>';
+    const rows = await api("/api/v1/cartera/comprobantes/pendientes?empresa_id=" + consultada);
+    if (consultada !== empresaId()) return;
+    paginadorPendientes.actualizar(rows);
     setEstado("Bandeja actualizada", "ok");
   } catch (error) {
-    pendientesLista.innerHTML = `<p class="empty">${escapar(error.message)}</p>`;
+    if (consultada !== empresaId()) return;
+    paginadorPendientes.fallo(error.message);
     setEstado(error.message, "error");
   }
 }
