@@ -15,6 +15,10 @@ th{background:#f3f7fa;color:#30465a}td a{color:#005b8f;overflow-wrap:anywhere}
 button{background:#005b8f;color:white;border:none;border-radius:7px;padding:10px 15px;cursor:pointer;font-weight:650}
 button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,a:focus-visible{outline:3px solid #f4cf22;outline-offset:3px}
 .toolbar{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+.toolbar label{display:grid;gap:5px;font-size:12px;color:#57534e}
+.toolbar input,.toolbar select{padding:10px 12px;border:1px solid #e8e6e5;border-radius:8px;background:white;color:#1c1917;min-height:38px}
+.toolbar input{min-width:min(320px,80vw)}
+input:focus-visible,select:focus-visible{outline:3px solid #3ba6f1;outline-offset:2px}
 .scroller{overflow-x:auto}.note{background:#fff8d7;padding:12px;border-radius:8px;color:#594900}
 </style>
 </head>
@@ -25,6 +29,12 @@ button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,a:focus-visib
 <p class="muted">Consulta documental para administración global. Se muestran las revisiones registradas durante la última sincronización autorizada; esta vista no representa cartera, vencimientos ni pagos confirmados.</p>
 <section class="panel">
 <div class="toolbar"><div><strong id="total">—</strong> registros documentales en PostgreSQL</div><button id="reload" type="button">Consultar inventario</button></div>
+<div class="toolbar" style="justify-content:flex-start;margin:16px 0">
+<label for="buscar">Buscar OC, documento o carpeta
+<input id="buscar" type="search" placeholder="OC, nombre de archivo o ruta" autocomplete="off" maxlength="100"></label>
+<label for="tamano">Registros por página
+<select id="tamano"><option value="10">10</option><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option></select></label>
+</div>
 <p id="estado" role="status" aria-live="polite" class="muted">Consultando la base de datos…</p>
 <div class="scroller"><table><thead><tr><th>O.C. candidata</th><th>Documento</th><th>Ruta en Drive</th><th>Revisión</th><th>Estado</th><th>Original</th></tr></thead><tbody id="filas"></tbody></table></div>
 <div class="toolbar" style="margin-top:15px"><span class="muted" id="pagina"></span><div><button id="prev" type="button">Anterior</button> <button id="next" type="button">Siguiente</button></div></div>
@@ -33,18 +43,21 @@ button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,a:focus-visib
 </main>
 <script>
 const endpoint="/api/v1/cartera/ocs/drive/inventario";
-const pageSize=50;let offset=0,total=0;
+let pageSize=50,offset=0,total=0,requestId=0;
 const el=id=>document.getElementById(id);
 function celda(tr,contenido){const td=document.createElement("td");td.textContent=contenido??"—";tr.appendChild(td);return td}
 async function cargar(){
+ const version=++requestId;
  el("reload").disabled=true;el("estado").textContent="Consultando la base de datos…";
  try{
-  const r=await fetch(endpoint+"?limit="+pageSize+"&offset="+offset,{credentials:"same-origin",headers:{"Accept":"application/json"}});
+  const query=new URLSearchParams({limit:String(pageSize),offset:String(offset),buscar:el("buscar").value.trim()});
+  const r=await fetch(endpoint+"?"+query,{credentials:"same-origin",headers:{"Accept":"application/json"}});
   if(!r.ok){
    const msg=r.status===401?"Debes iniciar sesión en la plataforma.":r.status===403?"Este inventario requiere permiso global de administración.":"No se pudo consultar el inventario (HTTP "+r.status+").";
    throw new Error(msg);
   }
-  const d=await r.json();total=d.total;el("total").textContent=String(total);
+  const d=await r.json();if(version!==requestId)return;
+  total=d.total;el("total").textContent=String(total);
   const body=el("filas");body.replaceChildren();
   for(const item of d.items){
    const tr=document.createElement("tr");
@@ -54,12 +67,17 @@ async function cargar(){
    a.textContent="Ver archivo";a.href=item.url_origen;a.target="_blank";a.rel="noopener noreferrer";
    td.appendChild(a);tr.appendChild(td);body.appendChild(tr);
   }
-  el("pagina").textContent=total?(offset+1)+"–"+Math.min(offset+d.items.length,total)+" de "+total:"No hay documentos importados";
+  if(!d.items.length&&offset>0&&total>0){offset=Math.max(0,Math.ceil(total/pageSize)-1)*pageSize;return cargar()}
+  if(!d.items.length){const tr=document.createElement("tr");const td=celda(tr,el("buscar").value.trim()?"Sin documentos con ese filtro.":"No hay documentos importados.");td.colSpan=6;body.appendChild(tr)}
+  el("pagina").textContent=total?(offset+1)+"–"+Math.min(offset+d.items.length,total)+" de "+total:"Sin resultados";
   el("estado").textContent="Consulta completada. Fuente: índice PostgreSQL; no es lectura en vivo de Drive.";
   el("prev").disabled=offset===0;el("next").disabled=offset+pageSize>=total;
- }catch(e){el("estado").textContent=e.message;el("prev").disabled=true;el("next").disabled=true}
- finally{el("reload").disabled=false}
+ }catch(e){if(version!==requestId)return;el("estado").textContent=e.message;el("prev").disabled=true;el("next").disabled=true}
+ finally{if(version===requestId)el("reload").disabled=false}
 }
+let debounce;
+el("buscar").addEventListener("input",()=>{clearTimeout(debounce);debounce=setTimeout(()=>{offset=0;cargar()},300)});
+el("tamano").addEventListener("change",()=>{pageSize=Number(el("tamano").value)||50;offset=0;cargar()});
 el("reload").onclick=()=>cargar();
 el("prev").onclick=()=>{offset=Math.max(0,offset-pageSize);cargar()};
 el("next").onclick=()=>{offset+=pageSize;cargar()};
