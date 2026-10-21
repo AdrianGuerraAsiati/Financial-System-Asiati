@@ -1,0 +1,131 @@
+/* ASIATI 360 · Sistema visual v2 (basado en DESIGN Seline, sin cambiar lógica)
+   La capa es progresiva: tokens compartidos y componentes financieros del Inicio. */
+:root {
+  --finance-canvas: #fafaf9;
+  --finance-surface: #ffffff;
+  --finance-border: #e8e6e5;
+  --finance-muted: #78716c;
+  --finance-ink: #0c0a09;
+  --finance-signal: #3ba6f1;
+  --finance-signal-hover: #3398e1;
+  --finance-wash: #c1e1f7;
+  --finance-soot: #1c1917;
+  --finance-radius-card: 10px;
+  --finance-radius-button: 9999px;
+  --finance-shadow: 0 4px 16px rgba(0,0,0,.05);
+  --bg: var(--finance-canvas);
+  --bg-subtle: #f5f5f4;
+  --surface-muted: #fafaf9;
+  --ink: var(--finance-ink);
+  --ink-soft: #44403c;
+  --muted-strong: var(--finance-muted);
+  --line: var(--finance-border);
+  --line-strong: #d6d3d1;
+  --accent: var(--finance-signal);
+  --accent-hover: var(--finance-signal-hover);
+  --accent-soft: #eaf6fe;
+}
+html, body {background:var(--finance-canvas);}
+body {background:var(--finance-canvas); color:var(--finance-ink);}
+#app-shell .topbar {background:rgba(255,255,255,.98);border-bottom-color:var(--finance-border);box-shadow:none;}
+#app-shell .layout {grid-template-columns:232px minmax(0,1fr);}
+#app-shell .sidebar {background:var(--finance-surface); border-right:1px solid var(--finance-border);box-shadow:none;}
+#app-shell .sidebar-section-label, #app-shell .sidebar-footer {color:#a8a29e;}
+#app-shell .sidebar-footer {border-color:var(--finance-border);}
+#app-shell .nav-item {color:#57534e;border-radius:10px;box-shadow:none;}
+#app-shell .nav-item .nav-icon {color:#78716c;background:#f5f5f4;}
+#app-shell .nav-item:not(:disabled):hover {color:var(--finance-ink);background:#f5f5f4;}
+#app-shell .nav-item.active {background:var(--finance-soot);color:#fff;border-color:var(--finance-soot);box-shadow:none;}
+#app-shell .nav-item.active .nav-icon {color:var(--finance-signal);background:rgba(255,255,255,.12);}
+#app-shell .nav-item.active::before {content:none;}
+#app-shell .sidebar .nav-badge {background:#f5f5f4;color:#78716c;border:1px solid var(--finance-border);}
+#app-shell .sidebar .nav-item.active .nav-badge {background:#44403c;color:#fff;}
+#app-shell .content {max-width:1600px;padding:28px clamp(14px,3vw,40px) 48px;}
+#app-shell .intro h2 {font-family:"Inter Tight",Inter,system-ui,sans-serif;font-size:clamp(27px,2.8vw,36px);font-weight:400;letter-spacing:-.035em;line-height:1.18;}
+#app-shell .intro p {color:var(--finance-muted);}
+#app-shell .eyebrow {color:var(--finance-muted);font-weight:600;}
+#app-shell .panel, #app-shell .home-module-card,
+#app-shell .executive-metric-card, #app-shell .metric-card {
+  background:var(--finance-surface);border:1px solid var(--finance-border);
+  border-radius:var(--finance-radius-card);box-shadow:none;
+}
+#app-shell .panel h3,#app-shell .panel-heading h3 {color:var(--finance-ink);font-weight:500;}
+#app-shell .panel-heading p, #app-shell .table-footnote {color:var(--finance-muted);}
+#app-shell th,#app-shell td {border-bottom-color:var(--finance-border);}
+#app-shell th {color:var(--finance-muted);}
+#app-shell .secondary-button, #app-shell .logout-button {
+  background:#fff;border:1px solid var(--finance-border);border-radius:var(--finance-radius-button);
+  color:var(--finance-ink);box-shadow:none;
+}
+#app-shell .secondary-button:not(:disabled):hover,#app-shell .logout-button:not(:disabled):hover {
+  border-color:#c4c0bc;background:#fafaf9;color:var(--finance-ink);
+}
+#app-shell .panel-heading button:not(.secondary-button),
+#app-shell form button:not(.secondary-button), #app-shell #inicio-actualizar,
+#app-shell .compras-header-actions > button:not(.secondary-button) {
+  border-radius:var(--finance-radius-button);border:1px solid var(--finance-signal-hover);
+  background:var(--finance-signal);color:#fff;box-shadow:none;
+}
+#app-shell .panel-heading button:not(.secondary-button):hover,
+#app-shell form button:not(.secondary-button):hover,
+#app-shell #inicio-actualizar:hover {
+  background:var(--finance-signal-hover);border-color:var(--finance-signal-hover);
+}
+#app-shell input:not([type="checkbox"]), #app-shell select {
+  border-color:#d6d3d1; border-radius:6px;background:#fff;box-shadow:none;
+}
+#app-shell button:focus-visible, #app-shell input:focus-visible,
+#app-shell select:focus-visible, #app-shell a:focus-visible,
+#app-shell summary:focus-visible {
+  outline:3px solid var(--finance-signal);outline-offset:2px;
+}
+#app-shell .table-wrap {scrollbar-color:#d6d3d1 transparent;}
+#app-shell .home-module-card:hover {border-color:#d6d3d1;box-shadow:var(--finance-shadow);}
+#app-shell .home-module-heading h3 {font-weight:500;letter-spacing:-.02em;}
+#app-shell .home-module-metrics strong, #app-shell .metric-card strong {
+  font-weight:500;font-variant-numeric:tabular-nums;
+}
+/* Sistema de gráficas: conteos observados por módulo, nunca importes agregados. */
+#vista-inicio .finance-chart-section {margin-top:22px;}
+#vista-inicio .finance-section-heading {display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+#vista-inicio .finance-section-heading h3 {margin:0;font-weight:500;font-size:20px;letter-spacing:-.02em;}
+#vista-inicio .finance-section-heading p {margin:4px 0 0;color:var(--finance-muted);font-size:12px;}
+#vista-inicio .finance-chart-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+#vista-inicio .finance-chart-card {padding:21px 23px;background:#fff;border:1px solid var(--finance-border);border-radius:var(--finance-radius-card);min-width:0;}
+#vista-inicio .finance-chart-card h4 {font-size:16px;font-weight:500;letter-spacing:-.02em;margin:0;}
+#vista-inicio .finance-chart-header {display:flex;justify-content:space-between;align-items:start;gap:10px;}
+#vista-inicio .finance-chart-provenance {font-size:11px;color:var(--finance-muted);margin:7px 0 0;line-height:1.6;}
+#vista-inicio .finance-chart-meta {border:1px solid var(--finance-border);border-radius:999px;padding:4px 9px;color:#57534e;font-size:10px;white-space:nowrap;}
+#vista-inicio .finance-chart-bars {margin:22px 0 14px;display:grid;gap:13px;}
+#vista-inicio .finance-bar-row {display:grid;grid-template-columns:minmax(100px,152px) minmax(0,1fr) minmax(40px,65px);gap:10px;align-items:center;}
+#vista-inicio .finance-bar-label {font-size:12px;color:#44403c;overflow-wrap:anywhere;}
+#vista-inicio .finance-bar-track {height:19px;width:100%;position:relative;border:0;cursor:pointer;background:#f5f5f4;border-radius:5px;padding:0;overflow:hidden;display:block;}
+#vista-inicio .finance-bar-fill {height:100%;min-width:0;background:#a8a29e;border-radius:5px;display:block;transition:width .22s ease;}
+#vista-inicio .finance-bar-row:first-child .finance-bar-fill {background:var(--finance-signal);}
+#vista-inicio .finance-bar-track:hover .finance-bar-fill,#vista-inicio .finance-bar-track[aria-pressed="true"] .finance-bar-fill {background:var(--finance-signal-hover);}
+#vista-inicio .finance-bar-value {font-size:13px;font-weight:550;font-variant-numeric:tabular-nums;text-align:right;}
+#vista-inicio .finance-chart-focus {border-top:1px solid var(--finance-border);padding-top:12px;color:#57534e;font-size:12px;min-height:34px;}
+#vista-inicio .finance-chart-source {color:var(--finance-muted);font-size:11px;margin-top:10px;}
+#vista-inicio .finance-chart-empty {padding:24px 12px;color:var(--finance-muted);font-size:13px;background:var(--finance-canvas);border:1px dashed var(--finance-border);border-radius:8px;margin-top:16px;}
+#vista-inicio .finance-chart-table {font-size:12px;margin-top:12px;}
+#vista-inicio .finance-chart-table summary {cursor:pointer;color:#44403c;font-size:12px;}
+#vista-inicio .finance-chart-table th,#vista-inicio .finance-chart-table td {padding:7px 9px;font-size:12px;}
+#vista-inicio .finance-chart-table table {margin-top:8px;}
+@media(max-width:1100px) {
+  #vista-inicio .finance-chart-grid {grid-template-columns:1fr;}
+}
+@media(max-width:900px) {
+  #app-shell .layout {grid-template-columns:1fr;}
+  #app-shell .sidebar {position:static;height:auto;flex-direction:row;align-items:center;overflow-x:auto;white-space:nowrap;}
+  #app-shell .sidebar .sidebar-section-label, #app-shell .sidebar .sidebar-footer, #app-shell .sidebar .sidebar-spacer {display:none;}
+}
+@media(max-width:620px) {
+  #app-shell .content {padding:16px 12px 32px;}
+  #vista-inicio .finance-chart-card {padding:15px 13px;}
+  #vista-inicio .finance-bar-row {grid-template-columns:92px minmax(0,1fr) 46px;gap:6px;}
+  #vista-inicio .finance-chart-header {flex-wrap:wrap;}
+  #vista-inicio .finance-bar-label {font-size:11px;}
+}
+@media(prefers-reduced-motion:reduce) {
+  #vista-inicio .finance-bar-fill {transition:none;}
+}
