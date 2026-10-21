@@ -51,6 +51,11 @@ fi
 "${DC[@]}" run --rm api alembic upgrade head
 "${DC[@]}" up -d --build
 
+# La ruta del Caddyfile es un bind-mount. Tras intercambiar el directorio
+# de release se debe recrear Caddy para montar y leer el archivo nuevo.
+"${DC[@]}" run --rm --no-deps --entrypoint caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+"${DC[@]}" up -d --no-deps --force-recreate caddy
+
 ready=0
 for _ in $(seq 1 60); do
   if curl -fsS http://127.0.0.1/ready >/tmp/financial-system-ready.json 2>/dev/null; then
