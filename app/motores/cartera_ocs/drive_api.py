@@ -148,7 +148,7 @@ def soportes_de_orden_documental(
 ) -> dict[str, object]:
     """Devuelve solo la revisión actual de cada soporte identificado por GM."""
     limpio = numero_oc.strip().upper()
-    if not re.fullmatch(r"GM\\d{1,6}", limpio):
+    if not re.fullmatch(r"GM\d{1,6}", limpio):
         raise HTTPException(status_code=422, detail="Número de O.C. no válido.")
     normalizado = f"GM{int(limpio[2:])}"
     archivos = [
