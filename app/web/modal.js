@@ -4,6 +4,7 @@
   let node=null, heading=null, subtitle=null, body=null, returnFocus=null, callback=null;
   let epoch=0;
   let active=false;
+  let movedNode=null, originalParent=null, originalNext=null;
   function ensure() {
     if(node)return;
     node=document.createElement("dialog");
@@ -41,6 +42,15 @@
     active=false;++epoch;
     const done=callback;callback=null;
     body.replaceChildren();
+    // Restaurar el nodo original para que los selectores por ID y listeners
+    // sigan funcionando después de cerrar el modal.
+    if(movedNode && originalParent?.isConnected) {
+      originalParent.insertBefore(
+        movedNode,
+        originalNext?.parentNode===originalParent ? originalNext : null
+      );
+    }
+    movedNode=null;originalParent=null;originalNext=null;
     node.classList.remove("asiati-modal-wide");
     document.body.classList.remove("asiati-modal-open");
     if(typeof done==="function")done();
@@ -57,8 +67,14 @@
     heading.textContent=title;
     subtitle.textContent=description;
     body.replaceChildren();
+    movedNode=null;originalParent=null;originalNext=null;
     if(content instanceof Node) {
-      // El dueño de la vista conserva su referencia al nodo original.
+      // Reutilizar la vista existente sin perder su posición al cerrar.
+      if(content.parentNode && content.isConnected) {
+        movedNode=content;
+        originalParent=content.parentNode;
+        originalNext=content.nextSibling;
+      }
       body.appendChild(content);
       content.hidden=false;
     } else if(typeof content==="string") {
