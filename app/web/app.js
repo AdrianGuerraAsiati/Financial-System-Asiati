@@ -1616,6 +1616,7 @@ function mostrarFuenteNoDisponible(tipo) {
   if (tipo === "PROYECCION") {
     ++carteraProyeccionSolicitud;
     window.ASIATI_SCATTER?.limpiarDatos("La fuente PROYECCIONES no está disponible.");
+    window.ASIATI_APORTES?.limpiarDatos("La fuente PROYECCIONES no está disponible.");
     paginadorProyeccion.fallo("La fuente de Proyección todavía no está disponible.");
   }
 }
@@ -1624,6 +1625,7 @@ async function cargarCarteraTodo() {
   // Ocultar valores antiguos al cambiar de empresa antes de consultar Sheets.
   ++carteraProyeccionSolicitud;
   window.ASIATI_SCATTER?.limpiarDatos("Validando fuente PROYECCIONES…");
+  window.ASIATI_APORTES?.limpiarDatos("Validando fuente PROYECCIONES…");
   const estadoFuente = await cargarEstadoFuenteCartera();
   const tareas = [cargarPendientes(), cargarSnapshotsCartera()];
   // El índice documental está en PostgreSQL y funciona aunque Google Sheets esté caído.
@@ -1845,16 +1847,19 @@ async function cargarProyeccion() {
   const consultada = empresaId();
   const solicitud = ++carteraProyeccionSolicitud;
   window.ASIATI_SCATTER?.limpiarDatos("Consultando proyecciones de la empresa seleccionada…");
+  window.ASIATI_APORTES?.limpiarDatos("Consultando aportes previstos por OC…");
   try {
     const rows = await api("/api/v1/cartera/proyeccion?empresa_id=" + consultada);
     if (consultada !== empresaId() || solicitud !== carteraProyeccionSolicitud) return;
     paginadorProyeccion.actualizar(rows);
     window.ASIATI_SCATTER?.setData(rows, {empresaId: consultada});
+    window.ASIATI_APORTES?.setData(rows, {empresaId: consultada});
     setEstado("Proyección actualizada", "ok");
   } catch (error) {
     if (consultada !== empresaId() || solicitud !== carteraProyeccionSolicitud) return;
     paginadorProyeccion.fallo(error.message);
     window.ASIATI_SCATTER?.limpiarDatos("No se pudo consultar PROYECCIONES: " + error.message);
+    window.ASIATI_APORTES?.limpiarDatos("No se pudo consultar PROYECCIONES: " + error.message);
     setEstado(error.message, "error");
   }
 }
