@@ -103,6 +103,7 @@ let carteraOperacionesRows = [];
 let carteraOperacionesPagina = 1;
 const CARTERA_OPERACIONES_PAGE_SIZE = 20;
 let carteraProyeccionSolicitud = 0;
+let carteraDetalleSolicitud = 0;
 let comprasOcsOffset = 0;
 let dashboardVersiones = {};
 let dashboardVersionTimer = null;
@@ -112,6 +113,10 @@ const DASHBOARD_VERSION_POLL_MS = 10000;
 empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
   dashboardVersiones = {};
+  ++carteraDetalleSolicitud;
+  document.getElementById("detalle-operacion").hidden = true;
+  detalleContenido.textContent = "Selecciona una OC.";
+  formComprobante.elements.oc.value = "";
   if (moduloActivo === "inicio") {
     cargarDashboardPrincipal();
   } else if (moduloActivo === "cartera") {
