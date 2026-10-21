@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/asiati_v2.css">
   <link rel="stylesheet" href="/static/cartera_navegacion.css">
+  <link rel="stylesheet" href="/static/modal.css">
   <link rel="stylesheet" href="/static/inicio_cartera.css">
 </head>
 <body>
@@ -321,6 +322,20 @@
             Estado
             <select id="cartera-operaciones-estado"><option value="">Todos</option></select>
           </label>
+          <label class="cartera-page-size-label" for="cartera-operaciones-orden">Ordenar por
+            <select id="cartera-operaciones-orden" aria-label="Ordenar operaciones por">
+              <option value="oc" selected>GM / OC</option>
+              <option value="cliente">Cliente</option>
+              <option value="estado">Estado</option>
+              <option value="valor">Valor</option>
+            </select>
+          </label>
+          <label class="cartera-page-size-label" for="cartera-operaciones-direccion">Dirección
+            <select id="cartera-operaciones-direccion" class="cartera-sort-direction">
+              <option value="asc" selected>Ascendente</option>
+              <option value="desc">Descendente</option>
+            </select>
+          </label>
           <label class="cartera-page-size-label" for="cartera-operaciones-por-pagina">
             Filas por página
             <select id="cartera-operaciones-por-pagina">
@@ -334,12 +349,12 @@
           <table class="cartera-table" aria-label="Operaciones de cartera">
             <thead>
               <tr>
-                <th scope="col">OC</th>
-                <th scope="col">Cliente</th>
+                <th scope="col" data-sort-th="oc" aria-sort="ascending"><span class="cartera-sortable-heading"><button type="button" data-cartera-sort="oc" aria-label="Ordenar por OC" aria-pressed="true" data-direction="asc">OC</button></span></th>
+                <th scope="col" data-sort-th="cliente" aria-sort="none"><span class="cartera-sortable-heading"><button type="button" data-cartera-sort="cliente" aria-label="Ordenar por Cliente" aria-pressed="false" data-direction="asc">Cliente</button></span></th>
                 <th scope="col">SKU</th>
-                <th scope="col">Estado</th>
+                <th scope="col" data-sort-th="estado" aria-sort="none"><span class="cartera-sortable-heading"><button type="button" data-cartera-sort="estado" aria-label="Ordenar por Estado" aria-pressed="false" data-direction="asc">Estado</button></span></th>
                 <th scope="col">Cartera</th>
-                <th scope="col" class="cartera-money">Valor</th>
+                <th scope="col" class="cartera-money" data-sort-th="valor" aria-sort="none"><span class="cartera-sortable-heading"><button type="button" data-cartera-sort="valor" aria-label="Ordenar por Valor" aria-pressed="false" data-direction="asc">Valor</button></span></th>
                 <th scope="col">Acción</th>
               </tr>
             </thead>
@@ -375,6 +390,7 @@
               <option value="fecha_desc" selected>Más recientes primero</option>
               <option value="fecha_asc">Más antiguas primero</option>
               <option value="oc_asc">Número de OC (A–Z)</option>
+              <option value="oc_desc">Número de OC (Z–A)</option>
             </select>
           </label>
           <button type="submit">Buscar</button>
@@ -506,7 +522,7 @@
         </div>
         <div class="cartera-aportes-layout">
           <div class="cartera-aportes-principal">
-            <div class="cartera-aportes-subtitulo"><strong>Órdenes con aportes programados</strong><small>Las barras comparan el importe esperado de cada OC con la OC de mayor importe. Los colores separan fechas previstas, no pagos realizados.</small></div>
+            <div class="cartera-aportes-subtitulo"><strong>Órdenes con aportes previstos</strong><small>Selecciona una GM para consultar sus fechas previstas en un modal. No se conocen aún pagos confirmados ni saldos pendientes por GM.</small></div>
             <div class="cartera-aportes-opciones">
               <label for="cartera-aportes-orden">Ordenar OC por
                 <select id="cartera-aportes-orden">
@@ -529,7 +545,7 @@
               </div>
             </div>
           </div>
-          <aside class="cartera-aportes-detalle" aria-labelledby="cartera-aportes-detalle-titulo">
+          <aside class="cartera-aportes-detalle" id="cartera-aportes-detalle" hidden aria-labelledby="cartera-aportes-detalle-titulo">
             <h4 id="cartera-aportes-detalle-titulo">Detalle de la OC</h4>
             <div id="cartera-aportes-detalle-contenido" aria-live="polite">
               <p class="empty">Selecciona una OC para ver sus aportes por fecha.</p>
@@ -1458,6 +1474,8 @@
 
   <script src="/static/financial_charts.js" defer></script>
   <script src="/static/cartera_paginacion.js" defer></script>
+  <script src="/static/cartera_sort.js" defer></script>
+  <script src="/static/modal.js" defer></script>
   <script src="/static/cartera_scatter.js" defer></script>
   <script src="/static/cartera_aportes.js" defer></script>
   <script src="/static/cartera_navegacion.js" defer></script>

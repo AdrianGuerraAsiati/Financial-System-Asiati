@@ -101,9 +101,12 @@ const comprasFiltroMixtas = document.querySelector("#compras-filtro-mixtas");
 let moduloActivo = "inicio";
 let carteraOperacionesRows = [];
 let carteraOperacionesPagina = 1;
+const carteraOperacionesOrden = document.querySelector("#cartera-operaciones-orden");
+const carteraOperacionesDireccion = document.querySelector("#cartera-operaciones-direccion");
 const CARTERA_OPERACIONES_PAGE_SIZE = 20;
 let carteraProyeccionSolicitud = 0;
 let carteraDetalleSolicitud = 0;
+let carteraPendientesCache = [];
 let comprasOcsOffset = 0;
 let dashboardVersiones = {};
 let dashboardVersionTimer = null;
@@ -113,10 +116,12 @@ const DASHBOARD_VERSION_POLL_MS = 10000;
 empresaInput.addEventListener("change", () => {
   localStorage.setItem("asiati_empresa_id", empresaInput.value);
   dashboardVersiones = {};
+  window.ASIATI_MODAL?.close();
   ++carteraDetalleSolicitud;
   document.getElementById("detalle-operacion").hidden = true;
   detalleContenido.textContent = "Selecciona una OC.";
   formComprobante.elements.oc.value = "";
+  carteraPendientesCache = [];
   if (moduloActivo === "inicio") {
     cargarDashboardPrincipal();
   } else if (moduloActivo === "cartera") {
@@ -1867,9 +1872,46 @@ const paginadorPendientes = window.CarteraPaginacion.crear({
       : 'USD ' + formatearDecimal(r.monto_esperado)) + ' · ' +
     escapar(r.estado_auditoria === 'PENDIENTE_ASOCIACION'
       ? 'Pendiente de asociación' : r.estado_auditoria) +
-    '</p><p><a href="/api/v1/cartera/comprobantes/' + encodeURIComponent(r.id) +
-    '/archivo?empresa_id=' + encodeURIComponent(empresaId()) +
-    '" target="_blank" rel="noopener noreferrer">Ver soporte</a></p></article>',
+    '</p><p><button type="button" class="secondary-button" data-cartera-comprobante="' +
+    escapar(String(r.id)) + '">Ver detalle</button></p></article>',
+});
+document.querySelector("#pendientes-lista").addEventListener("click",(event) => {
+  const boton = event.target.closest("[data-cartera-comprobante]");
+  if(!boton)return;
+  const comprobante=carteraPendientesCache.find((c)=>String(c.id)===boton.dataset.carteraComprobante);
+  if(!comprobante)return;
+  const empresaConsultada=empresaId();
+  const contenido=document.createElement("div");
+  contenido.className="cartera-comprobante-detalle-modal";
+  const campos=[
+    ["OC / GM",comprobante.oc],
+    ["Cliente",comprobante.cliente ?? "Pendiente de asociación"],
+    ["País",comprobante.pais ?? "Sin verificar"],
+    ["Comercial",comprobante.comercial ?? "Sin verificar"],
+    ["Estado de auditoría",comprobante.estado_auditoria],
+    ["Importe esperado",comprobante.monto_esperado == null
+      ? "Sin verificar" : "USD "+formatearDecimal(comprobante.monto_esperado)],
+    ["Archivo",comprobante.nombre_archivo]
+  ];
+  for(const [etiqueta,valor] of campos){
+    const fila=document.createElement("div");
+    fila.className="cartera-comprobante-detalle-fila";
+    const dt=document.createElement("strong");dt.textContent=etiqueta;
+    const dd=document.createElement("span");dd.textContent=String(valor??"—");
+    fila.append(dt,dd);contenido.appendChild(fila);
+  }
+  const enlace=document.createElement("a");
+  enlace.className="secondary-button";
+  enlace.textContent="Abrir archivo original";
+  enlace.href="/api/v1/cartera/comprobantes/"+
+    encodeURIComponent(comprobante.id)+"/archivo?empresa_id="+encodeURIComponent(empresaConsultada);
+  enlace.target="_blank";enlace.rel="noopener noreferrer";
+  contenido.appendChild(enlace);
+  window.ASIATI_MODAL.open({
+    title:"Comprobante · "+(comprobante.oc||"sin OC"),
+    subtitle:"Soporte radicado; no constituye automáticamente un recaudo aplicado.",
+    content:contenido
+  });
 });
 const paginadorSnapshots = window.CarteraPaginacion.crear({
   id: "snapshots", destino: "#cartera-snapshots-lista",
@@ -1933,11 +1975,22 @@ function renderizarOperacionesCartera() {
     ))
   );
 
+  const filasOrdenadas = window.ASIATI_CARTERA_SORT.ordenar(
+    carteraOperacionesFiltradas,carteraOperacionesOrden.value,carteraOperacionesDireccion.value
+  );
+  document.querySelectorAll("#operaciones [data-sort-th]").forEach((th) => {
+    const activo = th.dataset.sortTh === carteraOperacionesOrden.value;
+    th.setAttribute("aria-sort", activo
+      ? (carteraOperacionesDireccion.value==="asc"?"ascending":"descending") : "none");
+    const boton = th.querySelector("[data-cartera-sort]");
+    boton.setAttribute("aria-pressed",String(activo));
+    boton.dataset.direction=carteraOperacionesDireccion.value;
+  });
   const porPagina = Number(carteraOperacionesPorPagina.value) || CARTERA_OPERACIONES_PAGE_SIZE;
   const paginas = Math.max(1, Math.ceil(carteraOperacionesFiltradas.length / porPagina));
   carteraOperacionesPagina = Math.min(Math.max(1, carteraOperacionesPagina), paginas);
   const inicio = (carteraOperacionesPagina - 1) * porPagina;
-  const pagina = carteraOperacionesFiltradas.slice(inicio, inicio + porPagina);
+  const pagina = filasOrdenadas.slice(inicio, inicio + porPagina);
 
   operacionesBody.innerHTML = pagina.length
     ? pagina.map((row) => `
@@ -2029,12 +2082,17 @@ async function cargarProyeccion() {
 
 async function cargarDetalle(oc) {
   const consultada = empresaId();
-  const solicitud = ++carteraDetalleSolicitud;
   const panel = document.getElementById("detalle-operacion");
-  panel.hidden = false;
   detalleTitulo.textContent = oc;
+  detalleContenido.className = "empty-block";
   detalleContenido.textContent = "Consultando…";
-  panel.scrollIntoView({block:"start", behavior:"auto"});
+  window.ASIATI_MODAL.open({
+    title: "Operación · " + oc,
+    subtitle: "Detalle de las líneas de la GM. La consulta no confirma recaudos.",
+    content: panel,
+    onClose: () => { panel.hidden = true; ++carteraDetalleSolicitud; },
+  });
+  const solicitud = ++carteraDetalleSolicitud;
   try {
     const detalle = await api(
       `/api/v1/cartera/operaciones/${encodeURIComponent(oc)}?empresa_id=${consultada}`
@@ -2074,10 +2132,12 @@ async function cargarPendientes() {
   try {
     const rows = await api("/api/v1/cartera/comprobantes/pendientes?empresa_id=" + consultada);
     if (consultada !== empresaId()) return;
-    paginadorPendientes.actualizar(rows);
+    carteraPendientesCache=Array.isArray(rows)?rows:[];
+    paginadorPendientes.actualizar(carteraPendientesCache);
     setEstado("Bandeja actualizada", "ok");
   } catch (error) {
     if (consultada !== empresaId()) return;
+    carteraPendientesCache=[];
     paginadorPendientes.fallo(error.message);
     setEstado(error.message, "error");
   }
@@ -2136,6 +2196,25 @@ formComprobante.addEventListener("submit", async (event) => {
   }
 });
 
+
+for (const control of [carteraOperacionesOrden, carteraOperacionesDireccion]) {
+  control.addEventListener("change", () => {
+    carteraOperacionesPagina=1;
+    renderizarOperacionesCartera();
+  });
+}
+document.querySelectorAll("#operaciones [data-cartera-sort]").forEach((boton) => {
+  boton.addEventListener("click", () => {
+    if(carteraOperacionesOrden.value === boton.dataset.carteraSort) {
+      carteraOperacionesDireccion.value = carteraOperacionesDireccion.value==="asc"?"desc":"asc";
+    } else {
+      carteraOperacionesOrden.value=boton.dataset.carteraSort;
+      carteraOperacionesDireccion.value=boton.dataset.carteraSort==="valor"?"desc":"asc";
+    }
+    carteraOperacionesPagina=1;
+    renderizarOperacionesCartera();
+  });
+});
 document.querySelector("#cargar-operaciones").addEventListener("click", cargarOperaciones);
 carteraOperacionesBuscar.addEventListener("input", () => {
   carteraOperacionesPagina = 1;

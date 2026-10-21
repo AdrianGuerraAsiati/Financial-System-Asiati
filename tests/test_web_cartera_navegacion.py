@@ -42,7 +42,8 @@ def test_no_se_modifican_las_rutas_ni_el_alcance_de_los_datos():
         BASE / "app/web/cartera_navegacion.js"
     ).read_text("utf-8")
     assert "consultada !== empresaId() || solicitud !== carteraDetalleSolicitud" in app_js
-    assert "panel.scrollIntoView" in app_js
+    assert "window.ASIATI_MODAL.open(" in app_js
+    assert "panel.scrollIntoView" not in app_js
     assert "formComprobante.elements.oc.value = \"\"" in app_js
 
 

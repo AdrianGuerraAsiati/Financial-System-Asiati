@@ -1,0 +1,105 @@
+/* Componente compartido de detalle de Cartera */
+body.asiati-modal-open {overflow:hidden;}
+.asiati-modal {
+  border:0;border-radius:14px;padding:0;
+  width:min(850px,calc(100vw - 30px));
+  max-width:100%;max-height:min(91dvh,950px);
+  background:#fff;color:#1c1917;
+  box-shadow:0 32px 90px rgba(28,25,23,.32);
+  overscroll-behavior:contain;
+}
+.asiati-modal.asiati-modal-wide {width:min(1120px,calc(100vw - 30px));}
+.asiati-modal::backdrop {background:rgba(12,10,9,.59);}
+.asiati-modal-layout {display:flex;flex-direction:column;max-height:min(91dvh,950px);overflow:hidden;}
+.asiati-modal-header {
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:18px;padding:19px 23px;border-bottom:1px solid #e8e6e5;
+  background:#fff;position:relative;z-index:1;
+}
+.asiati-modal-header h2 {margin:0;font-size:19px;line-height:1.3;letter-spacing:-.025em;}
+.asiati-modal-header p {font-size:12px;line-height:1.5;color:#78716c;margin:6px 0 0;}
+.asiati-modal-close {
+  background:#fafaf9;border:1px solid #e8e6e5;border-radius:8px;
+  padding:9px 12px;color:#44403c;white-space:nowrap;font-size:12px;font-weight:600;
+}
+.asiati-modal-close:hover {background:#f5f5f4;border-color:#a8a29e;}
+.asiati-modal-body {
+  padding:19px 23px 23px;overflow:auto;
+  overscroll-behavior:contain;min-height:0;flex:1;
+}
+.asiati-modal-body > [hidden] {display:none!important;}
+.asiati-modal-body > .panel,
+.asiati-modal-body > .stack {
+  margin:0;border:none;box-shadow:none;padding:0;background:#fff;
+}
+.asiati-modal-body > .panel .panel-heading {margin-bottom:14px;}
+.asiati-modal-body .table-wrap {max-height:min(55dvh,520px);overflow:auto;}
+.asiati-modal-body .table-wrap thead th {
+  position:sticky;top:0;background:#fafaf9;z-index:1;
+}
+.asiati-modal-body table {width:100%;}
+.asiati-modal-body th,.asiati-modal-body td {font-size:12px;padding:9px 10px;}
+.asiati-modal-body #cartera-drive-soportes {margin-top:0!important;}
+.asiati-modal-body .cartera-aportes-detalle {
+  border:none;padding:0;background:#fff;min-width:0;
+}
+.asiati-modal-body .cartera-aportes-detalle-metricas {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.cartera-sortable-heading {display:flex;align-items:center;justify-content:flex-start;gap:4px;width:100%;}
+.cartera-sortable-heading button {
+  border:0;padding:2px 0;background:transparent;font-size:inherit;
+  font-weight:inherit;text-transform:inherit;letter-spacing:inherit;
+  color:inherit;cursor:pointer;text-align:left;
+}
+.cartera-sortable-heading button:hover {text-decoration:underline;text-underline-offset:3px;}
+.cartera-sortable-heading button:focus-visible {
+  outline:2px solid #3ba6f1;outline-offset:3px;border-radius:2px;
+}
+.cartera-sortable-heading button[aria-pressed="true"]:after {content:" ↓";color:#2196ca;}
+.cartera-sortable-heading button[aria-pressed="true"][data-direction="asc"]:after {content:" ↑";}
+.cartera-sort-direction {min-width:90px;}
+#vista-cartera .cartera-aportes-layout {display:block;}
+#vista-cartera .cartera-aportes-principal {border:0;padding:14px 0;}
+#vista-cartera .cartera-aportes-detalle[hidden] {display:none!important;}
+@media(max-width:680px){
+  .asiati-modal,.asiati-modal.asiati-modal-wide {width:calc(100vw - 16px);max-height:95dvh;}
+  .asiati-modal-layout {max-height:95dvh;}
+  .asiati-modal-header {padding:14px 15px;}
+  .asiati-modal-header h2 {font-size:17px;}
+  .asiati-modal-body {padding:14px;}
+  .asiati-modal-body .cartera-aportes-detalle-metricas {grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+/* Sin aplicación verificada no existe porcentaje real: barra neutra al 100 %. */
+#vista-cartera .cartera-avance-sin-conciliar {
+  display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;
+  color:#57534e;font-size:11px;line-height:1.5;
+}
+#vista-cartera .cartera-avance-pista {
+  display:block;width:100%;height:12px;border-radius:999px;
+  border:1px dashed #a8a29e;
+  background:repeating-linear-gradient(
+    135deg,#e7e5e4 0px,#e7e5e4 8px,#fafaf9 8px,#fafaf9 16px
+  );
+}
+#vista-cartera .cartera-avance-pista:after {content:none;}
+.asiati-modal-body .cartera-comprobante-detalle-modal {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.asiati-modal-body .cartera-comprobante-detalle-fila {
+  border:1px solid #e8e6e5;border-radius:8px;padding:11px;
+  min-width:0;display:flex;flex-direction:column;gap:7px;
+}
+.asiati-modal-body .cartera-comprobante-detalle-fila strong {
+  color:#78716c;font-size:11px;
+}
+.asiati-modal-body .cartera-comprobante-detalle-fila span {
+  font-size:13px;overflow-wrap:anywhere;color:#292524;
+}
+.asiati-modal-body .cartera-comprobante-detalle-modal > a {
+  margin-top:7px;width:fit-content;
+}
+@media(max-width:520px){
+  .asiati-modal-body .cartera-comprobante-detalle-modal {grid-template-columns:1fr;}
+}

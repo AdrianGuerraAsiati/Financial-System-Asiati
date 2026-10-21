@@ -25,7 +25,8 @@ def test_cartera_operations_has_search_and_pagination_controls() -> None:
 
     assert "CARTERA_OPERACIONES_PAGE_SIZE = 20" in js.text
     assert "renderizarOperacionesCartera" in js.text
-    assert "carteraOperacionesFiltradas.slice(" in js.text
+    assert "filasOrdenadas.slice(" in js.text
+    assert "ASIATI_CARTERA_SORT.ordenar(" in js.text
     assert "carteraOperacionesBody" not in js.text
     assert ".cartera-table" in css.text
 

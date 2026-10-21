@@ -168,6 +168,7 @@
     byId("cartera-drive-refrescar").disabled = true;
     mensaje.textContent = "Consultando el índice documental…";
     vaciarConMensaje(body, 5, "Consultando…");
+    if(soportePanel.parentElement?.closest("#asiati-modal")) window.ASIATI_MODAL?.close();
     soportePanel.hidden = true;
     const qs = new URLSearchParams({
       buscar: campo.value.trim(),
@@ -225,12 +226,21 @@
   async function cargarSoportes(oc) {
     if (panel.hidden) return;
     const version = consultaActual;
-    const solicitudSoporte = ++consultaSoporte;
-    soportePanel.hidden = false;
     soportesActuales = [];
     paginaSoportes = 1;
     filtroSoportes.value = "";
     byId("cartera-drive-titulo").textContent = "Soportes · " + oc + " (referencia sin validar)";
+    window.ASIATI_MODAL.open({
+      title: "Soportes · " + oc,
+      subtitle: "Referencia candidata sin validación jurídica. Los archivos se abren con permisos de Google Drive.",
+      content: soportePanel,
+      size: "wide",
+      onClose: () => {
+        ++consultaSoporte;
+        soportePanel.hidden = true;
+      },
+    });
+    const solicitudSoporte = ++consultaSoporte;
     soporteEstado.textContent = "Consultando soportes…";
     vaciarConMensaje(soporteBody, 4, "Consultando…");
     try {
@@ -254,6 +264,7 @@
     ++consultaActual;
     ++consultaSoporte;
     if (!global) {
+      window.ASIATI_MODAL?.close();
       vaciarConMensaje(body, 5, "Sin acceso al inventario multiempresa.");
       soportePanel.hidden = true;
     }
