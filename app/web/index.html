@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Plataforma Financiera ASIATI</title>
   <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/asiati_v2.css">
 </head>
 <body>
   <section id="login-view" class="auth-shell">
@@ -205,6 +206,10 @@
           <article class="home-module-card">
             <p class="empty">Cargando módulos visibles…</p>
           </article>
+        </section>
+
+        <section id="inicio-analitica" class="finance-chart-section" aria-label="Gráficas de indicadores financieros" aria-live="polite">
+          <p class="empty">Consultando indicadores verificados…</p>
         </section>
 
         <section class="home-main-grid">
@@ -1296,6 +1301,7 @@
 
   </div>
 
+  <script src="/static/financial_charts.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/cartera_drive.js" defer></script>
   <script src="/static/wallets.js" defer></script>

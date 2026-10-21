@@ -653,6 +653,7 @@ function enlazarAccionesInicio() {
 }
 
 async function cargarDashboardPrincipal({preservar = false} = {}) {
+  const empresaConsultada = empresaId();
   const tieneDatos = Boolean(inicioModulos.querySelector("[data-home-module]"));
   if (!preservar || !tieneDatos) {
     inicioModulos.innerHTML = '<article class="home-module-card"><p class="empty">Cargando último snapshot…</p></article>';
@@ -664,7 +665,9 @@ async function cargarDashboardPrincipal({preservar = false} = {}) {
     : "Cargando snapshot…";
 
   try {
-    const data = await api(`/api/v1/dashboard/principal?empresa_id=${empresaId()}`);
+    const data = await api(`/api/v1/dashboard/principal?empresa_id=${empresaConsultada}`);
+    // Ignorar respuestas atrasadas de otra empresa; ningún panel puede mostrar datos cruzados.
+    if (empresaConsultada !== empresaId()) return;
     inicioSubtitulo.textContent =
       `${data.empresa.nombre} · Resumen persistido; Google se consulta solo cuando la fuente cambia.`;
 
@@ -681,11 +684,15 @@ async function cargarDashboardPrincipal({preservar = false} = {}) {
       : '<p class="empty">Sin módulos visibles.</p>';
 
     dashboardVersiones = {...(data.versiones || {})};
+    window.ASIATI_FINANCIAL_CHARTS?.renderDashboard(data);
     inicioActualizado.textContent =
       `Vista actualizada ${new Date(data.generado_en).toLocaleString("es-CO")}`;
     enlazarAccionesInicio();
   } catch (error) {
+    if (empresaConsultada !== empresaId()) return;
     if (!preservar || !tieneDatos) {
+      const graficas = document.getElementById("inicio-analitica");
+      if (graficas) graficas.textContent = "No fue posible consultar los indicadores. No se muestran datos no verificados.";
       inicioModulos.innerHTML = `<article class="home-module-card"><p class="empty">${escapar(error.message)}</p></article>`;
       inicioAtencion.innerHTML = '<p class="empty">No se pudo cargar la bandeja transversal.</p>';
       inicioEstadoDatos.innerHTML = '<p class="empty">No se pudo consultar el estado de datos.</p>';
