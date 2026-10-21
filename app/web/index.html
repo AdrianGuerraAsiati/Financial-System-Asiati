@@ -450,6 +450,58 @@
         </div>
       </section>
 
+      <section class="panel" id="cartera-aportes" aria-labelledby="cartera-aportes-titulo">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Cartera · Proyecciones por OC</p>
+            <h3 id="cartera-aportes-titulo">Aportes previstos por orden de compra</h3>
+            <p>Consulta los importes programados y sus fechas en cada OC. No equivale a pagos recibidos, comprobantes auditados ni recaudos aplicados.</p>
+          </div>
+        </div>
+        <div class="cartera-aportes-filtros">
+          <label for="cartera-aportes-buscar">Buscar OC o cliente
+            <input id="cartera-aportes-buscar" type="search" placeholder="OC o cliente" autocomplete="off">
+          </label>
+          <label for="cartera-aportes-comercial">Comercial
+            <select id="cartera-aportes-comercial"><option value="">Todos</option></select>
+          </label>
+          <label for="cartera-aportes-desde">Fecha prevista desde
+            <input id="cartera-aportes-desde" type="date">
+          </label>
+          <label for="cartera-aportes-hasta">Hasta
+            <input id="cartera-aportes-hasta" type="date">
+          </label>
+          <button class="secondary-button" id="cartera-aportes-limpiar" type="button">Limpiar</button>
+        </div>
+        <p id="cartera-aportes-fuente" class="table-footnote">Fuente: PROYECCIONES · empresa seleccionada.</p>
+        <p id="cartera-aportes-estado" role="status" aria-live="polite" class="table-footnote">Cargando aportes programados…</p>
+        <div class="cartera-aportes-resumen" aria-label="Totales de la consulta">
+          <article><span>OC con proyecciones</span><strong id="cartera-aportes-ocs">—</strong></article>
+          <article><span>Registros programados</span><strong id="cartera-aportes-registros">—</strong></article>
+          <article><span>Total esperado · USD</span><strong id="cartera-aportes-monto">—</strong></article>
+        </div>
+        <div class="cartera-aportes-layout">
+          <div class="cartera-aportes-principal">
+            <div class="cartera-aportes-subtitulo"><strong>Distribución por OC</strong><small>Barras proporcionales al total proyectado; cada segmento es una fecha prevista.</small></div>
+            <div id="cartera-aportes-lista" class="cartera-aportes-lista" aria-label="Órdenes con aportes programados"></div>
+            <div class="cartera-aportes-paginacion">
+              <span id="cartera-aportes-pagina" class="table-footnote" aria-live="polite">Página 1 de 1</span>
+              <div class="pagination">
+                <button id="cartera-aportes-anterior" class="secondary-button" type="button" disabled>Anterior</button>
+                <button id="cartera-aportes-siguiente" class="secondary-button" type="button" disabled>Siguiente</button>
+              </div>
+            </div>
+          </div>
+          <aside class="cartera-aportes-detalle" aria-labelledby="cartera-aportes-detalle-titulo">
+            <h4 id="cartera-aportes-detalle-titulo">Detalle de la OC</h4>
+            <div id="cartera-aportes-detalle-contenido" aria-live="polite">
+              <p class="empty">Selecciona una OC para ver sus aportes por fecha.</p>
+            </div>
+          </aside>
+        </div>
+        <p class="table-footnote cartera-aportes-advertencia">Las cifras representan registros de pago <strong>esperado</strong> de PROYECCIONES. Varias filas de una OC con la misma fecha se agrupan solo para visualización, conservando su cantidad. No se descuentan pagos reales ni se calcula saldo por cobrar porque aún no existe una conciliación por OC.</p>
+      </section>
+
       <section class="panel cartera-scatter-panel" id="cartera-dispersion" aria-labelledby="cartera-dispersion-titulo">
         <div class="panel-heading">
           <div>
@@ -537,35 +589,41 @@
             </div>
           </div>
 
-          <form id="form-comprobante" class="form-grid">
-            <label>OC
-              <input name="oc" required>
+          <form id="form-comprobante" class="cartera-comprobante-form" enctype="multipart/form-data">
+            <p class="cartera-comprobante-intro">Solo necesitas identificar la OC y adjuntar el archivo. El soporte queda <strong>pendiente de asociación y auditoría</strong>; no se registra como recaudo aplicado.</p>
+            <label for="cartera-comprobante-oc">Número de OC <span aria-hidden="true">*</span>
+              <input id="cartera-comprobante-oc" name="oc" maxlength="120" placeholder="Ej.: OC-2026-001" autocomplete="off" required>
             </label>
-            <label>Cliente
-              <input name="cliente" required>
+            <label for="cartera-comprobante-archivo">Comprobante de pago <span aria-hidden="true">*</span>
+              <input id="cartera-comprobante-archivo" name="archivo" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required>
+              <small>PDF, JPG o PNG. Límite definido por la plataforma.</small>
             </label>
-            <label>País
-              <input name="pais" required>
-            </label>
-            <label>Valor DDP
-              <input name="valor_ddp" type="number" min="0" step="0.01" required>
-            </label>
-            <label class="span-two">Tipo de negociación
-              <input name="tipo_negociacion" required>
-            </label>
-            <label>Fecha de entrega
-              <input name="fecha_entrega" type="date" required>
-            </label>
-            <label>Comercial
-              <input name="comercial" required>
-            </label>
-            <label class="span-two">Comprobante
-              <input name="archivo" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required>
-            </label>
-            <p class="notice span-two">
-              País, comercial y fecha de entrega permanecen manuales hasta conectar la hoja real y confirmar esas columnas.
-            </p>
-            <button class="span-two" type="submit">Radicar comprobante</button>
+            <details id="cartera-comprobante-avanzado" class="cartera-comprobante-avanzado">
+              <summary>Agregar condición financiera (opcional)</summary>
+              <p class="table-footnote">Si ya están verificados todos estos datos, puedes registrar la condición original. Si no, deja este apartado cerrado para evitar estimaciones incorrectas.</p>
+              <fieldset id="cartera-comprobante-datos" class="form-grid" disabled>
+                <label>Cliente
+                  <input name="cliente" maxlength="255">
+                </label>
+                <label>País
+                  <input name="pais" maxlength="100">
+                </label>
+                <label>Valor DDP (USD)
+                  <input name="valor_ddp" type="number" min="0" step="0.01">
+                </label>
+                <label class="span-two">Tipo de negociación
+                  <input name="tipo_negociacion">
+                </label>
+                <label>Fecha de entrega
+                  <input name="fecha_entrega" type="date">
+                </label>
+                <label>Comercial
+                  <input name="comercial" maxlength="255">
+                </label>
+              </fieldset>
+            </details>
+            <p id="cartera-comprobante-ayuda" class="table-footnote" role="status" aria-live="polite">Radicación rápida: OC + archivo; los datos financieros se revisarán después.</p>
+            <button id="cartera-comprobante-enviar" type="submit">Radicar comprobante</button>
           </form>
         </section>
       </section>
@@ -1364,6 +1422,7 @@
   <script src="/static/financial_charts.js" defer></script>
   <script src="/static/cartera_paginacion.js" defer></script>
   <script src="/static/cartera_scatter.js" defer></script>
+  <script src="/static/cartera_aportes.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/cartera_drive.js" defer></script>
   <script src="/static/wallets.js" defer></script>

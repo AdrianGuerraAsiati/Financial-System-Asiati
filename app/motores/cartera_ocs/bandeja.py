@@ -1,6 +1,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.motores.cartera_ocs.comprobantes import ESTADOS_AUDITORIA_PENDIENTES
 from app.motores.cartera_ocs.persistencia import ComprobantePagoPersistido
 
 
@@ -14,7 +15,7 @@ def listar_comprobantes_pendientes(
         select(ComprobantePagoPersistido)
         .where(
             ComprobantePagoPersistido.empresa_id == empresa_id,
-            ComprobantePagoPersistido.estado_auditoria == "PENDIENTE",
+            ComprobantePagoPersistido.estado_auditoria.in_(ESTADOS_AUDITORIA_PENDIENTES),
         )
         .order_by(ComprobantePagoPersistido.id.asc())
     )
@@ -32,6 +33,6 @@ def contar_comprobantes_pendientes(
     statement = select(func.count(ComprobantePagoPersistido.id)).where(
         ComprobantePagoPersistido.empresa_id == empresa_id,
         ComprobantePagoPersistido.oc == oc,
-        ComprobantePagoPersistido.estado_auditoria == "PENDIENTE",
+        ComprobantePagoPersistido.estado_auditoria.in_(ESTADOS_AUDITORIA_PENDIENTES),
     )
     return int(session.scalar(statement) or 0)

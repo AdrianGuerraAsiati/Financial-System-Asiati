@@ -23,7 +23,10 @@ from app.motores.cartera_ocs.bandeja import (
     contar_comprobantes_pendientes,
     listar_comprobantes_pendientes,
 )
-from app.motores.cartera_ocs.comprobantes import radicar_comprobante
+from app.motores.cartera_ocs.comprobantes import (
+    radicar_comprobante,
+    radicar_comprobante_simple,
+)
 from app.motores.cartera_ocs.consultas import (
     FuenteOperacionesCartera,
     OperacionNoEncontradaError,
@@ -655,7 +658,10 @@ def consultar_comprobantes_pendientes(
             "cliente": item.cliente,
             "pais": item.pais,
             "comercial": item.comercial,
-            "monto_esperado": _dinero_texto(item.monto_esperado),
+            "monto_esperado": (
+                _dinero_texto(item.monto_esperado)
+                if item.monto_esperado is not None else None
+            ),
             "nombre_archivo": item.nombre_archivo,
             "estado_auditoria": item.estado_auditoria,
             "creado_en": item.creado_en,
@@ -711,12 +717,12 @@ def subir_comprobante(
     empresa_id: int = Form(...),
     _acceso: Acceso = Depends(subir_comprobante_permitido),
     oc: str = Form(...),
-    cliente: str = Form(...),
-    pais: str = Form(...),
-    valor_ddp: Decimal = Form(...),
-    tipo_negociacion: str = Form(...),
-    fecha_entrega: date = Form(...),
-    comercial: str = Form(...),
+    cliente: str | None = Form(None),
+    pais: str | None = Form(None),
+    valor_ddp: Decimal | None = Form(None),
+    tipo_negociacion: str | None = Form(None),
+    fecha_entrega: date | None = Form(None),
+    comercial: str | None = Form(None),
     archivo: UploadFile = File(...),
     session: Session = Depends(obtener_session),
     almacen: AlmacenComprobantes = Depends(obtener_almacen_comprobantes),
@@ -739,23 +745,46 @@ def subir_comprobante(
             detail="El comprobante supera el tamaño máximo permitido.",
         )
 
-    operacion = OperacionFinanciada(
-        oc=oc,
-        cliente=cliente,
-        pais=pais,
-        valor_ddp=valor_ddp,
-        tipo_negociacion=tipo_negociacion,
-        fecha_entrega=fecha_entrega,
-        comercial=comercial,
-    )
-    condicion = generar_condicion_pago(operacion)
+    oc_limpia = oc.strip()
+    if not oc_limpia or len(oc_limpia) > 120:
+        raise HTTPException(status_code=422, detail="Indica una OC válida de máximo 120 caracteres.")
+
+    # No se debe inferir una fecha de entrega a partir de la fecha de pago
+    # esperada, ni un DDP desde el valor OC, ni aceptar una condición parcial.
+    extras = (cliente, pais, valor_ddp, tipo_negociacion, fecha_entrega, comercial)
+    informados = sum(v is not None and str(v).strip() != "" for v in extras)
+    if informados not in (0, len(extras)):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Para radicar con condición financiera, completa los seis "
+                "datos adicionales. Para radicación rápida, deja esos campos vacíos."
+            ),
+        )
 
     nombre_archivo = archivo.filename or "comprobante.bin"
-    comprobante = radicar_comprobante(
-        condicion=condicion,
-        nombre_archivo=nombre_archivo,
-        contenido=contenido,
-    )
+    if informados == 0:
+        comprobante = radicar_comprobante_simple(
+            oc=oc_limpia,
+            nombre_archivo=nombre_archivo,
+            contenido=contenido,
+        )
+    else:
+        operacion = OperacionFinanciada(
+            oc=oc_limpia,
+            cliente=cliente.strip(),
+            pais=pais.strip(),
+            valor_ddp=valor_ddp,
+            tipo_negociacion=tipo_negociacion.strip(),
+            fecha_entrega=fecha_entrega,
+            comercial=comercial.strip(),
+        )
+        condicion = generar_condicion_pago(operacion)
+        comprobante = radicar_comprobante(
+            condicion=condicion,
+            nombre_archivo=nombre_archivo,
+            contenido=contenido,
+        )
 
     if existe_comprobante_por_hash(
         session,
@@ -800,6 +829,9 @@ def subir_comprobante(
         "id": registro.id,
         "oc": registro.oc,
         "estado_auditoria": registro.estado_auditoria,
-        "monto_esperado": _dinero_texto(registro.monto_esperado),
+        "monto_esperado": (
+            _dinero_texto(registro.monto_esperado)
+            if registro.monto_esperado is not None else None
+        ),
         "contenido_hash": registro.contenido_hash,
     }

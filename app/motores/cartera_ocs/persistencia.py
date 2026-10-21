@@ -25,12 +25,12 @@ class ComprobantePagoPersistido(Base):
         index=True,
     )
     oc: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
-    cliente: Mapped[str] = mapped_column(String(255), nullable=False)
-    pais: Mapped[str] = mapped_column(String(100), nullable=False)
-    comercial: Mapped[str] = mapped_column(String(255), nullable=False)
-    monto_esperado: Mapped[Decimal] = mapped_column(
+    cliente: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    pais: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    comercial: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    monto_esperado: Mapped[Decimal | None] = mapped_column(
         Numeric(18, 2),
-        nullable=False,
+        nullable=True,
     )
     nombre_archivo: Mapped[str] = mapped_column(String(255), nullable=False)
     contenido_hash: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -64,7 +64,10 @@ def guardar_comprobante(
         cliente=comprobante.cliente,
         pais=comprobante.pais,
         comercial=comprobante.comercial,
-        monto_esperado=Decimal(str(comprobante.monto_esperado)),
+        monto_esperado=(
+            Decimal(str(comprobante.monto_esperado))
+            if comprobante.monto_esperado is not None else None
+        ),
         nombre_archivo=comprobante.nombre_archivo,
         contenido_hash=comprobante.contenido_hash,
         ubicacion_archivo=ubicacion_archivo,

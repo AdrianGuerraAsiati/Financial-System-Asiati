@@ -1616,6 +1616,7 @@ function mostrarFuenteNoDisponible(tipo) {
   if (tipo === "PROYECCION") {
     ++carteraProyeccionSolicitud;
     window.ASIATI_SCATTER?.limpiarDatos("La fuente PROYECCIONES no está disponible.");
+    window.ASIATI_APORTES?.limpiarDatos("La fuente PROYECCIONES no está disponible.");
     paginadorProyeccion.fallo("La fuente de Proyección todavía no está disponible.");
   }
 }
@@ -1624,6 +1625,7 @@ async function cargarCarteraTodo() {
   // Ocultar valores antiguos al cambiar de empresa antes de consultar Sheets.
   ++carteraProyeccionSolicitud;
   window.ASIATI_SCATTER?.limpiarDatos("Validando fuente PROYECCIONES…");
+  window.ASIATI_APORTES?.limpiarDatos("Validando fuente PROYECCIONES…");
   const estadoFuente = await cargarEstadoFuenteCartera();
   const tareas = [cargarPendientes(), cargarSnapshotsCartera()];
   // El índice documental está en PostgreSQL y funciona aunque Google Sheets esté caído.
@@ -1696,8 +1698,12 @@ const paginadorPendientes = window.CarteraPaginacion.crear({
   estado: (r) => r.estado_auditoria,
   plantilla: (r) => '<article class="proof-card"><strong>' +
     escapar(r.oc) + ' · ' + escapar(r.cliente) + '</strong><p>' +
-    escapar(r.nombre_archivo) + '</p><p>USD ' +
-    formatearDecimal(r.monto_esperado) + ' · ' + escapar(r.estado_auditoria) +
+    escapar(r.nombre_archivo) + '</p><p>' +
+    (r.monto_esperado === null || r.monto_esperado === undefined
+      ? 'Monto sin verificar'
+      : 'USD ' + formatearDecimal(r.monto_esperado)) + ' · ' +
+    escapar(r.estado_auditoria === 'PENDIENTE_ASOCIACION'
+      ? 'Pendiente de asociación' : r.estado_auditoria) +
     '</p><p><a href="/api/v1/cartera/comprobantes/' + encodeURIComponent(r.id) +
     '/archivo?empresa_id=' + encodeURIComponent(empresaId()) +
     '" target="_blank" rel="noopener noreferrer">Ver soporte</a></p></article>',
@@ -1841,16 +1847,19 @@ async function cargarProyeccion() {
   const consultada = empresaId();
   const solicitud = ++carteraProyeccionSolicitud;
   window.ASIATI_SCATTER?.limpiarDatos("Consultando proyecciones de la empresa seleccionada…");
+  window.ASIATI_APORTES?.limpiarDatos("Consultando aportes previstos por OC…");
   try {
     const rows = await api("/api/v1/cartera/proyeccion?empresa_id=" + consultada);
     if (consultada !== empresaId() || solicitud !== carteraProyeccionSolicitud) return;
     paginadorProyeccion.actualizar(rows);
     window.ASIATI_SCATTER?.setData(rows, {empresaId: consultada});
+    window.ASIATI_APORTES?.setData(rows, {empresaId: consultada});
     setEstado("Proyección actualizada", "ok");
   } catch (error) {
     if (consultada !== empresaId() || solicitud !== carteraProyeccionSolicitud) return;
     paginadorProyeccion.fallo(error.message);
     window.ASIATI_SCATTER?.limpiarDatos("No se pudo consultar PROYECCIONES: " + error.message);
+    window.ASIATI_APORTES?.limpiarDatos("No se pudo consultar PROYECCIONES: " + error.message);
     setEstado(error.message, "error");
   }
 }
@@ -1875,10 +1884,12 @@ async function cargarDetalle(oc) {
 
     const primera = detalle.lineas[0];
     if (primera) {
+      // La orden viene de la consulta autenticada. No copiar importes ni
+      // condiciones de una línea a un comprobante sin verificación.
       formComprobante.elements.oc.value = primera.oc || "";
-      formComprobante.elements.cliente.value = primera.cliente || "";
-      formComprobante.elements.valor_ddp.value = primera.valor || "";
-      formComprobante.elements.tipo_negociacion.value = primera.negociacion || "";
+      document.querySelector("#cartera-comprobante-ayuda").textContent =
+        "OC seleccionada: " + (primera.oc || "sin número") +
+        ". Adjunta el soporte; no se marcará como cobro confirmado.";
     }
     setEstado(`Detalle ${oc} cargado`, "ok");
   } catch (error) {
@@ -1902,22 +1913,56 @@ async function cargarPendientes() {
   }
 }
 
+const comprobanteAvanzado = document.querySelector("#cartera-comprobante-avanzado");
+const comprobanteExtras = document.querySelector("#cartera-comprobante-datos");
+const comprobanteBoton = document.querySelector("#cartera-comprobante-enviar");
+const comprobanteAyuda = document.querySelector("#cartera-comprobante-ayuda");
+const camposExtraComprobante = [
+  "cliente", "pais", "valor_ddp", "tipo_negociacion", "fecha_entrega", "comercial"
+];
+comprobanteAvanzado.addEventListener("toggle", () => {
+  comprobanteExtras.disabled = !comprobanteAvanzado.open;
+  if (comprobanteAvanzado.open) {
+    camposExtraComprobante.forEach((campo) => {
+      formComprobante.elements[campo].required = true;
+    });
+    comprobanteAyuda.textContent = "Modo con condición financiera: completa los seis datos verificados.";
+  } else {
+    camposExtraComprobante.forEach((campo) => {
+      formComprobante.elements[campo].required = false;
+      formComprobante.elements[campo].value = "";
+    });
+    comprobanteAyuda.textContent =
+      "Radicación rápida: OC + archivo. Quedará pendiente de asociación y auditoría.";
+  }
+});
 formComprobante.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (comprobanteBoton.disabled) return;
+  const consultada = empresaId();
   const data = new FormData(formComprobante);
-  data.set("empresa_id", String(empresaId()));
+  data.set("empresa_id", String(consultada));
+  comprobanteBoton.disabled = true;
   setEstado("Radicando comprobante…");
-
+  comprobanteAyuda.textContent = "Guardando archivo y registrando evidencia…";
   try {
     const resultado = await api("/api/v1/cartera/comprobantes", {
       method: "POST",
       body: data,
     });
-    setEstado(`Comprobante ${resultado.id} radicado como PENDIENTE`, "ok");
+    const estado = resultado.estado_auditoria === "PENDIENTE_ASOCIACION"
+      ? "PENDIENTE DE ASOCIACIÓN"
+      : "PENDIENTE DE AUDITORÍA";
+    setEstado("Comprobante #" + resultado.id + " radicado como " + estado, "ok");
     formComprobante.elements.archivo.value = "";
-    await cargarPendientes();
+    comprobanteAyuda.textContent =
+      "Comprobante #" + resultado.id + " registrado. No constituye un recaudo aplicado.";
+    if (consultada === empresaId()) await cargarPendientes();
   } catch (error) {
     setEstado(error.message, "error");
+    comprobanteAyuda.textContent = error.message;
+  } finally {
+    comprobanteBoton.disabled = false;
   }
 });
 
