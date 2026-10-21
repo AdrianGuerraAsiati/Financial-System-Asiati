@@ -28,6 +28,7 @@ def test_panel_y_script_estan_en_cartera_sin_dependencias_cdn():
     assert 'id="cartera-dispersion-kpi-monto"' in html
     assert 'id="cartera-dispersion-kpi-registros"' in html
     assert '<details class="cartera-scatter-tabla">' in html
+    assert 'href="#cartera-dispersion"' in html
     assert html.index('src="/static/cartera_scatter.js"') < html.index(
         'src="/static/app.js"'
     )
