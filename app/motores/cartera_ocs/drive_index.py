@@ -93,6 +93,42 @@ class GoogleDriveInventario:
             # No filtrar datos sensibles del proveedor a logs o respuestas.
             raise DriveInventarioError("No fue posible leer Google Drive.") from exc
 
+    def verificar_acceso_raiz(self, raiz_id: str) -> None:
+        """Comprueba el permiso real del principal desplegado sin guardar datos.
+
+        Obtener la carpeta evita falsos OK: Drive puede devolver una lista
+        vacía para una consulta de hijos de una raíz no accesible.
+        """
+        raiz_id = validar_id(raiz_id)
+        try:
+            respuesta = self.cliente.get(
+                f"https://www.googleapis.com/drive/v3/files/{raiz_id}",
+                params={
+                    "fields": "id,mimeType,trashed",
+                    "supportsAllDrives": "true",
+                },
+                timeout=30,
+            )
+            if respuesta.status_code != 200:
+                raise DriveInventarioError(
+                    f"Google Drive no permitió consultar la carpeta raíz (HTTP {respuesta.status_code})."
+                )
+            metadatos = respuesta.json()
+        except DriveInventarioError:
+            raise
+        except Exception as exc:
+            raise DriveInventarioError("No fue posible verificar la carpeta raíz de Drive.") from exc
+
+        if (
+            metadatos.get("id") != raiz_id
+            or metadatos.get("mimeType") != FOLDER_MIME
+            or metadatos.get("trashed")
+        ):
+            raise DriveInventarioError("La raíz configurada no es una carpeta activa de Google Drive.")
+
+        # Verifica que se pueda listar la raíz con el mismo scope del inventario.
+        self._pagina(raiz_id, None)
+
     def recorrer(
         self,
         raiz_id: str,
