@@ -19,6 +19,7 @@ SCRIPTS = [
     "app/web/cartera_navegacion.js",
     "app/web/cartera_paginacion.js",
     "app/web/financial_charts.js",
+    "app/web/google_sheets_connect.js",
 ]
 
 
