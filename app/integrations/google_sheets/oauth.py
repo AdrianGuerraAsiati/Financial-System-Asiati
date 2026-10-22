@@ -27,6 +27,8 @@ from app.core.auth.dependencias import Acceso, requiere, usuario_vigente
 from app.core.db import Base
 from app.core.session import crear_session, obtener_session
 from app.core.usuarios.model import Usuario
+from app.core.usuarios.roles import ROL_SUPER_ADMINISTRADOR
+from app.core.empresas import Empresa
 
 SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -182,6 +184,10 @@ def iniciar_conexion(
     _origin_valido(request)
     client_id, _, redirect_uri = _config()
     _fernet()
+    if session.get(Empresa, empresa_id) is None:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada.")
+    if os.getenv("CARTERA_SHEETS_EMPRESA_ID", "").strip() != str(empresa_id):
+        raise HTTPException(status_code=409, detail="La fuente de Cartera no está configurada para esta empresa.")
     state = secrets.token_urlsafe(32)
     verifier = secrets.token_urlsafe(64)
     registro = EstadoOAuthGoogleSheets(
@@ -223,7 +229,7 @@ def oauth_callback(
         session.delete(registro)
         session.commit()
         raise HTTPException(status_code=400, detail="La autorización caducó. Inicia de nuevo.")
-    if usuario.rol != "SUPER_ADMINISTRADOR":
+    if usuario.rol != ROL_SUPER_ADMINISTRADOR:
         raise HTTPException(status_code=403, detail="La conexión requiere superadministración.")
     empresa_id, verifier = registro.empresa_id, registro.code_verifier
     session.delete(registro)
