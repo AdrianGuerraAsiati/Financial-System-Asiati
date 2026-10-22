@@ -9,6 +9,7 @@ import os
 from sqlalchemy import select
 
 from app.core.auditoria import registrar_auditoria
+from app.core.empresas import Empresa  # noqa: F401; registrar modelo para FK auditoria.empresa_id
 from app.core.session import crear_session
 from app.core.usuarios.model import Usuario
 from app.core.usuarios.roles import ROL_SUPER_ADMINISTRADOR, ROL_TI
