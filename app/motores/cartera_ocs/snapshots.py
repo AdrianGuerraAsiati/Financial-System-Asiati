@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from .google_sheets import (
     ClienteGoogleSheetsApi,
+    _cliente_google_desde_entorno,
     ClienteValoresGoogleSheets,
     ConfiguracionGoogleSheetsIncompletaError,
     analizar_rango_cartera,
@@ -184,13 +185,7 @@ def capturar_snapshot_cartera_desde_entorno(
             "Falta configurar al menos un rango de Cartera."
         )
 
-    cliente_real = cliente or ClienteGoogleSheetsApi(
-        target_principal=os.getenv(
-            "GOOGLE_IMPERSONATE_SERVICE_ACCOUNT",
-            "",
-        ).strip()
-        or None,
-    )
+    cliente_real = cliente or _cliente_google_desde_entorno()
 
     diagnosticos: list[Mapping[str, Any]] = []
     filas: list[FilaSnapshotCartera] = []
