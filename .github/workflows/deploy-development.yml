@@ -461,8 +461,11 @@ jobs:
               -e DEV_EMPRESA_NOMBRE=ASIATI \
               api python -m app.core.usuarios.asegurar_superadmin_dev </dev/null
             "${DC[@]}" exec -T db psql -U asiati -d financial_system -v ON_ERROR_STOP=1 \
-              -c "UPDATE usuarios SET rol='ti', debe_cambiar_password=true WHERE email='sistemas@asiati.com.co';" </dev/null
-          elif [[ "$sistemas_role" != "ti" ]]; then
+              -c "UPDATE usuarios SET debe_cambiar_password=true WHERE email='sistemas@asiati.com.co';" </dev/null
+          elif [[ "$sistemas_role" == "ti" ]]; then
+            # Promoción única de Sistemas, registrada en auditoría de ASIATI.
+            "${DC[@]}" exec -T api python -m app.core.usuarios.promover_sistemas_superadmin_dev </dev/null
+          elif [[ "$sistemas_role" != "super_administrador" ]]; then
             echo "Rol inesperado para Sistemas: $sistemas_role" >&2
             exit 1
           fi
