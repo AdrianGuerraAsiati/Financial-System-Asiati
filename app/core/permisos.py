@@ -37,6 +37,8 @@ _ASIG = Alcance.ASIGNADAS
 # consulta, que por sí mismos no cambian datos.
 PERMISOS: dict[str, dict[str, Alcance]] = {
     "usuarios.gestionar": {_SA: _TODAS},
+    # La conexión técnica OAuth no concede administrar usuarios ni editar finanzas.
+    "google_sheets.conectar": {_SA: _TODAS, ROL_TI: _TODAS},
     "empresas.gestionar": {_SA: _TODAS},
     "parametros.editar": {_SA: _TODAS},
     "parametros.ver": {_SA: _TODAS, _CO: _TODAS, _CN: _ASIG, ROL_TI: _TODAS},

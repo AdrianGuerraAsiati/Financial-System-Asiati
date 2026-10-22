@@ -53,3 +53,16 @@ def test_no_se_permite_callback_inseguro(monkeypatch):
       "http://example.org/api/v1/integrations/google-sheets/oauth/callback")
     with pytest.raises(HTTPException):
         _config()
+
+def test_frontend_and_backend_share_independent_connection_permission():
+    """Evita que un cambio en JS vuelva a ocultar Conectar a soporte TI."""
+    from pathlib import Path
+    from app.core.permisos import permisos_efectivos
+    from app.core.usuarios.roles import ROL_TI, ROL_SUPER_ADMINISTRADOR
+    assert "google_sheets.conectar" in permisos_efectivos(ROL_TI)
+    assert "google_sheets.conectar" in permisos_efectivos(ROL_SUPER_ADMINISTRADOR)
+    frontend = (Path(__file__).resolve().parents[1] / "app/web/google_sheets_connect.js").read_text()
+    from app.integrations.google_sheets import oauth
+    assert 'permisos?.["google_sheets.conectar"]' in frontend
+    assert '"usuarios.gestionar"' not in frontend
+    assert 'administrar = requiere("google_sheets.conectar")' in (Path(oauth.__file__).read_text())

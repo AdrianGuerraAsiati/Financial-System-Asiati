@@ -73,6 +73,21 @@ def test_read_only_cells_only_appear_on_read_permissions() -> None:
             assert permiso.endswith(".ver"), permiso
 
 
+def test_google_sheets_connection_allowed_only_for_superadmin_and_it() -> None:
+    for rol in (ROL_SUPER_ADMINISTRADOR, ROL_TI):
+        alcance = verificar_acceso(
+            rol, "google_sheets.conectar", empresa_id=3, asignadas=frozenset()
+        )
+        assert alcance is Alcance.TODAS
+
+    for rol in (ROL_COORDINACION_FINANCIERA, ROL_CONCILIACION, ROL_ANALISTA_TESORERIA):
+        with pytest.raises(SinPermisoError):
+            verificar_acceso(
+                rol, "google_sheets.conectar", empresa_id=3, asignadas=frozenset({3})
+            )
+    assert "usuarios.gestionar" not in permisos_efectivos(ROL_TI)
+
+
 def test_treasury_analyst_has_only_treasury_permissions() -> None:
     assert set(permisos_efectivos(ROL_ANALISTA_TESORERIA)) == {
         "tesoreria.ver", "tesoreria.facturas.gestionar", "tesoreria.pagos.registrar",
