@@ -6,6 +6,7 @@ from typing import Any, Protocol
 from .google_sheets import (
     CONTRATOS_FUENTE_CARTERA,
     ClienteGoogleSheetsApi,
+    _cliente_google_desde_entorno,
     ConfiguracionGoogleSheetsIncompletaError,
 )
 
@@ -131,13 +132,7 @@ def descubrir_hojas_cartera_desde_entorno(
             f"No existe configuración de Google Sheets para empresa {empresa_id}."
         )
 
-    cliente_real = cliente or ClienteGoogleSheetsApi(
-        target_principal=os.getenv(
-            "GOOGLE_IMPERSONATE_SERVICE_ACCOUNT",
-            "",
-        ).strip()
-        or None,
-    )
+    cliente_real = cliente or _cliente_google_desde_entorno()
 
     hojas: list[dict[str, object]] = []
     coincidencias_exactas = 0
