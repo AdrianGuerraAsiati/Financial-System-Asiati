@@ -84,3 +84,22 @@ def test_pipeline_nunca_degrada_sistemas_a_ti():
     assert '"$sistemas_role" == "ti"' in workflow
     assert "python -m app.core.usuarios.promover_sistemas_superadmin_dev" in workflow
     assert '"$sistemas_role" != "super_administrador"' in workflow
+
+
+def test_proceso_aislado_carga_modelos_fk_auditoria():
+    """Regresión del deploy: el proceso Python parte con ORM vacío."""
+    import subprocess
+    import sys
+
+    programa = (
+        "from app.core.usuarios.promover_sistemas_superadmin_dev import main; "
+        "from app.core.db import Base; "
+        "from sqlalchemy.orm import configure_mappers; "
+        "assert 'empresas' in Base.metadata.tables; "
+        "configure_mappers()"
+    )
+    salida = subprocess.run(
+        [sys.executable, "-c", programa],
+        capture_output=True, text=True, timeout=30, check=False,
+    )
+    assert salida.returncode == 0, salida.stderr
