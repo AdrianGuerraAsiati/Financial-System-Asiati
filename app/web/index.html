@@ -267,10 +267,13 @@
             <p>Google Sheets en modo solo lectura. La plataforma valida el contrato antes de consultar Cartera.</p>
           </div>
           <div class="panel-actions">
+            <button id="cartera-google-conectar" type="button" class="secondary-button" hidden>Conectar Google Sheets</button>
+            <button id="cartera-google-probar" type="button" class="secondary-button" hidden>Probar conexión</button>
             <button id="cartera-descubrir-fuente" type="button" class="secondary-button">Descubrir pestañas</button>
             <button id="cartera-refrescar-fuente" type="button">Validar fuente</button>
           </div>
         </div>
+        <p id="cartera-google-estado" class="table-footnote" role="status" aria-live="polite">Consultando conexión con Google…</p>
         <div id="cartera-fuente-contenido" class="stack">
           <p class="empty">Validando configuración…</p>
         </div>
@@ -1481,6 +1484,7 @@
   <script src="/static/cartera_navegacion.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/cartera_drive.js" defer></script>
+  <script src="/static/google_sheets_connect.js" defer></script>
   <script src="/static/wallets.js" defer></script>
   <script src="/static/tesoreria.js" defer></script>
   <script src="/static/recaudos.js" defer></script>
