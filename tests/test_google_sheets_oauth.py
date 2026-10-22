@@ -115,6 +115,7 @@ def test_callback_rechaza_sin_cookie_temporal_en_vez_de_401(monkeypatch):
     from fastapi.testclient import TestClient
     from app.main import app
     monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+    monkeypatch.setenv("GOOGLE_OAUTH_TOKEN_KEY", "X" * 48)
     response = TestClient(app, base_url="https://testserver").get(
         "/api/v1/integrations/google-sheets/oauth/callback?state=abc&code=test",
         follow_redirects=False,
