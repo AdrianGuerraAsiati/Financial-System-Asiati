@@ -216,7 +216,7 @@ def oauth_callback(
 ) -> RedirectResponse:
     if error:
         return RedirectResponse("/?google_sheets=denegada", status_code=303)
-    if not code or not state or len(state) > 200:
+    if not code or not state or len(state) > 200 or not state.isascii():
         raise HTTPException(status_code=400, detail="Respuesta de autorización incompleta.")
     registro = session.scalar(
         select(EstadoOAuthGoogleSheets)
