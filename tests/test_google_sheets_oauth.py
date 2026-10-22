@@ -122,3 +122,25 @@ def test_callback_rechaza_sin_cookie_temporal_en_vez_de_401(monkeypatch):
     )
     assert response.status_code == 403
     assert "navegador" in response.json()["detail"]
+
+
+def test_oauth_se_abre_en_pestana_separada_sin_perder_sesion():
+    """El link abre tab misma-origin y el launcher hace POST protegido (no GET CSRF)."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    app_html = (root / "app/web/index.html").read_text()
+    launcher_html = (root / "app/web/google_sheets_oauth_launch.html").read_text()
+    launcher_js = (root / "app/web/google_sheets_oauth_launch.js").read_text()
+    controller_js = (root / "app/web/google_sheets_connect.js").read_text()
+
+    assert 'target="_blank" rel="noopener noreferrer"' in app_html
+    assert 'id="cartera-google-conectar"' in app_html
+    assert 'href="/static/google_sheets_oauth_launch.html"' in app_html
+    assert '/static/google_sheets_oauth_launch.js' in launcher_html
+    assert '"/api/v1/integrations/google-sheets/conexion/iniciar?empresa_id="' in launcher_js
+    assert 'method: "POST"' in launcher_js
+    assert 'credentials: "same-origin"' in launcher_js
+    assert '"https://accounts.google.com"' in launcher_js
+    assert 'window.location.replace' in launcher_js
+    assert 'window.location.assign(r.url)' not in controller_js
+    assert 'new BroadcastChannel(CANAL)' in controller_js
