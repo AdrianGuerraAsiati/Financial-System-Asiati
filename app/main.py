@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from google.auth.exceptions import RefreshError
 from fastapi.staticfiles import StaticFiles
 
 from app.core.auth.api import router as auth_router
@@ -29,6 +30,7 @@ from app.motores.conciliacion_wallets.preflight_aplicacion_api import router as 
 from app.motores.conciliacion_wallets.plataforma.api import router as wallets_router
 from app.motores.conciliacion_wallets.wiilog.api import router as wiilog_wallet_router
 from app.integrations.google_sheets.api import router as google_sheets_router
+from app.integrations.google_sheets.oauth import router as google_sheets_oauth_router
 
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -64,12 +66,22 @@ app.include_router(wallets_reapertura_router, prefix=API_V1)
 app.include_router(wallets_correcciones_router, prefix=API_V1)
 app.include_router(wallets_aplicacion_preflight_router, prefix=API_V1)
 app.include_router(google_sheets_router, prefix=API_V1)
+app.include_router(google_sheets_oauth_router, prefix=API_V1)
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 
 @app.get("/", include_in_schema=False)
 def inicio() -> FileResponse:
     return FileResponse(WEB_DIR / "index.html")
+
+
+@app.exception_handler(RefreshError)
+async def google_reautenticacion(_request, _exc: RefreshError) -> JSONResponse:
+    # Evitar HTTP 500 por credenciales ADC caducadas. No revelar tokens.
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "La conexión con Google Sheets caducó. Un administrador debe reconectarla desde Cartera > Fuente de datos."},
+    )
 
 
 @app.get("/health")
