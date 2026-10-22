@@ -45,6 +45,7 @@ Los códigos de rol siguen la convención de la migración `0009_create_usuarios
 | Permiso (código) | Qué permite | Superadmin | Coordinador | Conciliador | TI | Analista tesorería |
 |---|---|---|---|---|---|---|
 | `usuarios.gestionar` | Crear, editar, desactivar usuarios; asignar rol y empresas | Sí | — | — | — | — |
+| `google_sheets.conectar` | Conectar, reconectar, comprobar o desconectar Google Sheets (OAuth de solo lectura; acción técnica auditada, sin editar hojas) | Sí | — | — | Sí | — |
 | `empresas.gestionar` | Crear empresas y habilitar procesos por empresa | Sí | — | — | — | — |
 | `parametros.editar` | Crear una versión nueva de parámetros de un motor | Sí | — | — | — | — |
 | `parametros.ver` | Ver parámetros y su historial de versiones | Sí | Sí | Asig. | Leer | — |
@@ -76,6 +77,7 @@ Los códigos de rol siguen la convención de la migración `0009_create_usuarios
 
 Notas:
 - **Cerrar período** lo hace el coordinador (supervisa) y el superadmin; el conciliador no cierra su propio trabajo.
+- **TI puede gestionar la conexión OAuth de Sheets** sin recibir `usuarios.gestionar`; la autorización de lectura y sus cambios quedan auditados.
 - **TI no modifica datos financieros.** Puede ver resultados para diagnosticar un error y reprocesar lo que falló, siempre dejando rastro en auditoría. Si un arreglo exige cambiar un dato, lo hace un superadmin.
 - **Analista de tesorería** tiene permisos solo para el módulo de Tesorería por empresa. No adquiere permisos de Cartera ni de conciliación.
 - **Cartera:** el mapeo inicial replica el alcance de consulta de conciliación y el patrón operativo de carga. Puede ajustarse cuando negocio defina un rol específico de cartera.
