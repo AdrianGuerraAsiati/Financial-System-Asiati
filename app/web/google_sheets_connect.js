@@ -1,4 +1,4 @@
-/* Conexión Google Sheets: OAuth gestionado en backend, únicamente para administradores. */
+/* Conexión Google Sheets: OAuth gestionado en backend, para superadministración y soporte TI. */
 (() => {
   "use strict";
   const boton = document.getElementById("cartera-google-conectar");
@@ -10,7 +10,7 @@
 
   let generacion = 0;
   const idEmpresa = () => Number(empresa.value);
-  const admin = () => Boolean(window.ASIATI_SESION?.permisos?.["usuarios.gestionar"]);
+  const admin = () => Boolean(window.ASIATI_SESION?.permisos?.["google_sheets.conectar"]);
   const mensaje = texto => { estado.textContent = texto; };
 
   async function json(url, opciones = {}) {
