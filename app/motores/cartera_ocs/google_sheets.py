@@ -5,6 +5,8 @@ from typing import Any, Mapping, Protocol
 from urllib.parse import quote
 
 import google.auth
+
+from app.integrations.google_sheets.oauth import obtener_sesion_oauth_cartera
 from google.auth import impersonated_credentials
 from google.auth.transport.requests import AuthorizedSession
 
@@ -268,6 +270,12 @@ class LectorGoogleSheetsApi:
 
 
 def _cliente_google_desde_entorno() -> ClienteGoogleSheetsApi:
+    # OAuth web corporativo reemplaza las ADC humanas caducables del host.
+    empresa = os.getenv("CARTERA_SHEETS_EMPRESA_ID", "").strip()
+    if empresa.isdecimal():
+        oauth_session = obtener_sesion_oauth_cartera(int(empresa))
+        if oauth_session is not None:
+            return ClienteGoogleSheetsApi(session=oauth_session)
     return ClienteGoogleSheetsApi(
         target_principal=os.getenv(
             "GOOGLE_IMPERSONATE_SERVICE_ACCOUNT",
