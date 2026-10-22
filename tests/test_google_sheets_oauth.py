@@ -66,3 +66,59 @@ def test_frontend_and_backend_share_independent_connection_permission():
     assert 'permisos?.["google_sheets.conectar"]' in frontend
     assert '"usuarios.gestionar"' not in frontend
     assert 'administrar = requiere("google_sheets.conectar")' in (Path(oauth.__file__).read_text())
+
+
+def test_cookie_oauth_es_efimera_y_lax_sin_cambiar_cookie_sesion(monkeypatch):
+    """Google navega desde otro sitio: la sesión Strict no se debe flexibilizar."""
+    from fastapi import Response
+    from app.integrations.google_sheets.oauth import (
+        _poner_cookie_retorno, CALLBACK_PATH, COOKIE_RETORNO_GOOGLE,
+    )
+    monkeypatch.setenv("GOOGLE_OAUTH_TOKEN_KEY", "K" * 48)
+    response = Response()
+    _poner_cookie_retorno(response, "state-prueba")
+    header = response.headers["set-cookie"]
+    assert COOKIE_RETORNO_GOOGLE + "=" in header
+    assert "Max-Age=600" in header
+    assert "SameSite=lax" in header
+    assert "Secure" in header
+    assert "HttpOnly" in header
+    assert "Path=" + CALLBACK_PATH in header
+    assert "state-prueba" not in header
+    assert "asiati_sesion" not in header
+
+
+def test_cookie_oauth_firmada_ligada_al_state_y_secreto(monkeypatch):
+    from starlette.requests import Request
+    from app.integrations.google_sheets.oauth import (
+        COOKIE_RETORNO_GOOGLE, _firma_cookie_retorno, _validar_cookie_retorno,
+    )
+    monkeypatch.setenv("GOOGLE_OAUTH_TOKEN_KEY", "S" * 48)
+    firma = _firma_cookie_retorno("abc")
+    assert len(firma) == 64
+    assert firma != "abc"
+    assert _firma_cookie_retorno("abc") == firma
+    assert _firma_cookie_retorno("otro") != firma
+
+    scope = {
+        "type": "http", "method": "GET", "path": "/oauth/callback",
+        "headers": [(b"cookie", (COOKIE_RETORNO_GOOGLE + "=" + firma).encode())],
+    }
+    _validar_cookie_retorno(Request(scope), "abc")
+    with pytest.raises(HTTPException) as exc:
+        _validar_cookie_retorno(Request(scope), "estado-falsificado")
+    assert exc.value.status_code == 403
+
+
+def test_callback_rechaza_sin_cookie_temporal_en_vez_de_401(monkeypatch):
+    """Regresión: el retorno de Google no debe requerir la cookie Strict."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+    monkeypatch.setenv("GOOGLE_OAUTH_TOKEN_KEY", "X" * 48)
+    response = TestClient(app, base_url="https://testserver").get(
+        "/api/v1/integrations/google-sheets/oauth/callback?state=abc&code=test",
+        follow_redirects=False,
+    )
+    assert response.status_code == 403
+    assert "navegador" in response.json()["detail"]

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -15,7 +16,7 @@ from urllib.parse import urlencode, urlparse
 
 import requests
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.credentials import Credentials
@@ -23,7 +24,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.core.auditoria.service import registrar_auditoria
-from app.core.auth.dependencias import Acceso, requiere, usuario_vigente
+from app.core.auth.dependencias import Acceso, requiere
 from app.core.db import Base
 from app.core.session import crear_session, obtener_session
 from app.core.usuarios.model import Usuario
@@ -35,6 +36,7 @@ TOKEN_URL = "https://oauth2.googleapis.com/token"
 AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 CALLBACK_PATH = "/api/v1/integrations/google-sheets/oauth/callback"
 TTL_ESTADO = timedelta(minutes=10)
+COOKIE_RETORNO_GOOGLE = "asiati_google_oauth_retorno"
 router = APIRouter(prefix="/integrations/google-sheets", tags=["integrations"])
 
 
@@ -89,6 +91,62 @@ def _fernet() -> Fernet:
 
 def _hash_estado(state: str) -> str:
     return hashlib.sha256(state.encode("ascii")).hexdigest()
+
+
+def _firma_cookie_retorno(state: str) -> str:
+    """Prueba de navegador independiente del state público que Google devuelve.
+
+    Esta cookie con SameSite=Lax sí llega tras la navegación externa de Google.
+    La sesión principal permanece Strict. La firma no puede fabricarse con el
+    state/código que aparece en la URL y queda ligada a la clave privada.
+    """
+    secret = os.getenv("GOOGLE_OAUTH_TOKEN_KEY") or os.getenv("JWT_SECRET", "")
+    if len(secret) < 32:
+        raise HTTPException(status_code=503, detail="La clave de cifrado OAuth no está configurada.")
+    key = hashlib.sha256(b"asiati.google-sheets.oauth.callback.v1:" + secret.encode()).digest()
+    return hmac.new(key, state.encode("ascii"), hashlib.sha256).hexdigest()
+
+
+def _poner_cookie_retorno(response: Response, state: str) -> None:
+    response.set_cookie(
+        COOKIE_RETORNO_GOOGLE,
+        _firma_cookie_retorno(state),
+        max_age=int(TTL_ESTADO.total_seconds()),
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path=CALLBACK_PATH,
+    )
+
+
+def _validar_cookie_retorno(request: Request, state: str) -> None:
+    firma_recibida = request.cookies.get(COOKIE_RETORNO_GOOGLE, "")
+    firma_esperada = _firma_cookie_retorno(state)
+    if not hmac.compare_digest(firma_recibida, firma_esperada):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "El retorno desde Google no corresponde a este navegador. "
+                "Abre Cartera e inicia de nuevo Conectar Google Sheets."
+            ),
+        )
+
+
+def _redireccionar_resultado(resultado: str) -> RedirectResponse:
+    """No conservar el código OAuth en referers ni la cookie tras finalizar."""
+    response = RedirectResponse(
+        "/?google_sheets=" + resultado,
+        status_code=303,
+        headers={"Referrer-Policy": "no-referrer"},
+    )
+    response.delete_cookie(
+        COOKIE_RETORNO_GOOGLE,
+        path=CALLBACK_PATH,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
 
 
 def _pkce_challenge(verifier: str) -> str:
@@ -177,6 +235,7 @@ def estado_conexion(
 @router.post("/conexion/iniciar")
 def iniciar_conexion(
     request: Request,
+    response: Response,
     empresa_id: int,
     acceso: Acceso = Depends(administrar),
     session: Session = Depends(obtener_session),
@@ -199,6 +258,8 @@ def iniciar_conexion(
     )
     session.add(registro)
     session.commit()
+    # Solo este callback requiere SameSite=Lax. No cambiar la cookie de sesión.
+    _poner_cookie_retorno(response, state)
     return {
         "url": construir_url_google(
             client_id=client_id, redirect_uri=redirect_uri, state=state, verifier=verifier,
@@ -208,23 +269,27 @@ def iniciar_conexion(
 
 @router.get("/oauth/callback")
 def oauth_callback(
+    request: Request,
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
-    usuario: Usuario = Depends(usuario_vigente),
     session: Session = Depends(obtener_session),
 ) -> RedirectResponse:
     if error:
-        return RedirectResponse("/?google_sheets=denegada", status_code=303)
+        return _redireccionar_resultado("denegada")
     if not code or not state or len(state) > 200 or not state.isascii():
         raise HTTPException(status_code=400, detail="Respuesta de autorización incompleta.")
+    _validar_cookie_retorno(request, state)
     registro = session.scalar(
         select(EstadoOAuthGoogleSheets)
         .where(EstadoOAuthGoogleSheets.state_hash == _hash_estado(state))
         .with_for_update()
     )
-    if registro is None or registro.usuario_id != usuario.id:
-        raise HTTPException(status_code=403, detail="La autorización no corresponde a esta sesión.")
+    if registro is None:
+        raise HTTPException(status_code=403, detail="Autorización inválida o utilizada previamente.")
+    usuario = session.get(Usuario, registro.usuario_id)
+    if usuario is None or not usuario.activo or usuario.debe_cambiar_password:
+        raise HTTPException(status_code=403, detail="El usuario que inició la conexión ya no está habilitado.")
     if registro.vence_en < datetime.now(timezone.utc):
         session.delete(registro)
         session.commit()
@@ -252,18 +317,18 @@ def oauth_callback(
         response.raise_for_status()
         payload = response.json()
     except (requests.RequestException, ValueError):
-        return RedirectResponse("/?google_sheets=error", status_code=303)
+        return _redireccionar_resultado("error")
     concedidos = set(payload.get("scope", "").split())
     if SHEETS_SCOPE not in concedidos:
-        return RedirectResponse("/?google_sheets=permisos", status_code=303)
+        return _redireccionar_resultado("permisos")
     refresh_token = payload.get("refresh_token")
     if not refresh_token or not isinstance(refresh_token, str):
-        return RedirectResponse("/?google_sheets=sin_refresh", status_code=303)
+        return _redireccionar_resultado("sin_refresh")
 
     # No se guarda la conexión hasta demostrar acceso a la hoja ya configurada.
     spreadsheet_id = os.getenv("CARTERA_SHEETS_SPREADSHEET_ID", "").strip()
     if not spreadsheet_id:
-        return RedirectResponse("/?google_sheets=sin_hoja", status_code=303)
+        return _redireccionar_resultado("sin_hoja")
     credenciales = Credentials(
         token=payload["access_token"],
         refresh_token=refresh_token,
@@ -280,7 +345,7 @@ def oauth_callback(
         )
         respuesta.raise_for_status()
     except (requests.RequestException, KeyError):
-        return RedirectResponse("/?google_sheets=sin_acceso", status_code=303)
+        return _redireccionar_resultado("sin_acceso")
 
     cifrado = _fernet().encrypt(refresh_token.encode()).decode()
     conexion = session.get(ConexionGoogleSheets, empresa_id)
@@ -301,7 +366,7 @@ def oauth_callback(
         entidad_id=empresa_id, despues={"solo_lectura": True},
     )
     session.commit()
-    return RedirectResponse("/?google_sheets=conectada", status_code=303)
+    return _redireccionar_resultado("conectada")
 
 
 @router.get("/conexion/probar")

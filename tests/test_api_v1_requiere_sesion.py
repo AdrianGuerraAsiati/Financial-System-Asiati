@@ -16,6 +16,9 @@ PUBLICOS = {
 AUTENTICADOS_POR_MAQUINA = {
     ("POST", "/api/v1/integrations/google-sheets/changed"),
 }
+# Google devuelve una navegación cross-site GET sin la cookie de sesión Strict.
+# Este callback exige en su lugar state + cookie efímera firmada SameSite=Lax.
+CALLBACKS_OAUTH = {("GET", "/api/v1/integrations/google-sheets/oauth/callback")}
 
 
 def _endpoints_v1() -> list[tuple[str, str]]:
@@ -47,6 +50,7 @@ def test_machine_authenticated_endpoints_are_explicit() -> None:
         for endpoint in _endpoints_v1()
         if endpoint not in PUBLICOS
         and endpoint not in AUTENTICADOS_POR_MAQUINA
+        and endpoint not in CALLBACKS_OAUTH
     ],
 )
 def test_endpoint_rejects_requests_without_session(

@@ -1,7 +1,7 @@
 # Conectar Google Sheets sin consola
 
 ## Uso
-En Cartera → Fuente de datos, una persona con rol super_administrador pulsa Conectar Google Sheets. Autoriza a Google a leer las hojas y regresa a ASIATI. El token de renovación se conserva cifrado en PostgreSQL, por empresa. El botón se convierte en Reconectar Google Sheets, y Probar conexión verifica el acceso. Nadie necesita hacer login con gcloud en Lightsail para reconectar.
+En Cartera → Fuentes y calidad, una persona con rol super_administrador o ti pulsa Conectar Google Sheets. Autoriza a Google a leer las hojas y regresa a ASIATI. El token de renovación se conserva cifrado en PostgreSQL, por empresa. El botón se convierte en Reconectar Google Sheets, y Probar conexión verifica el acceso. Nadie necesita hacer login con gcloud en Lightsail para reconectar.
 
 ## Configuración inicial por TI (una sola vez)
 1. Crear aplicación de tipo Web en Google Cloud Console / Google Auth Platform, habilitar Sheets API, configurar pantalla de consentimiento y usuarios autorizados (preferiblemente Internal para Workspace).
@@ -14,9 +14,10 @@ Una aplicación NO puede registrar su propio cliente de Google OAuth sin una con
 
 ## Controles
 - Scope restringido a spreadsheets.readonly, sin escritura ni acceso general a Drive.
-- Acceso a reconexión limitado a superadministradores; token cifrado con Fernet.
+- Acceso a reconexión limitado a roles super_administrador y ti, por permiso específico google_sheets.conectar; token cifrado con Fernet.
 - Estado aleatorio vinculado a empresa y usuario, de un solo uso, máximo diez minutos, con PKCE S256.
-- Autorización vinculada a la sesión actual de ASIATI.
+- El flujo se inicia únicamente con sesión ASIATI vigente y origen HTTPS del mismo sitio; se vincula al usuario autorizado y a su empresa.
+- El retorno desde Google usa cookie temporal de 10 minutos, firmada con HMAC, HttpOnly, Secure y SameSite=Lax solo para la ruta exacta del callback. La sesión principal de ASIATI conserva SameSite=Strict y no viaja desde Google. Se vuelve a verificar que el usuario iniciador siga activo y autorizado.
 - Auditoría de conexión y desconexión, y restauración de error de credenciales como HTTP 503 con instrucción de reconexión.
 - Inventario Drive usa una integración independiente que no se modifica.
 - No se modifica Cartera, pagos, movimientos ni saldos.
