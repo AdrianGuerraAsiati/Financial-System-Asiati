@@ -27,8 +27,8 @@ from app.core.auth.dependencias import Acceso, requiere, usuario_vigente
 from app.core.db import Base
 from app.core.session import crear_session, obtener_session
 from app.core.usuarios.model import Usuario
-from app.core.usuarios.roles import ROL_SUPER_ADMINISTRADOR
 from app.core.empresas import Empresa
+from app.core.permisos import permisos_efectivos
 
 SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -124,7 +124,7 @@ def _empresa_query(empresa_id: int) -> int:
 
 
 ver_cartera = requiere("cartera.ver", empresa_de=_empresa_query)
-administrar = requiere("usuarios.gestionar")
+administrar = requiere("google_sheets.conectar")
 
 
 def obtener_sesion_oauth_cartera(empresa_id: int) -> AuthorizedSession | None:
@@ -229,8 +229,8 @@ def oauth_callback(
         session.delete(registro)
         session.commit()
         raise HTTPException(status_code=400, detail="La autorización caducó. Inicia de nuevo.")
-    if usuario.rol != ROL_SUPER_ADMINISTRADOR:
-        raise HTTPException(status_code=403, detail="La conexión requiere superadministración.")
+    if "google_sheets.conectar" not in permisos_efectivos(usuario.rol):
+        raise HTTPException(status_code=403, detail="Sin permiso para conectar Google Sheets.")
     empresa_id, verifier = registro.empresa_id, registro.code_verifier
     session.delete(registro)
     session.commit()  # nonce de un solo uso incluso si Google falla
