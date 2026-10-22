@@ -107,6 +107,18 @@ def _firma_cookie_retorno(state: str) -> str:
     return hmac.new(key, state.encode("ascii"), hashlib.sha256).hexdigest()
 
 
+def _poner_cookie_retorno(response: Response, state: str) -> None:
+    response.set_cookie(
+        COOKIE_RETORNO_GOOGLE,
+        _firma_cookie_retorno(state),
+        max_age=int(TTL_ESTADO.total_seconds()),
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path=CALLBACK_PATH,
+    )
+
+
 def _validar_cookie_retorno(request: Request, state: str) -> None:
     firma_recibida = request.cookies.get(COOKIE_RETORNO_GOOGLE, "")
     firma_esperada = _firma_cookie_retorno(state)
@@ -247,15 +259,7 @@ def iniciar_conexion(
     session.add(registro)
     session.commit()
     # Solo este callback requiere SameSite=Lax. No cambiar la cookie de sesión.
-    response.set_cookie(
-        COOKIE_RETORNO_GOOGLE,
-        _firma_cookie_retorno(state),
-        max_age=int(TTL_ESTADO.total_seconds()),
-        secure=True,
-        httponly=True,
-        samesite="lax",
-        path=CALLBACK_PATH,
-    )
+    _poner_cookie_retorno(response, state)
     return {
         "url": construir_url_google(
             client_id=client_id, redirect_uri=redirect_uri, state=state, verifier=verifier,
