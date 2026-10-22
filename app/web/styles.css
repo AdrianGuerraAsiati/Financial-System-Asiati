@@ -2809,3 +2809,23 @@ summary {
     justify-content: space-between;
   }
 }
+
+/* El enlace OAuth conserva la apariencia del botón y deja clara su desactivación. */
+#cartera-google-conectar { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+#cartera-google-conectar[hidden] { display: none; }
+#cartera-google-conectar[aria-disabled="true"] { opacity: .45; cursor: not-allowed; pointer-events: none; }
+@media (max-width: 700px) {
+  #cartera-fuente .panel-actions #cartera-google-conectar { flex: 1 1 155px; }
+}
+.oauth-launch {
+  max-width: 34rem;
+  margin: 12vh auto;
+  padding: 2rem;
+  background: #fff;
+  border: 1px solid #d5dae2;
+  border-radius: 1rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, .06);
+  font-family: system-ui, sans-serif;
+}
+.oauth-launch h1 { font-size: 1.4rem; }
+.oauth-launch p { line-height: 1.55; }
